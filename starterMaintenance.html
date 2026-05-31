@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Heldentag 2026 – Starter Verwaltung</title>
+    <link rel="stylesheet" href="jury.css">
+    <style>
+        body {
+            overflow: auto;
+        }
+
+        .page-wrap {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .toolbar input {
+            flex: 1;
+            padding: 0.65rem 1rem;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text);
+            font-size: 1rem;
+            outline: none;
+        }
+
+        .toolbar input:focus {
+            border-color: var(--accent);
+        }
+
+        .toolbar input::placeholder {
+            color: var(--muted);
+        }
+
+        .btn {
+            padding: 0.65rem 1.1rem;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background: var(--green);
+            color: #000;
+        }
+
+        .btn-primary:active {
+            opacity: 0.85;
+        }
+
+        .btn-danger {
+            background: transparent;
+            border: 1px solid #e74c3c;
+            color: #e74c3c;
+        }
+
+        .btn-danger:active {
+            opacity: 0.75;
+        }
+
+        .btn-ghost {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        th {
+            text-align: left;
+            font-size: 0.65rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            padding: 0.4rem 0.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        td {
+            padding: 0.65rem 0.5rem;
+            border-bottom: 1px solid var(--border);
+            color: var(--text);
+            vertical-align: middle;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover td {
+            background: var(--card);
+        }
+
+        td.num {
+            font-weight: 800;
+            color: var(--accent);
+            width: 3rem;
+        }
+
+        td.actions {
+            width: 4rem;
+            text-align: right;
+        }
+
+        .icon-btn {
+            background: transparent;
+            border: none;
+            color: var(--muted);
+            cursor: pointer;
+            font-size: 1rem;
+            padding: 0.25rem 0.4rem;
+            border-radius: 6px;
+        }
+
+        .icon-btn:hover {
+            color: var(--text);
+            background: var(--border);
+        }
+
+        .icon-btn.del:hover {
+            color: #e74c3c;
+        }
+
+        .empty-row td {
+            text-align: center;
+            color: var(--muted);
+            padding: 2rem;
+            font-size: 0.9rem;
+        }
+
+        /* form modal */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+        }
+
+        .form-group.full {
+            grid-column: 1 / -1;
+        }
+
+        .form-label {
+            font-size: 0.65rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .form-input {
+            padding: 0.6rem 0.85rem;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 1rem;
+            outline: none;
+            width: 100%;
+        }
+
+        .form-input:focus {
+            border-color: var(--accent);
+        }
+
+        select.form-input option {
+            background: var(--card);
+        }
+
+        .status-bar {
+            font-size: 0.8rem;
+            color: var(--muted);
+            margin-bottom: 0.75rem;
+            min-height: 1.1rem;
+        }
+
+        .status-bar.err {
+            color: #e74c3c;
+        }
+
+        .status-bar.ok {
+            color: var(--green);
+        }
+
+        /* login overlay */
+        #login-overlay {
+            position: fixed;
+            inset: 0;
+            background: var(--bg);
+            z-index: 300;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #login-overlay.hidden {
+            display: none;
+        }
+
+        .login-box {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2rem 1.5rem;
+            width: calc(100% - 2rem);
+            max-width: 360px;
+        }
+
+        .login-title {
+            font-size: 0.7rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            text-align: center;
+            margin-bottom: 1.25rem;
+        }
+
+        .login-err {
+            font-size: 0.85rem;
+            color: #e74c3c;
+            text-align: center;
+            min-height: 1.2rem;
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Login overlay -->
+    <div id="login-overlay">
+        <div class="login-box">
+            <div class="login-title">Starter Verwaltung – Anmeldung</div>
+            <div class="login-err" id="login-err"></div>
+            <div class="form-group" style="margin-bottom:0.75rem">
+                <label class="form-label">Benutzername</label>
+                <input class="form-input" id="login-user" type="text" autocomplete="username" placeholder="admin">
+            </div>
+            <div class="form-group" style="margin-bottom:1.25rem">
+                <label class="form-label">Passwort</label>
+                <input class="form-input" id="login-pass" type="password" autocomplete="current-password">
+            </div>
+            <button class="btn btn-primary" id="login-btn" style="width:100%">Anmelden</button>
+        </div>
+    </div>
+    <header>
+        <div class="header-group">
+            <div class="header-label">Verwaltung</div>
+            <div class="header-value" style="color:var(--accent)">Starter</div>
+        </div>
+        <div class="header-group">
+            <div class="header-label">Geladen</div>
+            <div class="header-value" id="count-display">—</div>
+        </div>
+        <div class="header-group">
+            <div class="header-label">Angemeldet als</div>
+            <div class="header-value" id="login-display" style="font-size:1rem;color:var(--muted)">—</div>
+            <button class="btn btn-ghost" id="logout-btn"
+                style="font-size:0.8rem;padding:0.3rem 0.75rem;margin-top:0.25rem">Abmelden</button>
+        </div>
+    </header>
+
+    <div class="page-wrap">
+        <div class="toolbar">
+            <input id="search-input" type="text" placeholder="Name oder Startnummer suchen …" autocomplete="off">
+            <button class="btn btn-primary" id="add-btn">+ Neu</button>
+        </div>
+        <div class="status-bar" id="status-bar"></div>
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Nachname</th>
+                    <th>Vorname</th>
+                    <th>Geschlecht</th>
+                    <th>Geburtstag</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="table-body"></tbody>
+        </table>
+    </div>
+
+    <!-- Form modal -->
+    <div class="modal-backdrop" id="form-backdrop">
+        <div class="modal">
+            <div class="modal-title" id="form-title">Starter hinzufügen</div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label">Startnummer</label>
+                    <input class="form-input" id="f-startNumber" type="number" min="1" placeholder="z.B. 42">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Geschlecht</label>
+                    <select class="form-input" id="f-gender">
+                        <option value="">— wählen —</option>
+                        <option value="male">Männlich</option>
+                        <option value="female">Weiblich</option>
+                        <option value="diverse">Divers</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Vorname</label>
+                    <input class="form-input" id="f-firstName" type="text" placeholder="Max">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Nachname</label>
+                    <input class="form-input" id="f-lastName" type="text" placeholder="Mustermann">
+                </div>
+                <div class="form-group full">
+                    <label class="form-label">Geburtstag</label>
+                    <input class="form-input" id="f-birthday" type="date">
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="modal-cancel" id="form-cancel">← Abbrechen</button>
+                <button class="modal-confirm" id="form-save">✓ Speichern</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete confirm modal -->
+    <div class="modal-backdrop" id="del-backdrop">
+        <div class="modal">
+            <div class="modal-title" style="color:#e74c3c">Starter löschen?</div>
+            <div id="del-name" style="text-align:center;margin:1rem 0;font-size:1.1rem;font-weight:700"></div>
+            <div class="modal-actions">
+                <button class="modal-cancel" id="del-cancel">← Abbrechen</button>
+                <button class="btn btn-danger" style="padding:0.85rem" id="del-confirm">Löschen</button>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <img src="assets/weraceLogo.png" alt="WeRace">
+    </footer>
+
+    <script src="config.js"></script>
+    <script src="parse-api.js"></script>
+    <script>
+        let allStarters = [];
+        let editId = null;
+        let deleteId = null;
+
+        // ── login ──
+        async function doLogin() {
+            const username = document.getElementById('login-user').value.trim();
+            const password = document.getElementById('login-pass').value;
+            document.getElementById('login-err').textContent = '';
+            if (!username || !password) {
+                document.getElementById('login-err').textContent = 'Bitte Benutzername und Passwort eingeben.';
+                return;
+            }
+            document.getElementById('login-btn').disabled = true;
+            try {
+                const data = await ParseAPI.login(username, password);
+                document.getElementById('login-overlay').classList.add('hidden');
+                document.getElementById('login-display').textContent = data.username ?? username;
+                document.getElementById('login-pass').value = '';
+                await loadStarters();
+            } catch (e) {
+                document.getElementById('login-err').textContent = e.message;
+            } finally {
+                document.getElementById('login-btn').disabled = false;
+            }
+        }
+
+        document.getElementById('login-btn').addEventListener('click', doLogin);
+        document.getElementById('login-pass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+        document.getElementById('logout-btn').addEventListener('click', async () => {
+            await ParseAPI.logout();
+            allStarters = [];
+            document.getElementById('table-body').innerHTML = '';
+            document.getElementById('count-display').textContent = '—';
+            document.getElementById('login-display').textContent = '—';
+            document.getElementById('login-overlay').classList.remove('hidden');
+            document.getElementById('login-user').focus();
+        });
+
+        // ── data ──
+        const statusBar = document.getElementById('status-bar');
+        const tableBody = document.getElementById('table-body');
+        const searchInput = document.getElementById('search-input');
+
+        function setStatus(msg, type = '') {
+            statusBar.textContent = msg;
+            statusBar.className = 'status-bar' + (type ? ` ${type}` : '');
+        }
+
+        function formatDate(iso) {
+            if (!iso) return '—';
+            return new Date(iso).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        }
+
+        function renderTable(filter = '') {
+            const term = filter.toLowerCase().trim();
+            const rows = term
+                ? allStarters.filter(s =>
+                    String(s.startNumber).includes(term) ||
+                    (s.firstName || '').toLowerCase().includes(term) ||
+                    (s.lastName || '').toLowerCase().includes(term))
+                : allStarters;
+
+            document.getElementById('count-display').textContent = allStarters.length;
+            tableBody.innerHTML = '';
+
+            if (!rows.length) {
+                tableBody.innerHTML = '<tr class="empty-row"><td colspan="6">Keine Starter gefunden</td></tr>';
+                return;
+            }
+
+            for (const s of rows) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="num">${s.startNumber ?? '—'}</td>
+                    <td>${s.lastName ?? '—'}</td>
+                    <td>${s.firstName ?? '—'}</td>
+                    <td>${s.gender ?? '—'}</td>
+                    <td>${formatDate(s.birthday?.iso ?? s.birthday)}</td>
+                    <td class="actions">
+                        <button class="icon-btn edit" data-id="${s.objectId}" title="Bearbeiten">✎</button>
+                        <button class="icon-btn del"  data-id="${s.objectId}" data-name="${s.firstName} ${s.lastName}" title="Löschen">✕</button>
+                    </td>`;
+                tableBody.appendChild(tr);
+            }
+        }
+
+        async function loadStarters() {
+            setStatus('Lade Starter …');
+            try {
+                allStarters = await ParseAPI.fetchStarters();
+                renderTable(searchInput.value);
+                setStatus('');
+            } catch (e) {
+                setStatus(e.message, 'err');
+            }
+        }
+
+        searchInput.addEventListener('input', () => renderTable(searchInput.value));
+
+        // ── form modal ──
+        function openForm(starter = null) {
+            editId = starter?.objectId ?? null;
+            document.getElementById('form-title').textContent = starter ? 'Starter bearbeiten' : 'Starter hinzufügen';
+            document.getElementById('f-startNumber').value = starter?.startNumber ?? '';
+            document.getElementById('f-firstName').value = starter?.firstName ?? '';
+            document.getElementById('f-lastName').value = starter?.lastName ?? '';
+            document.getElementById('f-gender').value = starter?.gender ?? '';
+            const bd = starter?.birthday?.iso ?? starter?.birthday ?? '';
+            document.getElementById('f-birthday').value = bd ? bd.slice(0, 10) : '';
+            document.getElementById('form-backdrop').classList.add('open');
+            document.getElementById('f-startNumber').focus();
+        }
+
+        document.getElementById('add-btn').addEventListener('click', () => openForm());
+        document.getElementById('form-cancel').addEventListener('click', () =>
+            document.getElementById('form-backdrop').classList.remove('open'));
+
+        document.getElementById('form-save').addEventListener('click', async () => {
+            const startNumber = Number(document.getElementById('f-startNumber').value);
+            const firstName = document.getElementById('f-firstName').value.trim();
+            const lastName = document.getElementById('f-lastName').value.trim();
+            const gender = document.getElementById('f-gender').value;
+            const bdVal = document.getElementById('f-birthday').value;
+
+            if (!startNumber || !firstName || !lastName) {
+                setStatus('Startnummer, Vor- und Nachname sind Pflichtfelder.', 'err');
+                return;
+            }
+
+            const fields = {
+                startNumber,
+                firstName,
+                lastName,
+                gender: gender || undefined,
+                birthday: bdVal ? { __type: 'Date', iso: new Date(bdVal).toISOString() } : undefined,
+            };
+
+            document.getElementById('form-backdrop').classList.remove('open');
+            setStatus('Speichere …');
+            try {
+                await ParseAPI.saveStarter(fields, editId);
+                setStatus(editId ? 'Gespeichert.' : 'Hinzugefügt.', 'ok');
+                await loadStarters();
+            } catch (e) {
+                setStatus(e.message, 'err');
+            }
+        });
+
+        // ── delete modal ──
+        tableBody.addEventListener('click', e => {
+            const editBtn = e.target.closest('.icon-btn.edit');
+            const delBtn = e.target.closest('.icon-btn.del');
+            if (editBtn) {
+                const s = allStarters.find(x => x.objectId === editBtn.dataset.id);
+                if (s) openForm(s);
+            }
+            if (delBtn) {
+                deleteId = delBtn.dataset.id;
+                document.getElementById('del-name').textContent = delBtn.dataset.name;
+                document.getElementById('del-backdrop').classList.add('open');
+            }
+        });
+
+        document.getElementById('del-cancel').addEventListener('click', () =>
+            document.getElementById('del-backdrop').classList.remove('open'));
+
+        document.getElementById('del-confirm').addEventListener('click', async () => {
+            document.getElementById('del-backdrop').classList.remove('open');
+            setStatus('Lösche …');
+            try {
+                await ParseAPI.deleteStarter(deleteId);
+                setStatus('Gelöscht.', 'ok');
+                await loadStarters();
+            } catch (e) {
+                setStatus(e.message, 'err');
+            }
+        });
+    </script>
+</body>
+
+</html>

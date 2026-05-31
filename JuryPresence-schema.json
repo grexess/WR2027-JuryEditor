@@ -1,0 +1,25 @@
+{
+  "className": "JuryPresence",
+  "fields": {
+    "objectId":   { "type": "String" },
+    "createdAt":  { "type": "Date" },
+    "updatedAt":  { "type": "Date" },
+    "ACL":        { "type": "ACL" },
+    "judgeName":  { "type": "String" },
+    "lastSeen":   { "type": "Date" },
+    "event": {
+      "type": "Pointer",
+      "targetClass": "Event"
+    }
+  },
+  "classLevelPermissions": {
+    "find":     { "*": true },
+    "count":    { "*": true },
+    "get":      { "*": true },
+    "create":   { "*": true },
+    "update":   { "*": true },
+    "delete":   { "*": true },
+    "addField": { "requiresAuthentication": true },
+    "protectedFields": {}
+  }
+}

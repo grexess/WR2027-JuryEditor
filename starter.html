@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Heldentag 2026 – Starter</title>
+    <link rel="stylesheet" href="jury.css">
+</head>
+
+<body>
+    <header>
+        <div class="header-group">
+            <div class="header-label">Ansage</div>
+            <div class="header-value" style="color:var(--accent)">Starter</div>
+        </div>
+        <div class="header-group">
+            <div class="header-label">Ausgewählt</div>
+            <div class="header-value" id="selected-display">—</div>
+        </div>
+        <div class="header-group" id="presence-group">
+            <div class="header-label">Kampfrichter</div>
+            <div id="presence-chips" style="display:flex;gap:0.35rem;flex-wrap:wrap;justify-content:center;margin-top:0.15rem"></div>
+        </div>
+    </header>
+
+    <div class="content-center">
+        <!-- Waiting overlay — shown while a starter is on the floor -->
+        <div id="waiting-overlay" class="waiting hidden">
+            <div class="waiting-dots">
+                <div class="waiting-dot"></div>
+                <div class="waiting-dot"></div>
+                <div class="waiting-dot"></div>
+            </div>
+            <div id="waiting-name" style="font-size:2rem;font-weight:800;color:var(--accent);margin-top:0.5rem"></div>
+            <div class="waiting-label">Warte auf Wertungen</div>
+            <div id="jury-dots" style="display:flex;gap:0.75rem;margin-top:1rem"></div>
+        </div>
+
+        <!-- Picker — hidden while waiting -->
+        <div id="picker-section">
+            <div class="picker-wrap">
+                <div class="picker-input-wrap">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8" />
+                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    </svg>
+                    <input class="picker-input" id="filter-input" type="text" inputmode="numeric"
+                        placeholder="Startnummer suchen …" autocomplete="off">
+                </div>
+                <div class="picker-results-label" id="results-label"></div>
+                <div class="picker-list" id="picker-list"></div>
+            </div>
+
+            <div class="starter-footer">
+                <div style="display:grid;grid-template-columns:1fr auto;gap:0.5rem">
+                    <button class="submit-btn" id="start-btn" disabled>
+                        Starter auswählen
+                    </button>
+                    <button class="modal-cancel" id="clear-btn" disabled>✕</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <img src="assets/weraceLogo.png" alt="WeRace">
+    </footer>
+
+    <script src="config.js"></script>
+    <script src="parse-api.js"></script>
+    <script>
+        // START_NUMBERS is now loaded from Parse — populated on init
+        let START_NUMBERS = [];
+        let STARTERS = [];
+
+        const JUDGE_COUNT = Object.keys(CONFIG.judgeTokens).length;
+        const JUDGE_NAMES = Object.values(CONFIG.judgeTokens);
+        const channel = new BroadcastChannel('werace-starter');
+        let selected      = null;
+        let activeStarter = null;
+        let scoredBy      = new Set();
+        let scoreWs       = null;
+        let onlineJudges  = new Set();
+
+        // ── Presence ──
+        function renderPresenceChips() {
+            const wrap = document.getElementById('presence-chips');
+            wrap.innerHTML = '';
+            for (const name of JUDGE_NAMES) {
+                const online = onlineJudges.has(name);
+                const chip = document.createElement('div');
+                chip.style.cssText =
+                    `padding:0.2rem 0.5rem;border-radius:999px;font-size:0.7rem;font-weight:700;` +
+                    `background:${online ? 'var(--green)' : 'var(--border)'};` +
+                    `color:${online ? '#000' : 'var(--muted)'};transition:background 0.3s,color 0.3s`;
+                chip.textContent = name;
+                wrap.appendChild(chip);
+            }
+            updateStartBtnPresence();
+        }
+
+        function updateStartBtnPresence() {
+            if (activeStarter !== null) return;
+            const allOnline = JUDGE_NAMES.every(n => onlineJudges.has(n));
+            if (!allOnline) {
+                const missing = JUDGE_NAMES.filter(n => !onlineJudges.has(n));
+                startBtn.innerHTML = `Warte auf: ${missing.join(', ')}`;
+                startBtn.disabled = true;
+                if (selected !== null) clearBtn.disabled = false;
+            } else if (selected !== null) {
+                setStartBtn(selected);
+            }
+        }
+
+        async function refreshPresence() {
+            try {
+                const records = await ParseAPI.fetchPresence();
+                onlineJudges = new Set(records.map(r => r.judgeName));
+                renderPresenceChips();
+            } catch (_) {}
+        }
+
+        refreshPresence();
+        setInterval(refreshPresence, 35000);
+        ParseAPI.subscribePresence(refreshPresence);
+
+        const filterInput = document.getElementById('filter-input');
+        const pickerList = document.getElementById('picker-list');
+        const resultsLabel = document.getElementById('results-label');
+        const startBtn = document.getElementById('start-btn');
+        const clearBtn = document.getElementById('clear-btn');
+        const display = document.getElementById('selected-display');
+
+        function clearSelection() {
+            selected = null;
+            display.textContent = '—';
+            setStartBtn(null);
+            renderList(filterInput.value);
+        }
+
+        function renderList(filter) {
+            pickerList.innerHTML = '';
+            const term = filter.trim();
+            const matches = START_NUMBERS.filter(n => String(n).includes(term));
+            resultsLabel.textContent = term
+                ? `${matches.length} Ergebnis${matches.length !== 1 ? 'se' : ''}`
+                : `${START_NUMBERS.length} Starter`;
+            if (!matches.length) {
+                const empty = document.createElement('div');
+                empty.className = 'picker-empty';
+                empty.textContent = 'Keine Startnummer gefunden';
+                pickerList.appendChild(empty);
+                return;
+            }
+            for (const num of matches) {
+                const starter = STARTERS.find(s => s.startNumber === num);
+                const item = document.createElement('div');
+                item.className = 'picker-item' + (num === selected ? ' selected' : '');
+                if (starter?.firstName || starter?.lastName) {
+                    item.innerHTML =
+                        `<span class="picker-item-num">${num}</span>` +
+                        `<span class="picker-item-name">` +
+                        `<span class="picker-item-first">${starter.firstName ?? ''}</span>` +
+                        `<span class="picker-item-last">${starter.lastName ?? ''}</span>` +
+                        `</span>`;
+                } else {
+                    item.textContent = num;
+                }
+                item.addEventListener('click', () => {
+                    selected = num;
+                    display.textContent = num;
+                    setStartBtn(num);
+                    filterInput.value = '';
+                    renderList('');
+                });
+                pickerList.appendChild(item);
+            }
+        }
+
+        function setStartBtn(num) {
+            if (num === null) {
+                startBtn.innerHTML = 'Starter auswählen';
+                startBtn.disabled = true;
+                clearBtn.disabled = true;
+            } else {
+                const allOnline = JUDGE_NAMES.every(n => onlineJudges.has(n));
+                if (allOnline) {
+                    startBtn.innerHTML = `<span style="font-size:1.3rem">✓</span> Jetzt starten <span class="badge">${num}</span>`;
+                    startBtn.disabled = false;
+                } else {
+                    const missing = JUDGE_NAMES.filter(n => !onlineJudges.has(n));
+                    startBtn.innerHTML = `Warte auf: ${missing.join(', ')}`;
+                    startBtn.disabled = true;
+                }
+                clearBtn.disabled = false;
+            }
+        }
+
+        function renderJuryDots(scored) {
+            const dots = document.getElementById('jury-dots');
+            dots.innerHTML = '';
+            for (const name of JUDGE_NAMES) {
+                const chip = document.createElement('div');
+                const done = scored.has(name);
+                chip.style.cssText =
+                    `padding:0.35rem 0.75rem;border-radius:999px;font-size:0.8rem;font-weight:700;` +
+                    `background:${done ? 'var(--green)' : 'var(--border)'};` +
+                    `color:${done ? '#000' : 'var(--muted)'};transition:background 0.3s,color 0.3s`;
+                chip.textContent = name;
+                dots.appendChild(chip);
+            }
+        }
+
+        function enterWaitingForScores(startNumber) {
+            activeStarter = startNumber;
+            scoredBy = new Set();
+
+            const starter = STARTERS.find(s => s.startNumber === startNumber);
+            const name = starter ? `${starter.firstName ?? ''} ${starter.lastName ?? ''}`.trim() : String(startNumber);
+            document.getElementById('waiting-name').textContent = `#${startNumber}  ${name}`;
+            document.getElementById('waiting-overlay').classList.remove('hidden');
+            document.getElementById('picker-section').style.display = 'none';
+            renderJuryDots(scoredBy);
+
+            if (scoreWs) scoreWs.close();
+            scoreWs = ParseAPI.subscribeJuryScores(startNumber, score => {
+                if (score.judgeName) scoredBy.add(score.judgeName);
+                renderJuryDots(scoredBy);
+                if (scoredBy.size >= JUDGE_COUNT) exitWaitingForScores();
+            });
+
+            ParseAPI.fetchJuryScores(startNumber).then(existing => {
+                if (existing.length >= JUDGE_COUNT) {
+                    exitWaitingForScores();
+                } else {
+                    existing.forEach(s => { if (s.judgeName) scoredBy.add(s.judgeName); });
+                    renderJuryDots(scoredBy);
+                }
+            }).catch(() => { });
+        }
+
+        function exitWaitingForScores() {
+            if (scoreWs) { scoreWs.close(); scoreWs = null; }
+            activeStarter = null;
+            document.getElementById('waiting-overlay').classList.add('hidden');
+            document.getElementById('picker-section').style.display = '';
+            selected = null;
+            display.textContent = '—';
+            setStartBtn(null);
+            renderList(filterInput.value);
+        }
+
+        filterInput.addEventListener('input', () => renderList(filterInput.value));
+        clearBtn.addEventListener('click', clearSelection);
+
+        async function init() {
+            resultsLabel.textContent = 'Lade Starter …';
+            try {
+                STARTERS = await ParseAPI.fetchStarters();
+                START_NUMBERS = STARTERS.map(s => s.startNumber);
+            } catch (e) {
+                resultsLabel.textContent = 'Fehler beim Laden';
+            }
+            renderList('');
+        }
+
+        init();
+
+        startBtn.addEventListener('click', async () => {
+            if (selected === null) return;
+            startBtn.disabled = true;
+            startBtn.innerHTML = '…';
+            try {
+                await ParseAPI.publishActiveStarter(selected);
+                channel.postMessage({ startnumber: selected });
+                startBtn.innerHTML = '✓ Gestartet';
+                setTimeout(() => enterWaitingForScores(selected), 800);
+            } catch (e) {
+                startBtn.innerHTML = '✕ Fehler';
+                startBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+
+</html>

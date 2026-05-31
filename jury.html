@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Heldentag 2026 – Jury Wertung</title>
+    <link rel="stylesheet" href="jury.css">
+</head>
+
+<body>
+    <header>
+        <div class="header-group">
+            <div class="header-label">Startnummer</div>
+            <div class="header-value" id="startnumber">—</div>
+        </div>
+        <div class="header-group">
+            <div class="header-label">Kampfrichter</div>
+            <div class="header-value" id="judgeid">—</div>
+        </div>
+    </header>
+    <div class="waiting" id="waiting">
+        <div class="waiting-dots">
+            <div class="waiting-dot"></div>
+            <div class="waiting-dot"></div>
+            <div class="waiting-dot"></div>
+        </div>
+        <div class="waiting-label">Warte auf Startnummer …</div>
+    </div>
+    <div class="content-center">
+        <main id="main"></main>
+        <div class="numpad-wrap" id="numpad-wrap"></div>
+    </div>
+
+    <div class="toast" id="toast">✓ Wertung gespeichert</div>
+    <div class="modal-backdrop" id="error-backdrop">
+        <div class="modal">
+            <div class="modal-title" style="color:#e74c3c">Fehler beim Speichern</div>
+            <div id="error-message" style="text-align:center;margin:1rem 0;color:var(--muted);font-size:0.95rem"></div>
+            <div class="modal-actions" style="display:flex;justify-content:center">
+                <button class="modal-confirm" id="error-ok">OK</button>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop" id="modal-backdrop">
+        <div class="modal">
+            <div class="modal-title">Wertung bestätigen</div>
+            <div style="text-align:center;margin-bottom:1rem"><span id="modal-startnum"></span></div>
+            <div id="modal-rows"></div>
+            <div class="modal-total">
+                <span class="modal-total-label">Gesamt</span>
+                <span class="modal-total-value" id="modal-total"></span>
+            </div>
+            <div class="modal-actions">
+                <button class="modal-cancel" id="modal-cancel">← Zurück</button>
+                <button class="modal-confirm" id="modal-confirm">✓ Abschicken</button>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <img src="assets/weraceLogo.png" alt="WeRace">
+    </footer>
+
+    <script src="config.js"></script>
+    <script src="parse-api.js"></script>
+    <script>        const CRITERIA = ['Schwierigkeit', 'Ausführung', 'Amplitude'];
+        const params = new URLSearchParams(location.search);
+
+        const token = params.get('token');
+        const judgeName = token ? CONFIG.judgeTokens[token] : null;
+
+        if (!judgeName) {
+            document.body.innerHTML =
+                '<div style="display:flex;align-items:center;justify-content:center;height:100dvh;' +
+                'font-family:sans-serif;font-size:1.4rem;color:#e74c3c;text-align:center;padding:2rem">' +
+                'Zugang verweigert.<br><span style="font-size:1rem;color:#888;margin-top:0.5rem;display:block">' +
+                'Ungültiger oder fehlender Token.</span></div>';
+            throw new Error('Invalid judge token');
+        }
+
+        let startNum = params.get('num');
+
+        document.getElementById('startnumber').textContent = startNum ?? '—';
+        document.getElementById('judgeid').textContent = judgeName;
+
+        // Heartbeat — announces this judge is online, refreshes every 30 s
+        ParseAPI.heartbeat(judgeName);
+        const _heartbeatTimer = setInterval(() => ParseAPI.heartbeat(judgeName), 30000);
+        window.addEventListener('pagehide', () => {
+            clearInterval(_heartbeatTimer);
+            ParseAPI.removePresence(judgeName);
+        });
+
+        if (!startNum) {
+            document.getElementById('waiting').classList.remove('hidden');
+        } else {
+            document.getElementById('waiting').classList.add('hidden');
+        }
+
+        function onNewStarter(num) {
+            startNum = String(num);
+            document.getElementById('startnumber').textContent = startNum;
+            document.getElementById('waiting').classList.add('hidden');
+            submitted = false;
+            activeCrit = null;
+            inputBuffer = '';
+            CRITERIA.forEach(c => scores[c] = 50);
+            renderCriteria();
+            renderNumpad();
+        }
+
+        // Live Query — receives starter from any device via Parse
+        ParseAPI.subscribeActiveStarter(onNewStarter);
+
+        // BroadcastChannel — fallback for same-device tabs
+        const starterChannel = new BroadcastChannel('werace-starter');
+        starterChannel.addEventListener('message', e => onNewStarter(e.data.startnumber));
+
+        const scores = Object.fromEntries(CRITERIA.map(c => [c, 50]));
+        let submitted = false;
+        let activeCrit = null;
+        let inputBuffer = '';
+
+        async function saveScore(startnumber, judgeName, scores) {
+            return ParseAPI.saveJuryScore(startnumber, judgeName, scores, CRITERIA);
+        }
+        function clamp(v) { return Math.max(0, Math.min(100, Math.round(v))); }
+
+        function selectCrit(crit) {
+            if (submitted) return;
+            activeCrit = crit;
+            inputBuffer = '';
+            renderCriteria();
+            renderNumpad();
+        }
+
+        function numpadPress(key) {
+            if (!activeCrit) return;
+            const next = inputBuffer + key;
+            if (next.length <= 3 && Number(next) <= 100) {
+                inputBuffer = next;
+                scores[activeCrit] = clamp(Number(inputBuffer));
+            }
+            renderCriteria();
+            renderNumpad();
+        }
+
+        function renderCriteria() {
+            const main = document.getElementById('main');
+            main.innerHTML = '';
+            for (const crit of CRITERIA) {
+                const row = document.createElement('div');
+                row.className = 'criterion' +
+                    (crit === activeCrit ? ' active' : '') +
+                    (submitted ? ' submitted' : '');
+                row.addEventListener('click', () => selectCrit(crit));
+
+                const label = document.createElement('div');
+                label.className = 'criterion-label';
+                label.textContent = crit;
+
+                const score = document.createElement('div');
+                score.className = 'criterion-score';
+                if (crit === activeCrit && inputBuffer !== '') {
+                    score.textContent = inputBuffer;
+                } else {
+                    score.textContent = scores[crit];
+                }
+
+                row.appendChild(label);
+                row.appendChild(score);
+                main.appendChild(row);
+            }
+        }
+
+        function renderNumpad() {
+            const wrap = document.getElementById('numpad-wrap');
+            wrap.innerHTML = '';
+
+            if (submitted) {
+                const btn = document.createElement('button');
+                btn.className = 'submit-btn done';
+                btn.textContent = '✓ Abgeschickt';
+                btn.disabled = true;
+                wrap.appendChild(btn);
+                return;
+            }
+
+            const grid = document.createElement('div');
+            grid.className = 'numpad' + (!activeCrit ? ' inactive' : '');
+            const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'];
+            for (const k of keys) {
+                const btn = document.createElement('button');
+                btn.className = 'np-btn' + (k === '0' ? ' zero' : '');
+                btn.textContent = k;
+                btn.addEventListener('click', () => numpadPress(k));
+                grid.appendChild(btn);
+            }
+            wrap.appendChild(grid);
+
+            const submitBtn = document.createElement('button');
+            submitBtn.className = 'submit-btn';
+            submitBtn.style.marginTop = '0.5rem';
+            submitBtn.innerHTML = `<span style="font-size:1.3rem">✓</span> <span class="badge">${CRITERIA.reduce((a, c) => a + scores[c], 0)}</span>`;
+            submitBtn.addEventListener('click', () => openModal());
+            wrap.appendChild(submitBtn);
+        }
+
+        function openModal() {
+            document.getElementById('modal-startnum').textContent = startNum;
+            document.getElementById('modal-startnum').style.cssText = 'color:var(--accent);font-size:1.4em;font-weight:800;';
+            const rows = document.getElementById('modal-rows');
+            rows.innerHTML = '';
+            for (const c of CRITERIA) {
+                const row = document.createElement('div');
+                row.className = 'modal-row';
+                row.innerHTML = `<span class="modal-crit">${c}</span><span class="modal-score">${scores[c]}</span>`;
+                rows.appendChild(row);
+            }
+            document.getElementById('modal-total').textContent = CRITERIA.reduce((a, c) => a + scores[c], 0);
+            document.getElementById('modal-backdrop').classList.add('open');
+        }
+
+        document.getElementById('error-ok').addEventListener('click', () => {
+            document.getElementById('error-backdrop').classList.remove('open');
+        });
+
+        document.getElementById('modal-cancel').addEventListener('click', () => {
+            document.getElementById('modal-backdrop').classList.remove('open');
+        });
+
+        document.getElementById('modal-confirm').addEventListener('click', async () => {
+            document.getElementById('modal-backdrop').classList.remove('open');
+            try {
+                await saveScore(startNum, judgeName, scores);
+            } catch (e) {
+                document.getElementById('error-message').textContent = e.message;
+                document.getElementById('error-backdrop').classList.add('open');
+                return;
+            }
+            // show toast
+            const toast = document.getElementById('toast');
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2000);
+            // reset for next rider
+            submitted = false;
+            activeCrit = null;
+            inputBuffer = '';
+            CRITERIA.forEach(c => scores[c] = 50);
+            document.getElementById('startnumber').textContent = '—';
+            document.getElementById('waiting').classList.remove('hidden');
+            renderCriteria();
+            renderNumpad();
+        });
+
+        renderCriteria();
+        renderNumpad();
+    </script>
+</body>
+
+</html>

@@ -1,602 +1,97 @@
 <!DOCTYPE html>
 <html lang="de">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BMX Freestyle – Jury Wertung</title>
+    <title>Heldentag</title>
     <style>
-        :root {
-            --bg: #0d1117;
-            --card: #161b22;
-            --border: #30363d;
-            --accent: #f78166;
-            --text: #e6edf3;
-            --muted: #8b949e;
-            --green: #3fb950;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
-            background: var(--bg);
-            color: var(--text);
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            min-height: 100vh;
+            min-height: 100dvh;
             display: flex;
             flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2.5rem;
+            background: #0d1117;
+            color: #e6edf3;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            padding: 2rem;
         }
 
-        header {
-            background: var(--card);
-            border-bottom: 1px solid var(--border);
-            padding: 1rem;
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+        }
+
+        .links {
             display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
+            flex-direction: column;
+            gap: 0.75rem;
+            width: 100%;
+            max-width: 360px;
         }
 
-        .header-group {
-            text-align: center;
-        }
-
-        .header-label {
-            font-size: 0.7rem;
-            color: var(--muted);
+        .link-label {
+            font-size: 0.65rem;
+            color: #8b949e;
             text-transform: uppercase;
             letter-spacing: 0.1em;
+            margin-bottom: 0.25rem;
         }
 
-        .header-value {
-            font-size: 2rem;
-            font-weight: 800;
-            line-height: 1.1;
-        }
-
-        #startnumber {
-            color: var(--accent);
-        }
-
-        #judgeid {
-            color: var(--muted);
-            font-size: 1.4rem;
-        }
-
-        main {
-            padding: 0.75rem 1rem 0;
-            max-width: 480px;
-            width: 100%;
-            margin: 0 auto;
-        }
-
-        .criterion {
+        a.tile {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0.6rem 1rem;
-            margin-bottom: 0.5rem;
-            background: var(--card);
-            border: 2px solid var(--border);
+            padding: 0.85rem 1rem;
+            background: #161b22;
+            border: 1px solid #30363d;
             border-radius: 10px;
-            cursor: pointer;
-            touch-action: manipulation;
-            user-select: none;
-            transition: border-color 0.1s;
-        }
-
-        .criterion.active {
-            border-color: var(--accent);
-        }
-
-        .criterion.submitted {
-            opacity: 0.5;
-            cursor: default;
-        }
-
-        .criterion-label {
-            font-size: 0.9rem;
-            font-weight: 600;
-            color: var(--text);
-        }
-
-        .criterion-score {
-            font-size: 1.8rem;
-            font-weight: 800;
-            color: var(--text);
-            min-width: 2.8rem;
-            text-align: right;
-        }
-
-        .criterion.active .criterion-score {
-            color: var(--accent);
-        }
-
-        /* numpad */
-        .numpad-wrap {
-            max-width: 480px;
-            width: 100%;
-            margin: 0 auto;
-            padding: 0.5rem 1rem 1rem;
-        }
-
-        .numpad {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 0.4rem;
-            transition: opacity 0.15s;
-        }
-
-        .numpad.inactive {
-            opacity: 0.25;
-            pointer-events: none;
-        }
-
-        .np-btn {
-            padding: 0.75rem 0;
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            color: var(--text);
-            font-size: 1.3rem;
-            font-weight: 600;
-            cursor: pointer;
-            touch-action: manipulation;
-            user-select: none;
-            text-align: center;
-        }
-
-        .np-btn:active {
-            background: var(--border);
-        }
-
-        .np-btn.zero {
-            grid-column: 1 / -1;
-        }
-
-        .submit-btn {
-            width: 100%;
-            max-width: 480px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.6rem;
-            margin: 0 auto;
-            padding: 0.9rem;
-            background: var(--green);
-            color: #000;
-            border: none;
-            border-radius: 10px;
-            font-size: 1.1rem;
+            color: #e6edf3;
+            text-decoration: none;
+            font-size: 1rem;
             font-weight: 700;
-            cursor: pointer;
-            touch-action: manipulation;
+            transition: border-color 0.15s;
         }
 
-        .submit-btn .badge {
-            background: rgba(0, 0, 0, 0.15);
-            color: rgba(255, 255, 255, 0.9);
-            border: 1.5px solid rgba(255, 255, 255, 0.35);
-            border-radius: 999px;
-            padding: 0.25rem 0.75rem;
-            font-size: 1.3rem;
-            font-weight: 800;
-            line-height: 1;
-            display: inline-flex;
-            align-items: center;
-            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
-            letter-spacing: 0.02em;
-        }
+        a.tile:active { background: #30363d; }
 
-        .submit-btn:active {
-            opacity: 0.85;
-        }
-
-        .submit-btn:disabled {
-            background: var(--border);
-            color: var(--muted);
-            cursor: not-allowed;
-        }
-
-        .submit-btn.done {
-            background: var(--border);
-            color: var(--green);
-            cursor: default;
-        }
-
-        /* waiting screen */
-        .waiting {
-            position: fixed;
-            inset: 0;
-            background: var(--bg);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 1rem;
-            z-index: 50;
-        }
-
-        .waiting.hidden {
-            display: none;
-        }
-
-        .waiting-dot {
-            width: 14px;
-            height: 14px;
-            border-radius: 50%;
-            background: var(--accent);
-            animation: pulse 1.4s ease-in-out infinite;
-        }
-
-        .waiting-dot:nth-child(2) {
-            animation-delay: 0.2s;
-            background: var(--muted);
-        }
-
-        .waiting-dot:nth-child(3) {
-            animation-delay: 0.4s;
-            background: var(--muted);
-        }
-
-        .waiting-dots {
-            display: flex;
-            gap: 0.5rem;
-        }
-
-        @keyframes pulse {
-
-            0%,
-            80%,
-            100% {
-                transform: scale(0.7);
-                opacity: 0.4;
-            }
-
-            40% {
-                transform: scale(1);
-                opacity: 1;
-            }
-        }
-
-        .waiting-label {
+        a.tile .badge {
             font-size: 0.75rem;
-            color: var(--muted);
-            text-transform: uppercase;
-            letter-spacing: 0.15em;
-        }
-
-        /* toast */
-        .toast {
-            position: fixed;
-            bottom: 2rem;
-            left: 50%;
-            transform: translateX(-50%) translateY(2rem);
-            background: var(--green);
-            color: #000;
-            font-size: 0.9rem;
-            font-weight: 700;
-            padding: 0.6rem 1.25rem;
-            border-radius: 999px;
-            opacity: 0;
-            transition: opacity 0.2s, transform 0.2s;
-            z-index: 200;
-            white-space: nowrap;
-        }
-        .toast.show {
-            opacity: 1;
-            transform: translateX(-50%) translateY(0);
-        }
-        /* modal */
-        .modal-backdrop {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(3px);
-            z-index: 100;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .modal-backdrop.open {
-            display: flex;
-        }
-
-        .modal {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 1.5rem 1.25rem 1.5rem;
-            width: calc(100% - 2rem);
-            max-width: 400px;
-        }
-
-        .modal-title {
-            font-size: 0.7rem;
-            color: var(--muted);
-            text-transform: uppercase;
-            letter-spacing: 0.12em;
-            margin-bottom: 1rem;
-            text-align: center;
-        }
-
-        .modal-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.5rem 0;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .modal-row:last-of-type {
-            border-bottom: none;
-        }
-
-        .modal-crit {
-            font-size: 0.95rem;
-            color: var(--muted);
-        }
-
-        .modal-score {
-            font-size: 1.4rem;
-            font-weight: 800;
-            color: var(--text);
-        }
-
-        .modal-total {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 0.75rem;
-            padding-top: 0.75rem;
-            border-top: 2px solid var(--border);
-        }
-
-        .modal-total-label {
-            font-size: 0.9rem;
-            font-weight: 700;
-            color: var(--muted);
-            text-transform: uppercase;
-        }
-
-        .modal-total-value {
-            font-size: 2rem;
-            font-weight: 800;
-            color: var(--green);
-        }
-
-        .modal-actions {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 0.5rem;
-            margin-top: 1.25rem;
-        }
-
-        .modal-cancel {
-            padding: 0.85rem;
-            background: transparent;
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            color: var(--text);
-            font-size: 1rem;
             font-weight: 600;
-            cursor: pointer;
+            color: #8b949e;
         }
 
-        .modal-confirm {
-            padding: 0.85rem;
-            background: var(--green);
-            border: none;
-            border-radius: 10px;
-            color: #000;
-            font-size: 1rem;
-            font-weight: 700;
-            cursor: pointer;
-        }
-
-        .modal-confirm:active {
-            opacity: 0.85;
-        }
+        a.tile.accent { border-color: #f78166; color: #f78166; }
     </style>
+    <script src="config.js"></script>
 </head>
-
 <body>
-    <header>
-        <div class="header-group">
-            <div class="header-label">Startnummer</div>
-            <div class="header-value" id="startnumber">—</div>
-        </div>
-        <div class="header-group">
-            <div class="header-label">Kampfrichter</div>
-            <div class="header-value" id="judgeid">—</div>
-        </div>
-    </header>
-    <div class="waiting" id="waiting">
-        <div class="waiting-dots">
-            <div class="waiting-dot"></div>
-            <div class="waiting-dot"></div>
-            <div class="waiting-dot"></div>
-        </div>
-        <div class="waiting-label">Warte auf Startnummer …</div>
-        <button id="simulate-btn" onclick="simulateStart()"
-            style="margin-top:1rem;padding:0.6rem 1.5rem;background:var(--card);color:var(--muted);border:1px solid var(--border);border-radius:8px;font-size:0.85rem;cursor:pointer;">Simuliere
-            Start</button>
-    </div>
-    <main id="main"></main>
-    <div class="numpad-wrap" id="numpad-wrap"></div>
+    <h1>Heldentag</h1>
 
-    <div class="toast" id="toast">✓ Wertung gespeichert</div>
-    <div class="modal-backdrop" id="modal-backdrop">
-        <div class="modal">
-            <div class="modal-title">Wertung bestätigen</div>
-            <div style="text-align:center;margin-bottom:1rem"><span id="modal-startnum"></span></div>
-            <div id="modal-rows"></div>
-            <div class="modal-total">
-                <span class="modal-total-label">Gesamt</span>
-                <span class="modal-total-value" id="modal-total"></span>
-            </div>
-            <div class="modal-actions">
-                <button class="modal-cancel" id="modal-cancel">← Zurück</button>
-                <button class="modal-confirm" id="modal-confirm">✓ Abschicken</button>
-            </div>
-        </div>
+    <div class="links">
+        <div class="link-label">Ansage</div>
+        <a class="tile accent" href="starter.html">Starter <span class="badge">→</span></a>
+
+        <div class="link-label" style="margin-top:0.5rem">Kampfrichter</div>
+        <div id="jury-links"></div>
     </div>
 
     <script>
-        const CRITERIA = ['Schwierigkeit', 'Ausführung', 'Amplitude'];
-        const JUDGE_NAMES = ['Alice', 'Bob', 'Carol'];
-        const params = new URLSearchParams(location.search);
+        const juryLinks = document.getElementById('jury-links');
+        juryLinks.style.display = 'flex';
+        juryLinks.style.flexDirection = 'column';
+        juryLinks.style.gap = '0.75rem';
 
-        const startNum = params.get('num');
-        const judgeRaw = params.get('judge');
-        const judgeName = judgeRaw ?? JUDGE_NAMES[Math.floor(Math.random() * JUDGE_NAMES.length)];
-
-        document.getElementById('startnumber').textContent = startNum ?? '—';
-        document.getElementById('judgeid').textContent = judgeName;
-
-        if (!startNum) {
-            document.getElementById('waiting').classList.remove('hidden');
-        } else {
-            document.getElementById('waiting').classList.add('hidden');
+        for (const [token, name] of Object.entries(CONFIG.judgeTokens)) {
+            const a = document.createElement('a');
+            a.className = 'tile';
+            a.href = `jury.html?token=${encodeURIComponent(token)}`;
+            a.innerHTML = `${name} <span class="badge">→</span>`;
+            juryLinks.appendChild(a);
         }
-
-        const scores = Object.fromEntries(CRITERIA.map(c => [c, 50]));
-        let submitted = false;
-        let activeCrit = null;
-        let inputBuffer = '';
-
-        function simulateStart() {
-            const num = Math.floor(Math.random() * 99 + 1);
-            document.getElementById('startnumber').textContent = num;
-            document.getElementById('waiting').classList.add('hidden');
-        }
-
-        function clamp(v) { return Math.max(0, Math.min(100, Math.round(v))); }
-
-        function selectCrit(crit) {
-            if (submitted) return;
-            activeCrit = crit;
-            inputBuffer = '';
-            renderCriteria();
-            renderNumpad();
-        }
-
-        function numpadPress(key) {
-            if (!activeCrit) return;
-            const next = inputBuffer + key;
-            if (next.length <= 3 && Number(next) <= 100) {
-                inputBuffer = next;
-                scores[activeCrit] = clamp(Number(inputBuffer));
-            }
-            renderCriteria();
-            renderNumpad();
-        }
-
-        function renderCriteria() {
-            const main = document.getElementById('main');
-            main.innerHTML = '';
-            for (const crit of CRITERIA) {
-                const row = document.createElement('div');
-                row.className = 'criterion' +
-                    (crit === activeCrit ? ' active' : '') +
-                    (submitted ? ' submitted' : '');
-                row.addEventListener('click', () => selectCrit(crit));
-
-                const label = document.createElement('div');
-                label.className = 'criterion-label';
-                label.textContent = crit;
-
-                const score = document.createElement('div');
-                score.className = 'criterion-score';
-                if (crit === activeCrit && inputBuffer !== '') {
-                    score.textContent = inputBuffer;
-                } else {
-                    score.textContent = scores[crit];
-                }
-
-                row.appendChild(label);
-                row.appendChild(score);
-                main.appendChild(row);
-            }
-        }
-
-        function renderNumpad() {
-            const wrap = document.getElementById('numpad-wrap');
-            wrap.innerHTML = '';
-
-            if (submitted) {
-                const btn = document.createElement('button');
-                btn.className = 'submit-btn done';
-                btn.textContent = '✓ Abgeschickt';
-                btn.disabled = true;
-                wrap.appendChild(btn);
-                return;
-            }
-
-            const grid = document.createElement('div');
-            grid.className = 'numpad' + (!activeCrit ? ' inactive' : '');
-            const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'];
-            for (const k of keys) {
-                const btn = document.createElement('button');
-                btn.className = 'np-btn' + (k === '0' ? ' zero' : '');
-                btn.textContent = k;
-                btn.addEventListener('click', () => numpadPress(k));
-                grid.appendChild(btn);
-            }
-            wrap.appendChild(grid);
-
-            const submitBtn = document.createElement('button');
-            submitBtn.className = 'submit-btn';
-            submitBtn.style.marginTop = '0.5rem';
-            submitBtn.innerHTML = `<span style="font-size:1.3rem">✓</span> <span class="badge">${CRITERIA.reduce((a, c) => a + scores[c], 0)}</span>`;
-            submitBtn.addEventListener('click', () => openModal());
-            wrap.appendChild(submitBtn);
-        }
-
-        function openModal() {
-            document.getElementById('modal-startnum').textContent = startNum;
-            document.getElementById('modal-startnum').style.cssText = 'color:var(--accent);font-size:1.4em;font-weight:800;';
-            const rows = document.getElementById('modal-rows');
-            rows.innerHTML = '';
-            for (const c of CRITERIA) {
-                const row = document.createElement('div');
-                row.className = 'modal-row';
-                row.innerHTML = `<span class="modal-crit">${c}</span><span class="modal-score">${scores[c]}</span>`;
-                rows.appendChild(row);
-            }
-            document.getElementById('modal-total').textContent = CRITERIA.reduce((a, c) => a + scores[c], 0);
-            document.getElementById('modal-backdrop').classList.add('open');
-        }
-
-        document.getElementById('modal-cancel').addEventListener('click', () => {
-            document.getElementById('modal-backdrop').classList.remove('open');
-        });
-
-        document.getElementById('modal-confirm').addEventListener('click', () => {
-            document.getElementById('modal-backdrop').classList.remove('open');
-            console.log('Scores:', { startnumber: startNum ?? '—', judge: judgeName, ...scores });
-            // show toast
-            const toast = document.getElementById('toast');
-            toast.classList.add('show');
-            setTimeout(() => toast.classList.remove('show'), 2000);
-            // reset for next rider
-            submitted = false;
-            activeCrit = null;
-            inputBuffer = '';
-            CRITERIA.forEach(c => scores[c] = 50);
-            document.getElementById('startnumber').textContent = '—';
-            document.getElementById('waiting').classList.remove('hidden');
-            renderCriteria();
-            renderNumpad();
-        });
-
-        renderCriteria();
-        renderNumpad();
     </script>
 </body>
-
 </html>
