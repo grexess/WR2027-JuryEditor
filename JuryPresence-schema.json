@@ -1,16 +1,12 @@
 {
   "className": "JuryPresence",
   "fields": {
-    "objectId":   { "type": "String" },
-    "createdAt":  { "type": "Date" },
-    "updatedAt":  { "type": "Date" },
-    "ACL":        { "type": "ACL" },
-    "judgeName":  { "type": "String" },
-    "lastSeen":   { "type": "Date" },
-    "event": {
-      "type": "Pointer",
-      "targetClass": "Event"
-    }
+    "objectId":  { "type": "String" },
+    "createdAt": { "type": "Date" },
+    "updatedAt": { "type": "Date" },
+    "ACL":       { "type": "ACL" },
+    "judgeName": { "type": "String" },
+    "lastSeen":  { "type": "Date" }
   },
   "classLevelPermissions": {
     "find":     { "*": true },

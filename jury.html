@@ -86,7 +86,7 @@
 
         // Heartbeat — announces this judge is online, refreshes every 30 s
         ParseAPI.heartbeat(judgeName);
-        const _heartbeatTimer = setInterval(() => ParseAPI.heartbeat(judgeName), 30000);
+        const _heartbeatTimer = setInterval(() => ParseAPI.heartbeat(judgeName), 15000);
         window.addEventListener('pagehide', () => {
             clearInterval(_heartbeatTimer);
             ParseAPI.removePresence(judgeName);
