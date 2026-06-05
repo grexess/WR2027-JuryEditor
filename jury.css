@@ -31,10 +31,10 @@ body {
 header {
     background: var(--card);
     border-bottom: 1px solid var(--border);
-    padding: 1rem;
+    padding: 0.35rem 1rem;
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
+    align-items: center;
 }
 
 .header-group {
@@ -49,7 +49,7 @@ header {
 }
 
 .header-value {
-    font-size: 2rem;
+    font-size: 1.3rem;
     font-weight: 800;
     line-height: 1.1;
 }
@@ -74,7 +74,9 @@ main {
     flex: 1;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-start;
+    min-height: 0;
+    overflow: hidden;
 }
 
 .criterion {
@@ -199,7 +201,8 @@ main {
 }
 
 .submit-btn:disabled {
-    background: var(--border);
+    background: transparent;
+    border: 2px solid var(--border);
     color: var(--muted);
     cursor: not-allowed;
 }
@@ -405,17 +408,11 @@ main {
 
 /* ── Starter page ── */
 
-.picker-wrap {
-    max-width: 480px;
-    width: 100%;
-    margin: 0 auto;
-    padding: 0.75rem 1rem 0;
-}
-
 .picker-input-wrap {
     position: relative;
     display: flex;
     align-items: center;
+    flex-shrink: 0;
 }
 
 .picker-input-wrap svg {
@@ -454,12 +451,21 @@ main {
     color: var(--muted);
     text-transform: uppercase;
     letter-spacing: 0.1em;
+    flex-shrink: 0;
 }
 
 .picker-list {
-    margin-top: 0.5rem;
+    flex: 1;
+    min-height: 0;
     overflow-y: auto;
-    max-height: calc(5 * 3.35rem);
+    max-width: 480px;
+    width: 100%;
+    margin: 0.25rem auto 0;
+    padding: 0 1rem;
+    box-sizing: border-box;
+}
+
+.picker-list-inner {
     border: 1px solid var(--border);
     border-radius: 10px;
     background: var(--card);
@@ -509,6 +515,75 @@ main {
     color: var(--text);
 }
 
+.picker-item-group {
+    margin-left: auto;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--muted);
+    background: var(--border);
+    border-radius: 4px;
+    padding: 0.1rem 0.4rem;
+    white-space: nowrap;
+    align-self: center;
+}
+
+.picker-item-runs {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 15%, transparent);
+    border-radius: 4px;
+    padding: 0.1rem 0.4rem;
+    white-space: nowrap;
+    align-self: center;
+}
+
+.filter-chips {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    justify-content: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0 0;
+    scrollbar-width: none;
+    flex-shrink: 0;
+}
+
+.filter-chips::-webkit-scrollbar {
+    display: none;
+}
+
+.fchip {
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    border-radius: 999px;
+    padding: 0.2rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    touch-action: manipulation;
+    user-select: none;
+}
+
+.fchip:active {
+    background: var(--border);
+}
+
+.fchip.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+}
+
+.fchip.runs.active {
+    background: color-mix(in srgb, var(--accent) 20%, transparent);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
 .picker-item:active {
     background: var(--border);
 }
@@ -524,12 +599,133 @@ main {
     font-size: 0.9rem;
 }
 
-.starter-footer {
-    padding: 0.75rem 1rem 0.5rem;
+
+#picker-section {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+#picker-button-row {
+    flex-shrink: 0;
+}
+
+#picker-controls {
+    flex-shrink: 0;
     max-width: 480px;
     width: 100%;
     margin: 0 auto;
-    flex-shrink: 0;
+    padding: 0.5rem 1rem 0;
+    box-sizing: border-box;
+}
+
+.picker-list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    max-width: 480px;
+    width: 100%;
+    margin: 0.25rem auto 0;
+    padding: 0 1rem;
+    box-sizing: border-box;
+}
+
+/* ── Jury score grid (waiting overlay) ── */
+.jcard-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.6rem;
+    width: 100%;
+    max-width: 480px;
+    padding: 0 1rem;
+}
+
+.jcard {
+    background: var(--card);
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    padding: 0.6rem 0.6rem 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    transition: border-color 0.3s;
+    min-width: 0;
+}
+
+.jcard.scored {
+    border-color: var(--green);
+}
+
+.jcard-header {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.jcard-scores {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.1rem;
+    margin-top: 0.1rem;
+}
+
+.jcard-crit { text-align: center; }
+
+.jcard-crit-label {
+    font-size: 0.5rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.jcard-crit-val {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--text);
+    line-height: 1.1;
+}
+
+.jcard-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 0.15rem 0;
+}
+
+.jcard-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+}
+
+.jcard-total-label {
+    font-size: 0.55rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.jcard-total-val {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: var(--green);
+}
+
+.jcard-pending {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.6rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.5rem 0;
 }
 
 /* ── Footer ── */

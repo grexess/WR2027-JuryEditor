@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__playwright__browser_navigate",
+      "Bash(npx --yes serve . -l 5500)",
+      "Bash(python -m http.server 5500)"
+    ]
+  }
+}

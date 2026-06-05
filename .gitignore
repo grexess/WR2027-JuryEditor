@@ -1,1 +1,7 @@
 config.js
+
+*.log
+*.yml
+*.png
+*-schema.json
+

@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ergebnisse</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏆</text></svg>">
+    <link rel="stylesheet" href="jury.css">
+    <style>
+        .results-controls {
+            flex-shrink: 0;
+            max-width: 600px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 0.5rem 1rem 0;
+            box-sizing: border-box;
+        }
+
+        .results-list {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            padding: 0.5rem 1rem 1rem;
+            max-width: 600px;
+            width: 100%;
+            margin: 0 auto;
+            box-sizing: border-box;
+        }
+
+        .result-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            margin-bottom: 0.5rem;
+            overflow: hidden;
+        }
+
+        .result-header {
+            display: grid;
+            grid-template-columns: 2.5rem 1fr auto;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.65rem 1rem;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .result-header:active { background: var(--border); }
+
+        .result-rank {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: var(--muted);
+            text-align: right;
+        }
+
+        .result-rank.top1 { color: #ffd700; }
+        .result-rank.top2 { color: #c0c0c0; }
+        .result-rank.top3 { color: #cd7f32; }
+
+        .result-name {
+            display: flex;
+            flex-direction: column;
+            gap: 0.05rem;
+            min-width: 0;
+        }
+
+        .result-meta {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .result-num {
+            font-size: 0.7rem;
+            color: var(--accent);
+            font-weight: 700;
+        }
+
+        .result-group-badge {
+            font-size: 0.65rem;
+            font-weight: 600;
+            color: var(--muted);
+            background: var(--border);
+            border-radius: 4px;
+            padding: 0.1rem 0.35rem;
+            white-space: nowrap;
+        }
+
+        .result-runs-badge {
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: var(--accent);
+            background: color-mix(in srgb, var(--accent) 15%, transparent);
+            border-radius: 4px;
+            padding: 0.1rem 0.35rem;
+            white-space: nowrap;
+        }
+
+        .result-first {
+            font-size: 0.75rem;
+            color: var(--muted);
+            font-weight: 400;
+        }
+
+        .result-last {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .result-best {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: var(--green);
+            white-space: nowrap;
+        }
+
+        .result-runs {
+            border-top: 1px solid var(--border);
+            display: none;
+        }
+
+        .result-card.open .result-runs { display: block; }
+
+        .run-row {
+            padding: 0.5rem 1rem;
+            border-bottom: 1px solid var(--border);
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .run-row:last-child { border-bottom: none; }
+
+        .run-label {
+            font-size: 0.65rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            white-space: nowrap;
+        }
+
+        .run-best-badge {
+            font-size: 0.6rem;
+            font-weight: 700;
+            color: var(--green);
+            background: color-mix(in srgb, var(--green) 15%, transparent);
+            border-radius: 4px;
+            padding: 0.1rem 0.35rem;
+            white-space: nowrap;
+        }
+
+        .run-judges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+        }
+
+        .run-judge-chip {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.2rem 0.5rem;
+            min-width: 3rem;
+        }
+
+        .run-judge-name {
+            font-size: 0.6rem;
+            color: var(--muted);
+            white-space: nowrap;
+        }
+
+        .run-judge-score {
+            font-size: 0.95rem;
+            font-weight: 800;
+            color: var(--text);
+        }
+
+        .run-total {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: var(--text);
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        .run-total.best { color: var(--green); }
+
+        .results-empty {
+            text-align: center;
+            color: var(--muted);
+            font-size: 0.9rem;
+            padding: 3rem 1rem;
+        }
+
+        .results-count-label {
+            padding: 0.4rem 0.25rem 0.25rem;
+            font-size: 0.7rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .live-dot {
+            width: 0.45rem;
+            height: 0.45rem;
+            border-radius: 50%;
+            background: var(--green);
+            display: inline-block;
+            animation: pulse 2s ease-in-out infinite;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="header-group">
+            <div class="header-label">WeRace</div>
+            <div class="header-value" style="color:var(--accent)" id="event-name">Ergebnisse</div>
+        </div>
+        <div class="header-group">
+            <div class="header-label">Starter</div>
+            <div class="header-value" id="starter-count">—</div>
+        </div>
+        <div class="header-group">
+            <div class="header-label">Live</div>
+            <div class="header-value"><span class="live-dot"></span></div>
+        </div>
+    </header>
+
+    <div class="content-center">
+        <div class="results-controls">
+            <div id="group-chips" class="filter-chips" style="display:none;justify-content:center"></div>
+            <div class="results-count-label" id="count-label"></div>
+        </div>
+        <div class="results-list" id="results-list">
+            <div class="results-empty">Lade Ergebnisse …</div>
+        </div>
+    </div>
+
+    <footer>
+        <img src="assets/weraceLogo.png" alt="WeRace">
+    </footer>
+
+    <script src="config.js"></script>
+    <script src="parse-api.js"></script>
+    <script>
+        let starters = [];
+        let allScores = [];
+        let filterGroup = null; // startGroup objectId or null = all
+
+        function buildResults() {
+            const judgeCount = Object.keys(CONFIG.judgeTokens).length;
+
+            const byStarter = {};
+            for (const s of allScores) {
+                const n = s.startnumber;
+                if (!byStarter[n]) byStarter[n] = [];
+                byStarter[n].push(s);
+            }
+
+            const results = [];
+            for (const [numStr, scores] of Object.entries(byStarter)) {
+                const num = Number(numStr);
+                const starter = starters.find(s => s.startNumber === num);
+
+                if (filterGroup !== null && starter?.startGroup?.objectId !== filterGroup) continue;
+
+                const runs = [];
+                for (let i = 0; i + judgeCount <= scores.length; i += judgeCount) {
+                    const chunk = scores.slice(i, i + judgeCount);
+                    const runTotal = chunk.reduce((a, s) => a + (s.total ?? 0), 0);
+                    runs.push({ scores: chunk, total: runTotal });
+                }
+
+                if (!runs.length) continue;
+
+                const best = Math.max(...runs.map(r => r.total));
+                results.push({ num, starter, runs, best });
+            }
+
+            results.sort((a, b) => b.best - a.best);
+            return results;
+        }
+
+        function renderGroupChips() {
+            const bar = document.getElementById('group-chips');
+            const groups = [];
+            const seen = new Set();
+            for (const s of starters) {
+                if (s.startGroup && !seen.has(s.startGroup.objectId)) {
+                    seen.add(s.startGroup.objectId);
+                    groups.push({ id: s.startGroup.objectId, name: s.startGroup.name ?? s.startGroup.objectId });
+                }
+            }
+            groups.sort((a, b) => a.name.localeCompare(b.name));
+
+            bar.style.display = groups.length ? '' : 'none';
+            bar.innerHTML = '';
+            for (const g of groups) {
+                const chip = document.createElement('button');
+                chip.className = 'fchip' + (filterGroup === g.id ? ' active' : '');
+                chip.textContent = g.name;
+                chip.addEventListener('click', () => {
+                    filterGroup = filterGroup === g.id ? null : g.id;
+                    renderGroupChips();
+                    render();
+                });
+                bar.appendChild(chip);
+            }
+        }
+
+        function render() {
+            const results = buildResults();
+            const list = document.getElementById('results-list');
+            const total = filterGroup !== null
+                ? results.length + ' von ' + buildResultsAll().length
+                : results.length;
+            document.getElementById('starter-count').textContent = results.length;
+            document.getElementById('count-label').textContent =
+                results.length + (results.length !== 1 ? ' Starter' : ' Starter');
+
+            if (!results.length) {
+                list.innerHTML = '<div class="results-empty">Noch keine Wertungen</div>';
+                return;
+            }
+
+            const openNums = new Set(
+                [...list.querySelectorAll('.result-card.open')].map(el => Number(el.dataset.num))
+            );
+
+            list.innerHTML = '';
+            results.forEach(({ num, starter, runs, best }, i) => {
+                const card = document.createElement('div');
+                card.className = 'result-card' + (openNums.has(num) ? ' open' : '');
+                card.dataset.num = num;
+
+                const rankClass = i === 0 ? ' top1' : i === 1 ? ' top2' : i === 2 ? ' top3' : '';
+                const firstName = starter?.firstName ?? '';
+                const lastName = starter?.lastName ?? String(num);
+                const groupName = starter?.startGroup?.name ?? '';
+
+                const header = document.createElement('div');
+                header.className = 'result-header';
+                header.innerHTML =
+                    `<div class="result-rank${rankClass}">${i + 1}</div>` +
+                    `<div class="result-name">` +
+                    `<div class="result-meta">` +
+                    `<span class="result-num">#${num}</span>` +
+                    (groupName ? `<span class="result-group-badge">${groupName}</span>` : '') +
+                    `<span class="result-runs-badge">${runs.length}×</span>` +
+                    `</div>` +
+                    `<span class="result-first">${firstName}</span>` +
+                    `<span class="result-last">${lastName}</span>` +
+                    `</div>` +
+                    `<div class="result-best">${best.toFixed(1)}</div>`;
+                header.addEventListener('click', () => card.classList.toggle('open'));
+                card.appendChild(header);
+
+                const runsDiv = document.createElement('div');
+                runsDiv.className = 'result-runs';
+
+                runs.forEach((run, ri) => {
+                    const isBest = run.total === best;
+                    const row = document.createElement('div');
+                    row.className = 'run-row';
+
+                    const labelWrap = document.createElement('div');
+                    labelWrap.style.cssText = 'display:flex;flex-direction:column;gap:0.2rem';
+                    labelWrap.innerHTML =
+                        `<span class="run-label">Lauf ${ri + 1}</span>` +
+                        (isBest ? `<span class="run-best-badge">Best</span>` : '');
+
+                    const judgesDiv = document.createElement('div');
+                    judgesDiv.className = 'run-judges';
+                    for (const score of run.scores) {
+                        const chip = document.createElement('div');
+                        chip.className = 'run-judge-chip';
+                        chip.innerHTML =
+                            `<span class="run-judge-name">${score.judgeName}</span>` +
+                            `<span class="run-judge-score">${(score.total ?? 0).toFixed(1)}</span>`;
+                        judgesDiv.appendChild(chip);
+                    }
+
+                    const totalDiv = document.createElement('div');
+                    totalDiv.className = 'run-total' + (isBest ? ' best' : '');
+                    totalDiv.textContent = run.total.toFixed(1);
+
+                    row.appendChild(labelWrap);
+                    row.appendChild(judgesDiv);
+                    row.appendChild(totalDiv);
+                    runsDiv.appendChild(row);
+                });
+
+                card.appendChild(runsDiv);
+                list.appendChild(card);
+            });
+        }
+
+        // Helper for unfiltered count used in label
+        function buildResultsAll() {
+            const saved = filterGroup;
+            filterGroup = null;
+            const r = buildResults();
+            filterGroup = saved;
+            return r;
+        }
+
+        async function refresh() {
+            try {
+                allScores = await ParseAPI.fetchAllJuryScores();
+                render();
+            } catch (_) {}
+        }
+
+        async function init() {
+            await Promise.all([ParseAPI.fetchEvent(), ParseAPI.fetchJudges()]).catch(() => {});
+            document.getElementById('event-name').textContent = CONFIG.eventName;
+            document.title = `${CONFIG.eventName} – Ergebnisse`;
+
+            starters = await ParseAPI.fetchStarters().catch(() => []);
+            renderGroupChips();
+            await refresh();
+
+            ParseAPI.subscribeAllJuryScores(refresh);
+        }
+
+        init();
+    </script>
+</body>
+
+</html>

@@ -4,7 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Heldentag 2026 – Jury Wertung</title>
+    <title>Heldentag – Wertung</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏅</text></svg>">
     <link rel="stylesheet" href="jury.css">
 </head>
 
@@ -64,25 +65,31 @@
 
     <script src="config.js"></script>
     <script src="parse-api.js"></script>
-    <script>        const CRITERIA = ['Schwierigkeit', 'Ausführung', 'Amplitude'];
+    <script>
         const params = new URLSearchParams(location.search);
+        const token  = params.get('token');
 
-        const token = params.get('token');
-        const judgeName = token ? CONFIG.judgeTokens[token] : null;
+        // Fetch event config and judges before auth check so tokens come from Parse
+        (async () => {
+            await Promise.all([ParseAPI.fetchEvent(), ParseAPI.fetchJudges()]).catch(() => {});
 
-        if (!judgeName) {
-            document.body.innerHTML =
-                '<div style="display:flex;align-items:center;justify-content:center;height:100dvh;' +
-                'font-family:sans-serif;font-size:1.4rem;color:#e74c3c;text-align:center;padding:2rem">' +
-                'Zugang verweigert.<br><span style="font-size:1rem;color:#888;margin-top:0.5rem;display:block">' +
-                'Ungültiger oder fehlender Token.</span></div>';
-            throw new Error('Invalid judge token');
-        }
+            const CRITERIA  = CONFIG.criteria.map(c => c.label);
+            const judgeName = token ? CONFIG.judgeTokens[token] : null;
 
-        let startNum = params.get('num');
+            if (!judgeName) {
+                document.body.innerHTML =
+                    '<div style="display:flex;align-items:center;justify-content:center;height:100dvh;' +
+                    'font-family:sans-serif;font-size:1.4rem;color:#e74c3c;text-align:center;padding:2rem">' +
+                    'Zugang verweigert.<br><span style="font-size:1rem;color:#888;margin-top:0.5rem;display:block">' +
+                    'Ungültiger oder fehlender Token.</span></div>';
+                return;
+            }
 
-        document.getElementById('startnumber').textContent = startNum ?? '—';
-        document.getElementById('judgeid').textContent = judgeName;
+            let startNum = params.get('num');
+
+            document.getElementById('startnumber').textContent = startNum ?? '—';
+            document.getElementById('judgeid').textContent = judgeName;
+            document.title = `${CONFIG.eventName} – Wertung ${judgeName}`;
 
         // Heartbeat — announces this judge is online, refreshes every 30 s
         ParseAPI.heartbeat(judgeName);
@@ -256,6 +263,7 @@
 
         renderCriteria();
         renderNumpad();
+        })(); // end async init
     </script>
 </body>
 

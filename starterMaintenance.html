@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Heldentag 2026 – Starter Verwaltung</title>
+    <title>WeRace – Starter Verwaltung</title>
     <link rel="stylesheet" href="jury.css">
     <style>
         body {
@@ -447,6 +447,8 @@
         }
 
         async function loadStarters() {
+            await ParseAPI.fetchEvent().catch(() => {});
+            document.title = `${CONFIG.eventName} – Starter Verwaltung`;
             setStatus('Lade Starter …');
             try {
                 allStarters = await ParseAPI.fetchStarters();

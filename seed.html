@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WeRace – Seed</title>
+    <link rel="stylesheet" href="jury.css">
+    <style>
+        body { overflow: auto; }
+        .page-wrap { max-width: 480px; margin: 0 auto; padding: 1.5rem 1rem; }
+        .seed-title { font-size: 1.4rem; font-weight: 800; color: var(--accent); margin-bottom: 1.5rem; }
+        .field-group { display: flex; flex-direction: column; gap: 0.35rem; margin-bottom: 0.75rem; }
+        .field-label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
+        .field-input {
+            padding: 0.65rem 1rem;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 1rem;
+            outline: none;
+        }
+        .field-input:focus { border-color: var(--accent); }
+        .hint {
+            font-size: 0.82rem;
+            color: var(--muted);
+            line-height: 1.5;
+            margin-bottom: 1rem;
+        }
+        .hint strong { color: var(--text); }
+        .log-wrap {
+            display: none;
+            margin-top: 1.25rem;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 0.75rem 1rem;
+            max-height: 340px;
+            overflow-y: auto;
+            font-size: 0.82rem;
+            font-family: 'Segoe UI Mono', monospace;
+        }
+        .log-entry { padding: 0.1rem 0; white-space: pre; }
+        .ok   { color: var(--green); }
+        .skip { color: var(--muted); }
+        .err  { color: var(--accent); }
+        .head { color: var(--text); font-weight: 700; margin-top: 0.4rem; }
+    </style>
+    <script src="config.js"></script>
+</head>
+<body>
+    <div class="page-wrap">
+        <div class="seed-title">Seed – Testdaten erstellen</div>
+
+        <div id="login-section">
+            <div class="field-group">
+                <div class="field-label">Master Key</div>
+                <input class="field-input" id="master-key-input" type="password" autocomplete="off" placeholder="Back4App Master Key">
+            </div>
+            <div id="login-err" style="color:var(--accent);font-size:0.85rem;min-height:1.2em;margin-bottom:0.5rem"></div>
+            <button class="submit-btn" id="login-btn">Weiter</button>
+        </div>
+
+        <div id="seed-section" style="display:none">
+            <div class="hint">
+                Erstellt Event <strong>Heldentag</strong> mit den Startgruppen
+                <strong>Kids, Amateur, Pro, Frauen</strong> und je 10 Startern mit
+                zufälligen Startnummern.<br>
+                Bereits vorhandene Datensätze werden übersprungen.
+            </div>
+            <button class="submit-btn" id="seed-btn">Seed erstellen</button>
+        </div>
+
+        <div class="log-wrap" id="log-wrap"></div>
+    </div>
+
+    <script>
+        let masterKey = null;
+
+        function buildHeaders() {
+            const h = {
+                'x-parse-application-id': CONFIG.parseAppId,
+                'x-parse-javascript-key':  CONFIG.parseJsKey,
+                'content-type': 'application/json',
+            };
+            if (masterKey) h['x-parse-master-key'] = masterKey;
+            return h;
+        }
+
+        async function pGet(path) {
+            const res = await fetch(`${CONFIG.parseServerUrl}${path}`, { headers: buildHeaders() });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            return res.json();
+        }
+
+        async function pPost(path, body) {
+            const res = await fetch(`${CONFIG.parseServerUrl}${path}`, {
+                method: 'POST', headers: buildHeaders(), body: JSON.stringify(body),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
+            return data;
+        }
+
+        // ── Login ──
+
+        async function doLogin() {
+            const key = document.getElementById('master-key-input').value.trim();
+            const errEl = document.getElementById('login-err');
+            errEl.textContent = '';
+            if (!key) { errEl.textContent = 'Bitte Master Key eingeben.'; return; }
+            const btn = document.getElementById('login-btn');
+            btn.disabled = true; btn.textContent = '…';
+            // Verify the key with a cheap read before proceeding
+            masterKey = key;
+            try {
+                await pGet(`/classes/Event?limit=0`);
+                document.getElementById('login-section').style.display = 'none';
+                document.getElementById('seed-section').style.display = '';
+            } catch (e) {
+                masterKey = null;
+                errEl.textContent = 'Master Key ungültig oder Verbindungsfehler.';
+                btn.disabled = false; btn.textContent = 'Weiter';
+            }
+        }
+
+        // ── Log ──
+
+        function log(msg, cls = '') {
+            const wrap = document.getElementById('log-wrap');
+            wrap.style.display = '';
+            const el = document.createElement('div');
+            el.className = 'log-entry' + (cls ? ' ' + cls : '');
+            el.textContent = msg;
+            wrap.appendChild(el);
+            wrap.scrollTop = wrap.scrollHeight;
+        }
+
+        // ── Dummy data ──
+
+        const MALE   = ['Felix','Luca','Noah','Ben','Leon','Finn','Elias','Jonas','Tim','Max','Paul','Jan','Erik','Nico','Tom'];
+        const FEMALE = ['Lena','Anna','Laura','Sarah','Emma','Mia','Lisa','Julia','Hannah','Sophie','Lea','Marie','Nina','Katrin','Tanja'];
+        const LAST   = ['Müller','Schmidt','Schneider','Fischer','Weber','Wagner','Bauer','Koch','Richter','Hoffmann','Klein','Wolf','Schröder','Neumann','Braun'];
+
+        const GROUPS = [
+            { code: 'K', name: 'Kids',    sortOrder: 1, female: false, birthFrom: 2013, birthTo: 2017 },
+            { code: 'A', name: 'Amateur', sortOrder: 2, female: false, birthFrom: 1998, birthTo: 2008 },
+            { code: 'P', name: 'Pro',     sortOrder: 3, female: false, birthFrom: 1988, birthTo: 2002 },
+            { code: 'F', name: 'Frauen',  sortOrder: 4, female: true,  birthFrom: 1990, birthTo: 2008 },
+        ];
+
+        function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+        function rndDate(fromYear, toYear) {
+            const y = fromYear + Math.floor(Math.random() * (toYear - fromYear + 1));
+            const m = String(Math.floor(Math.random() * 12) + 1).padStart(2, '0');
+            const d = String(Math.floor(Math.random() * 28) + 1).padStart(2, '0');
+            return `${y}-${m}-${d}T00:00:00.000Z`;
+        }
+
+        function uniqueStartNumbers(count, min, max) {
+            const nums = new Set();
+            while (nums.size < count) nums.add(min + Math.floor(Math.random() * (max - min + 1)));
+            return [...nums].sort((a, b) => a - b);
+        }
+
+        // ── Seed ──
+
+        async function runSeed() {
+            const btn = document.getElementById('seed-btn');
+            btn.disabled = true;
+            document.getElementById('log-wrap').innerHTML = '';
+
+            try {
+                // 1. Event
+                log('Event "Heldentag"', 'head');
+                const evWhere = encodeURIComponent(JSON.stringify({ name: 'Heldentag' }));
+                const evRes   = await pGet(`/classes/Event?where=${evWhere}&limit=1`);
+                let eventId;
+                if (evRes.results?.length) {
+                    eventId = evRes.results[0].objectId;
+                    log(`  ↳ vorhanden  ${eventId}`, 'skip');
+                } else {
+                    const ev = await pPost('/classes/Event', {
+                        name: 'Heldentag',
+                        date: { __type: 'Date', iso: '2026-08-15T08:00:00.000Z' },
+                        criteria:      CONFIG.criteria,
+                        presenceStalMs: CONFIG.presenceStalMs,
+                        presencePollMs: CONFIG.presencePollMs,
+                    });
+                    eventId = ev.objectId;
+                    log(`  ↳ erstellt   ${eventId}`, 'ok');
+                }
+
+                const eventPtr = { __type: 'Pointer', className: 'Event', objectId: eventId };
+
+                // 2. StartGroups
+                log('Startgruppen', 'head');
+                const groupIds = {};
+                for (const g of GROUPS) {
+                    const where    = encodeURIComponent(JSON.stringify({ name: g.name, event: eventPtr }));
+                    const existing = await pGet(`/classes/StartGroup?where=${where}&limit=1`);
+                    if (existing.results?.length) {
+                        groupIds[g.code] = existing.results[0].objectId;
+                        log(`  ↳ ${g.name.padEnd(8)} vorhanden`, 'skip');
+                    } else {
+                        const sg = await pPost('/classes/StartGroup', {
+                            name: g.name, sortOrder: g.sortOrder, event: eventPtr,
+                        });
+                        groupIds[g.code] = sg.objectId;
+                        log(`  ↳ ${g.name.padEnd(8)} erstellt`, 'ok');
+                    }
+                }
+
+                // 3. Judges
+                log('Kampfrichter', 'head');
+                for (const [token, name] of Object.entries(CONFIG.judgeTokens)) {
+                    const where    = encodeURIComponent(JSON.stringify({ token, event: eventPtr }));
+                    const existing = await pGet(`/classes/Judge?where=${where}&limit=1`);
+                    if (existing.results?.length) {
+                        log(`  ↳ ${name.padEnd(10)} vorhanden`, 'skip');
+                    } else {
+                        await pPost('/classes/Judge', { name, token, event: eventPtr });
+                        log(`  ↳ ${name.padEnd(10)} erstellt`, 'ok');
+                    }
+                }
+
+                // 4. Starters
+                log('Starter (40 zufällige Startnummern 1–200)', 'head');                const startNums = uniqueStartNumbers(40, 1, 200);
+                let idx = 0;
+                for (const g of GROUPS) {
+                    log(`  ${g.name}`, 'head');
+                    const groupPtr = { __type: 'Pointer', className: 'StartGroup', objectId: groupIds[g.code] };
+                    for (let j = 0; j < 10; j++) {
+                        const startNumber = startNums[idx++];
+                        const where       = encodeURIComponent(JSON.stringify({ startNumber, event: eventPtr }));
+                        const existing    = await pGet(`/classes/Starter?where=${where}&limit=1`);
+                        if (existing.results?.length) {
+                            log(`    ↳ #${String(startNumber).padStart(3)} vorhanden`, 'skip');
+                            continue;
+                        }
+                        const firstName = g.female ? pick(FEMALE) : pick([...MALE, ...MALE, ...FEMALE]);
+                        const lastName  = pick(LAST);
+                        const gender    = g.female ? 'f' : (firstName in Object.fromEntries(FEMALE.map(n=>[n,1])) ? 'f' : 'm');
+                        await pPost('/classes/Starter', {
+                            startNumber, firstName, lastName, gender,
+                            birthday:   { __type: 'Date', iso: rndDate(g.birthFrom, g.birthTo) },
+                            event:      eventPtr,
+                            startGroup: groupPtr,
+                        });
+                        log(`    ↳ #${String(startNumber).padStart(3)}  ${firstName} ${lastName}`, 'ok');
+                    }
+                }
+
+                log('', '');
+                log('✓ Seed abgeschlossen.', 'ok');
+                btn.textContent = '✓ Fertig';
+            } catch (e) {
+                log(`✕ Fehler: ${e.message}`, 'err');
+                btn.disabled = false;
+                btn.textContent = 'Seed wiederholen';
+            }
+        }
+
+        document.getElementById('login-btn').addEventListener('click', doLogin);
+        document.getElementById('seed-btn').addEventListener('click', runSeed);
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Enter' && !masterKey) doLogin();
+        });
+    </script>
+</body>
+</html>

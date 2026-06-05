@@ -4,13 +4,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Heldentag 2026 – Starter</title>
+    <title>Heldentag – Ansage</title>
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎤</text></svg>">
     <link rel="stylesheet" href="jury.css">
     <style>
-        @keyframes presence-pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50%       { opacity: 0.4; transform: scale(0.75); }
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
         }
+
+        .retry-icon {
+            width: 0.7rem;
+            height: 0.7rem;
+            border: 2px solid var(--border);
+            border-top-color: var(--muted);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            flex-shrink: 0;
+        }
+
         .presence-dot {
             width: 0.45rem;
             height: 0.45rem;
@@ -18,29 +36,36 @@
             background: var(--border);
             flex-shrink: 0;
         }
+
         .presence-dot.online {
             background: var(--green);
         }
-        #presence-chips,
-        #presence-overlay-chips {
+
+        #presence-chips {
             display: flex;
             flex-direction: column;
-            gap: 0.25rem;
+            gap: 0.05rem;
             align-items: center;
-            margin-top: 0.15rem;
         }
+
         #presence-overlay {
             position: relative !important;
             flex: 1;
             inset: unset;
         }
+
         .pchip {
             width: 8rem;
             border-radius: 8px;
             background: transparent;
             padding: 0.25rem 0.6rem 0.35rem;
         }
-        .pchip.small { width: 6rem; padding: 0.2rem 0.5rem 0.3rem; }
+
+        .pchip.small {
+            width: 5.5rem;
+            padding: 0.1rem 0.4rem;
+        }
+
         .pchip-label {
             display: flex;
             align-items: center;
@@ -50,7 +75,11 @@
             color: var(--text);
             white-space: nowrap;
         }
-        .pchip.small .pchip-label { font-size: 0.65rem; }
+
+        .pchip.small .pchip-label {
+            font-size: 0.65rem;
+        }
+
         .pchip-track {
             margin-top: 0.2rem;
             height: 3px;
@@ -58,6 +87,7 @@
             background: var(--border);
             overflow: hidden;
         }
+
         .pchip-bar {
             height: 100%;
             transform-origin: left;
@@ -73,8 +103,9 @@
             <div class="header-value" style="color:var(--accent)">Starter</div>
         </div>
         <div class="header-group">
-            <div class="header-label">Ausgewählt</div>
-            <div class="header-value" id="selected-display">—</div>
+            <div class="header-label">Event</div>
+            <div class="header-value" id="event-display">—</div>
+            <div class="header-label" id="quali-display" style="display:none;color:var(--muted);font-size:0.75rem;margin-top:0.1rem"></div>
         </div>
         <div class="header-group" id="presence-group">
             <div class="header-label">Kampfrichter</div>
@@ -91,8 +122,12 @@
                 <div class="waiting-dot"></div>
             </div>
             <div id="waiting-name" style="font-size:2rem;font-weight:800;color:var(--accent);margin-top:0.5rem"></div>
-            <div class="waiting-label">Warte auf Wertungen</div>
-            <div id="jury-dots" style="display:flex;gap:0.75rem;margin-top:1rem"></div>
+            <div id="waiting-label" class="waiting-label">Warte auf Wertungen</div>
+            <div id="jury-grid" class="jcard-grid" style="margin-top:1rem"></div>
+            <button id="next-btn" class="submit-btn"
+                style="display:none;margin-top:1.25rem;max-width:480px;width:calc(100% - 2rem)">
+                Nächster Starter
+            </button>
         </div>
 
         <!-- Presence overlay — shown when not all judges are online -->
@@ -103,12 +138,20 @@
                 <div class="waiting-dot"></div>
             </div>
             <div class="waiting-label">Warte auf Kampfrichter</div>
-            <div id="presence-overlay-chips"></div>
         </div>
 
         <!-- Picker — hidden while waiting for scores or judges -->
         <div id="picker-section" style="display:none">
-            <div class="picker-wrap">
+            <div id="picker-button-row">
+                <div
+                    style="display:grid;grid-template-columns:1fr auto;gap:0.5rem;padding:0.5rem 1rem 0;max-width:480px;margin:0 auto;width:100%;box-sizing:border-box">
+                    <button class="submit-btn" id="start-btn" disabled>
+                        Starter auswählen
+                    </button>
+                    <button class="modal-cancel" id="clear-btn" disabled>✕</button>
+                </div>
+            </div>
+            <div id="picker-controls">
                 <div class="picker-input-wrap">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -118,18 +161,11 @@
                     <input class="picker-input" id="filter-input" type="text" inputmode="numeric"
                         placeholder="Startnummer suchen …" autocomplete="off">
                 </div>
+                <div id="filter-chips-groups" class="filter-chips" style="display:none"></div>
+                <div id="filter-chips-runs" class="filter-chips" style="display:none"></div>
                 <div class="picker-results-label" id="results-label"></div>
-                <div class="picker-list" id="picker-list"></div>
             </div>
-
-            <div class="starter-footer">
-                <div style="display:grid;grid-template-columns:1fr auto;gap:0.5rem">
-                    <button class="submit-btn" id="start-btn" disabled>
-                        Starter auswählen
-                    </button>
-                    <button class="modal-cancel" id="clear-btn" disabled>✕</button>
-                </div>
-            </div>
+            <div class="picker-list" id="picker-list"></div>
         </div>
     </div>
 
@@ -144,19 +180,21 @@
         let START_NUMBERS = [];
         let STARTERS = [];
 
-        const JUDGE_COUNT = Object.keys(CONFIG.judgeTokens).length;
-        const JUDGE_NAMES = Object.values(CONFIG.judgeTokens);
+        const JUDGE_COUNT = () => Object.keys(CONFIG.judgeTokens).length;
+        const JUDGE_NAMES = () => Object.values(CONFIG.judgeTokens);
         const channel = new BroadcastChannel('werace-starter');
-        let selected      = null;
+        let selected = null;
         let activeStarter = null;
-        let scoredBy      = new Set();
-        let scoreWs       = null;
-        let onlineJudges  = new Set();
-        let lastSeenMap   = {};
-        let _chipTicker   = null;
-        const STALE_MS    = 35000;
-        const POLL_MS     = 15000;
-        let lastPollTime  = Date.now();
+        let scoredBy = new Set();
+        let juryScores = {};
+        let scoreWs = null;
+        let onlineJudges = new Set();
+        let lastSeenMap = {};
+        let runCounts = {};
+        let filterGroup = null;  // startGroup objectId or null = all
+        let filterRuns = null;  // run count number or null = all
+        let _chipTicker = null;
+        const STALE_MS = CONFIG.presenceStalMs;
 
         // ── Presence ──
         function buildChip(name, small) {
@@ -168,75 +206,33 @@
 
             const label = document.createElement('div');
             label.className = 'pchip-label';
-            const dot = document.createElement('div');
-            dot.className = 'presence-dot' + (online ? ' online' : '');
-            label.appendChild(dot);
+
+            const indicator = document.createElement('div');
+            if (online) {
+                indicator.className = 'presence-dot online';
+            } else {
+                indicator.className = 'retry-icon';
+            }
+            label.appendChild(indicator);
             label.appendChild(document.createTextNode(name));
             chip.appendChild(label);
-
-            // Progress bar — online: staleness drain, offline: next-poll countdown
-            if (!small) {
-                const ts    = lastSeenMap[name];
-                const track = document.createElement('div');
-                track.className = 'pchip-track';
-                const bar = document.createElement('div');
-                bar.className = 'pchip-bar';
-                let pct, color;
-                if (online) {
-                    const age = ts ? Math.min(Date.now() - ts, STALE_MS) : STALE_MS;
-                    pct   = Math.max(0, 1 - age / STALE_MS);
-                    color = 'var(--green)';
-                } else {
-                    pct   = Math.max(0, 1 - (Date.now() - lastPollTime) / POLL_MS);
-                    color = 'var(--muted)';
-                }
-                bar.style.background = color;
-                bar.style.transform  = `scaleX(${pct})`;
-                track.appendChild(bar);
-                chip.appendChild(track);
-            }
 
             return chip;
         }
 
-        function tickChips() {
-            document.querySelectorAll('#presence-overlay-chips .pchip[data-judge]').forEach(chip => {
-                const name   = chip.dataset.judge;
-                const online = onlineJudges.has(name);
-                const bar    = chip.querySelector('.pchip-bar');
-                if (!bar) return;
-                if (online) {
-                    const ts  = lastSeenMap[name];
-                    const age = ts ? Math.min(Date.now() - ts, STALE_MS) : STALE_MS;
-                    bar.style.background = 'var(--green)';
-                    bar.style.transform  = `scaleX(${Math.max(0, 1 - age / STALE_MS)})`;
-                } else {
-                    const pct = Math.max(0, 1 - (Date.now() - lastPollTime) / POLL_MS);
-                    bar.style.background = 'var(--muted)';
-                    bar.style.transform  = `scaleX(${pct})`;
-                }
-            });
-        }
-
         function renderPresenceChips() {
-            const allOnline = JUDGE_NAMES.every(n => onlineJudges.has(n));
+            const allOnline = JUDGE_NAMES().every(n => onlineJudges.has(n));
 
             // Header chips
             const wrap = document.getElementById('presence-chips');
             wrap.innerHTML = '';
-            for (const name of JUDGE_NAMES) wrap.appendChild(buildChip(name, true));
+            for (const name of JUDGE_NAMES()) wrap.appendChild(buildChip(name, true));
 
-            // Overlay chips — only offline judges
-            const ow = document.getElementById('presence-overlay-chips');
-            ow.innerHTML = '';
-            for (const name of JUDGE_NAMES) {
-                if (!onlineJudges.has(name)) ow.appendChild(buildChip(name, false));
-            }
 
-            if (!_chipTicker) _chipTicker = setInterval(tickChips, 1000);
 
+            if (!_chipTicker) _chipTicker = setInterval(renderPresenceChips, 1000);
             // Show/hide sections
-            if (activeStarter !== null) return;
+            if (activeStarter !== null) { renderJuryGrid(); return; }
             document.getElementById('presence-overlay').classList.toggle('hidden', allOnline);
             document.getElementById('picker-section').style.display = allOnline ? '' : 'none';
 
@@ -250,17 +246,17 @@
         async function refreshPresence() {
             try {
                 const records = await ParseAPI.fetchPresence();
-                lastPollTime  = Date.now();
-                onlineJudges  = new Set(records.map(r => r.judgeName));
+                lastPollTime = Date.now();
+                onlineJudges = new Set(records.map(r => r.judgeName));
                 records.forEach(r => {
                     lastSeenMap[r.judgeName] = new Date(r.lastSeen?.iso ?? r.lastSeen).getTime();
                 });
                 renderPresenceChips();
-            } catch (_) {}
+            } catch (_) { }
         }
 
         refreshPresence();
-        setInterval(refreshPresence, 15000);
+        setInterval(refreshPresence, CONFIG.presencePollMs);
         ParseAPI.subscribePresence(refreshPresence);
 
         const filterInput = document.getElementById('filter-input');
@@ -272,23 +268,90 @@
 
         function clearSelection() {
             selected = null;
-            display.textContent = '—';
+            if (display) display.textContent = '—';
             setStartBtn(null);
             renderList(filterInput.value);
+        }
+
+        function renderFilterChips() {
+            const groupBar = document.getElementById('filter-chips-groups');
+            const runsBar = document.getElementById('filter-chips-runs');
+
+            const groups = [];
+            const seenG = new Set();
+            for (const s of STARTERS) {
+                if (s.startGroup && !seenG.has(s.startGroup.objectId)) {
+                    seenG.add(s.startGroup.objectId);
+                    groups.push({ id: s.startGroup.objectId, name: s.startGroup.name ?? s.startGroup.objectId });
+                }
+            }
+            groups.sort((a, b) => a.name.localeCompare(b.name));
+
+            const runSet = new Set(STARTERS.map(s => Math.floor((runCounts[s.startNumber] ?? 0) / JUDGE_COUNT())));
+            const runs = [...runSet].sort((a, b) => a - b);
+
+            // Groups row
+            groupBar.style.display = groups.length ? '' : 'none';
+            groupBar.innerHTML = '';
+            for (const g of groups) {
+                const chip = document.createElement('button');
+                chip.className = 'fchip' + (filterGroup === g.id ? ' active' : '');
+                chip.textContent = g.name;
+                chip.addEventListener('click', () => {
+                    filterGroup = filterGroup === g.id ? null : g.id;
+                    renderFilterChips();
+                    renderList(filterInput.value);
+                });
+                groupBar.appendChild(chip);
+            }
+
+            // Runs row
+            runsBar.style.display = runs.length > 1 || (runs.length === 1 && runs[0] > 0) ? '' : 'none';
+            runsBar.innerHTML = '';
+            for (const r of runs) {
+                const chip = document.createElement('button');
+                chip.className = 'fchip runs' + (filterRuns === r ? ' active' : '');
+                chip.textContent = r === 0 ? '0×' : `${r}×`;
+                chip.addEventListener('click', () => {
+                    filterRuns = filterRuns === r ? null : r;
+                    renderFilterChips();
+                    renderList(filterInput.value);
+                });
+                runsBar.appendChild(chip);
+            }
         }
 
         function renderList(filter) {
             pickerList.innerHTML = '';
             const term = filter.trim();
-            const matches = START_NUMBERS.filter(n => String(n).includes(term));
+            let matches = START_NUMBERS.filter(n => String(n).includes(term));
+            // Hide starters who have completed all qualiRuns
+            if (CONFIG.qualiRuns != null) {
+                matches = matches.filter(n => Math.floor((runCounts[n] ?? 0) / JUDGE_COUNT()) < CONFIG.qualiRuns);
+            }
+            if (filterGroup !== null) {
+                matches = matches.filter(n => {
+                    const s = STARTERS.find(x => x.startNumber === n);
+                    return s?.startGroup?.objectId === filterGroup;
+                });
+            }
+            if (filterRuns !== null) {
+                matches = matches.filter(n => Math.floor((runCounts[n] ?? 0) / JUDGE_COUNT()) === filterRuns);
+            }
+            const total = (filterGroup !== null || filterRuns !== null)
+                ? matches.length + ' von ' + START_NUMBERS.filter(n => String(n).includes(term)).length
+                : matches.length;
             resultsLabel.textContent = term
-                ? `${matches.length} Ergebnis${matches.length !== 1 ? 'se' : ''}`
-                : `${START_NUMBERS.length} Starter`;
+                ? `${total} Ergebnis${matches.length !== 1 ? 'se' : ''}`
+                : `${total} Starter`;
+            const inner = document.createElement('div');
+            inner.className = 'picker-list-inner';
             if (!matches.length) {
                 const empty = document.createElement('div');
                 empty.className = 'picker-empty';
                 empty.textContent = 'Keine Startnummer gefunden';
-                pickerList.appendChild(empty);
+                inner.appendChild(empty);
+                pickerList.appendChild(inner);
                 return;
             }
             for (const num of matches) {
@@ -296,24 +359,28 @@
                 const item = document.createElement('div');
                 item.className = 'picker-item' + (num === selected ? ' selected' : '');
                 if (starter?.firstName || starter?.lastName) {
+                    const runs = Math.floor((runCounts[num] ?? 0) / JUDGE_COUNT());
                     item.innerHTML =
                         `<span class="picker-item-num">${num}</span>` +
                         `<span class="picker-item-name">` +
                         `<span class="picker-item-first">${starter.firstName ?? ''}</span>` +
                         `<span class="picker-item-last">${starter.lastName ?? ''}</span>` +
-                        `</span>`;
+                        `</span>` +
+                        (starter.startGroup ? `<span class="picker-item-group">${starter.startGroup.name ?? ''}</span>` : '') +
+                        (runs > 0 ? `<span class="picker-item-runs">${runs}×</span>` : '');
                 } else {
                     item.textContent = num;
                 }
                 item.addEventListener('click', () => {
                     selected = num;
-                    display.textContent = num;
+                    if (display) display.textContent = num;
                     setStartBtn(num);
                     filterInput.value = '';
                     renderList('');
                 });
-                pickerList.appendChild(item);
+                inner.appendChild(item);
             }
+            pickerList.appendChild(inner);
         }
 
         function setStartBtn(num) {
@@ -328,71 +395,137 @@
             }
         }
 
-        function renderJuryDots(scored) {
-            const dots = document.getElementById('jury-dots');
-            dots.innerHTML = '';
-            for (const name of JUDGE_NAMES) {
-                const chip = document.createElement('div');
-                const done = scored.has(name);
-                chip.style.cssText =
-                    `padding:0.35rem 0.75rem;border-radius:999px;font-size:0.8rem;font-weight:700;` +
-                    `background:${done ? 'var(--green)' : 'var(--border)'};` +
-                    `color:${done ? '#000' : 'var(--muted)'};transition:background 0.3s,color 0.3s`;
-                chip.textContent = name;
-                dots.appendChild(chip);
+        function renderJuryGrid() {
+            const grid = document.getElementById('jury-grid');
+            const nextBtn = document.getElementById('next-btn');
+            const label = document.getElementById('waiting-label');
+            const allScored = scoredBy.size >= JUDGE_COUNT();
+
+            label.textContent = allScored ? 'Alle Wertungen eingegangen' : 'Warte auf Wertungen';
+            nextBtn.style.display = allScored ? '' : 'none';
+
+            grid.innerHTML = '';
+            for (const name of JUDGE_NAMES()) {
+                const s = juryScores[name];
+                const card = document.createElement('div');
+                card.className = 'jcard' + (s ? ' scored' : '');
+
+                const dot = document.createElement('div');
+                dot.className = 'presence-dot' + (onlineJudges.has(name) ? ' online' : '');
+                const hdr = document.createElement('div');
+                hdr.className = 'jcard-header';
+                hdr.appendChild(dot);
+                hdr.appendChild(document.createTextNode(name));
+                card.appendChild(hdr);
+
+                if (s) {
+                    const scoreGrid = document.createElement('div');
+                    scoreGrid.className = 'jcard-scores';
+                    CONFIG.criteria.forEach(c => {
+                        const col = document.createElement('div');
+                        col.className = 'jcard-crit';
+                        col.innerHTML =
+                            `<div class="jcard-crit-label">${c.shortLabel}</div>` +
+                            `<div class="jcard-crit-val">${s[c.key] ?? '—'}</div>`;
+                        scoreGrid.appendChild(col);
+                    });
+                    card.appendChild(scoreGrid);
+
+                    const div = document.createElement('div');
+                    div.className = 'jcard-divider';
+                    card.appendChild(div);
+
+                    const total = document.createElement('div');
+                    total.className = 'jcard-total';
+                    total.innerHTML =
+                        `<span class="jcard-total-label">Total</span>` +
+                        `<span class="jcard-total-val">${s.total ?? '—'}</span>`;
+                    card.appendChild(total);
+                } else {
+                    const pending = document.createElement('div');
+                    pending.className = 'jcard-pending';
+                    pending.textContent = 'Ausstehend';
+                    card.appendChild(pending);
+                }
+
+                grid.appendChild(card);
             }
         }
 
         function enterWaitingForScores(startNumber) {
             activeStarter = startNumber;
             scoredBy = new Set();
+            juryScores = {};
 
             const starter = STARTERS.find(s => s.startNumber === startNumber);
             const name = starter ? `${starter.firstName ?? ''} ${starter.lastName ?? ''}`.trim() : String(startNumber);
             document.getElementById('waiting-name').textContent = `#${startNumber}  ${name}`;
             document.getElementById('waiting-overlay').classList.remove('hidden');
             document.getElementById('picker-section').style.display = 'none';
-            renderJuryDots(scoredBy);
+            renderJuryGrid();
 
             if (scoreWs) scoreWs.close();
             scoreWs = ParseAPI.subscribeJuryScores(startNumber, score => {
-                if (score.judgeName) scoredBy.add(score.judgeName);
-                renderJuryDots(scoredBy);
-                if (scoredBy.size >= JUDGE_COUNT) exitWaitingForScores();
+                if (score.judgeName) {
+                    scoredBy.add(score.judgeName);
+                    juryScores[score.judgeName] = score;
+                }
+                renderJuryGrid();
             });
 
             ParseAPI.fetchJuryScores(startNumber).then(existing => {
-                if (existing.length >= JUDGE_COUNT) {
-                    exitWaitingForScores();
-                } else {
-                    existing.forEach(s => { if (s.judgeName) scoredBy.add(s.judgeName); });
-                    renderJuryDots(scoredBy);
-                }
+                existing.forEach(s => {
+                    if (s.judgeName) {
+                        scoredBy.add(s.judgeName);
+                        juryScores[s.judgeName] = s;
+                    }
+                });
+                renderJuryGrid();
             }).catch(() => { });
         }
 
         function exitWaitingForScores() {
             if (scoreWs) { scoreWs.close(); scoreWs = null; }
             activeStarter = null;
+            juryScores = {};
+            document.getElementById('next-btn').style.display = 'none';
             document.getElementById('waiting-overlay').classList.add('hidden');
             document.getElementById('picker-section').style.display = '';
             selected = null;
-            display.textContent = '—';
+            if (display) display.textContent = '—';
             setStartBtn(null);
+            ParseAPI.fetchScoreCountByStarter().then(m => { runCounts = m; renderFilterChips(); renderList(filterInput.value); }).catch(() => { });
             renderList(filterInput.value);
         }
 
         filterInput.addEventListener('input', () => renderList(filterInput.value));
         clearBtn.addEventListener('click', clearSelection);
+        document.getElementById('next-btn').addEventListener('click', exitWaitingForScores);
 
         async function init() {
+            await Promise.all([ParseAPI.fetchEvent(), ParseAPI.fetchJudges()]).catch(() => { });
+            document.title = `${CONFIG.eventName} – Ansage`;
+
+            // Show event name + qualiRuns in header center
+            const qualiRuns = CONFIG.qualiRuns;
+            document.getElementById('event-display').textContent = CONFIG.eventName;
+            const qualiEl = document.getElementById('quali-display');
+            if (qualiRuns != null) {
+                qualiEl.textContent = `${qualiRuns}× Qualifikation`;
+                qualiEl.style.display = '';
+            }
+
             resultsLabel.textContent = 'Lade Starter …';
             try {
-                STARTERS = await ParseAPI.fetchStarters();
+                [STARTERS, runCounts] = await Promise.all([
+                    ParseAPI.fetchStarters(),
+                    ParseAPI.fetchScoreCountByStarter(),
+                ]);
                 START_NUMBERS = STARTERS.map(s => s.startNumber);
             } catch (e) {
                 resultsLabel.textContent = 'Fehler beim Laden';
             }
+            renderFilterChips();
             renderList('');
         }
 
