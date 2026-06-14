@@ -1,12 +1,17 @@
 <!DOCTYPE html>
 <html lang="de">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WeRace – Start</title>
     <link rel="icon" href="assets/weraceLogo.png">
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
         body {
             min-height: 100dvh;
@@ -21,7 +26,9 @@
             padding: 2rem;
         }
 
-        img.logo { height: 36px; }
+        img.logo {
+            height: 36px;
+        }
 
         .card {
             width: 100%;
@@ -55,15 +62,23 @@
             transition: background 0.1s;
         }
 
-        .event-item:last-child { border-bottom: none; }
-        .event-item:active { background: #30363d; }
+        .event-item:last-child {
+            border-bottom: none;
+        }
+
+        .event-item:active {
+            background: #30363d;
+        }
 
         .event-item.selected {
             border-left: 3px solid #f78166;
             padding-left: calc(1rem - 3px);
         }
 
-        .event-name { font-size: 1rem; font-weight: 700; }
+        .event-name {
+            font-size: 1rem;
+            font-weight: 700;
+        }
 
         .event-meta {
             font-size: 0.7rem;
@@ -111,9 +126,20 @@
             font-weight: 700;
         }
 
-        a.tile:active { background: #30363d; }
-        a.tile .badge { font-size: 0.75rem; font-weight: 600; color: #8b949e; }
-        a.tile.accent { border-color: #f78166; color: #f78166; }
+        a.tile:active {
+            background: #30363d;
+        }
+
+        a.tile .badge {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #8b949e;
+        }
+
+        a.tile.accent {
+            border-color: #f78166;
+            color: #f78166;
+        }
 
         .change-btn {
             background: none;
@@ -126,7 +152,8 @@
         }
 
         .spinner {
-            width: 1rem; height: 1rem;
+            width: 1rem;
+            height: 1rem;
             border: 2px solid #30363d;
             border-top-color: #8b949e;
             border-radius: 50%;
@@ -134,18 +161,25 @@
             margin: 1rem auto;
         }
 
-        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
     </style>
     <script src="config.js"></script>
     <script src="parse-api.js"></script>
 </head>
+
 <body>
     <img class="logo" src="assets/weraceLogo.png" alt="WeRace">
 
     <!-- Event picker -->
     <div class="card" id="picker-card">
         <div class="card-header">Event auswählen</div>
-        <div id="event-list"><div class="spinner"></div></div>
+        <div id="event-list">
+            <div class="spinner"></div>
+        </div>
     </div>
 
     <!-- App links — shown after event is selected -->
@@ -157,9 +191,13 @@
             </div>
         </div>
 
-        <div class="link-label">Ansage</div>
-        <a class="tile accent" href="starter.html" target="werace-starter" rel="noopener">Ansage / Starterauswahl <span class="badge">↗</span></a>
-        <a class="tile" href="results.html" target="werace-results" rel="noopener">Ergebnisse <span class="badge">↗</span></a>
+        <div class="link-label">Organisation</div>
+        <a class="tile accent" href="htmlPages/starter.html" target="werace-starter" rel="noopener">Rennleitung<span
+                class="badge">↗</span></a>
+
+        <div class="link-label" style="margin-top:0.25rem">Public</div>
+        <a class="tile" href="htmlPages/results.html" target="werace-results" rel="noopener">Ergebnisse <span
+                class="badge">↗</span></a>
 
         <div class="link-label" style="margin-top:0.25rem">Kampfrichter</div>
         <div id="jury-links" style="display:flex;flex-direction:column;gap:0.75rem"></div>
@@ -207,10 +245,11 @@
             try {
                 await Promise.all([ParseAPI.fetchEvent(), ParseAPI.fetchJudges()]);
                 juryLinks.innerHTML = '';
+
                 for (const [token, name] of Object.entries(CONFIG.judgeTokens)) {
                     const a = document.createElement('a');
                     a.className = 'tile';
-                    a.href = `jury.html?token=${encodeURIComponent(token)}`;
+                    a.href = `htmlPages/jury.html?token=${encodeURIComponent(token)}`;
                     a.target = `werace-jury-${token}`;
                     a.rel = 'noopener';
                     a.innerHTML = `Wertung – ${name} <span class="badge">↗</span>`;
@@ -234,4 +273,5 @@
         loadEvents();
     </script>
 </body>
+
 </html>

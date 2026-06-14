@@ -54,7 +54,9 @@ const ParseAPI = (() => {
         if (ev.criteria)      CONFIG.criteria      = ev.criteria;
         if (ev.presenceStalMs) CONFIG.presenceStalMs = ev.presenceStalMs;
         if (ev.presencePollMs) CONFIG.presencePollMs = ev.presencePollMs;
-        if (ev.qualiRuns != null) CONFIG.qualiRuns  = ev.qualiRuns;
+        if (ev.qualiRuns != null)   CONFIG.qualiRuns     = ev.qualiRuns;
+        if (ev.finalRuns != null)   CONFIG.finalRuns     = ev.finalRuns;
+        if (ev.refereeToken)        CONFIG.refereeToken  = ev.refereeToken;
         return ev;
     }
 
@@ -371,5 +373,113 @@ const ParseAPI = (() => {
         return ws;
     }
 
-    return { login, logout, fetchAllEvents, fetchEvent, fetchJudges, fetchStarters, saveStarter, deleteStarter, saveJuryScore, fetchJuryScores, fetchScoreCountByStarter, fetchAllJuryScores, subscribeAllJuryScores, subscribeJuryScores, publishActiveStarter, subscribeActiveStarter, heartbeat, removePresence, fetchPresence, subscribePresence };
+    async function refereeUpdate(params) {
+        const res = await fetch(
+            `${CONFIG.parseServerUrl}/functions/refereeUpdate`,
+            {
+                method: 'POST',
+                headers: readHeaders(),
+                body: JSON.stringify({ ...params, refereeToken: CONFIG.refereeToken }),
+            }
+        );
+        const data = await res.json();
+        if (!res.ok || data.error) throw new Error(data.error ?? `Parse error ${res.status}`);
+        return data.result;
+    }
+
+    async function updateStarterStatus(objectId, status) {
+        return refereeUpdate({ action: 'setStarterStatus', objectId, status });
+    }
+
+    async function fetchStartGroups() {
+        const where = encodeURIComponent(JSON.stringify({
+            event: { __type: 'Pointer', className: 'Event', objectId: CONFIG.eventObjectId },
+        }));
+        const res = await fetch(
+            `${CONFIG.parseServerUrl}/classes/StartGroup?where=${where}&limit=100&order=name`,
+            { headers: readHeaders() }
+        );
+        if (!res.ok) throw new Error(`Parse error ${res.status}`);
+        const data = await res.json();
+        return data.results ?? [];
+    }
+
+    async function updateStartGroupQualiClosed(objectId, qualiClosed) {
+        return refereeUpdate({ action: 'setQualiClosed', objectId, qualiClosed });
+    }
+
+    function subscribeStartGroups(onChange) {
+        const ws = new WebSocket(CONFIG.parseLiveQueryUrl);
+        ws.addEventListener('open', () => {
+            ws.send(JSON.stringify({ op: 'connect', applicationId: CONFIG.parseAppId, javascriptKey: CONFIG.parseJsKey }));
+        });
+        ws.addEventListener('message', e => {
+            const msg = JSON.parse(e.data);
+            if (msg.op === 'connected') {
+                ws.send(JSON.stringify({
+                    op: 'subscribe', requestId: 20,
+                    query: { className: 'StartGroup', where: {
+                        event: { __type: 'Pointer', className: 'Event', objectId: CONFIG.eventObjectId }
+                    }},
+                }));
+            }
+            if (['create', 'update', 'delete'].includes(msg.op)) onChange(msg);
+        });
+        ws.addEventListener('close', () => setTimeout(() => subscribeStartGroups(onChange), 3000));
+        return ws;
+    }
+
+    async function createFinal(startGroupObjectId) {
+        return refereeUpdate({ action: 'createFinal', startGroupObjectId });
+    }
+
+    async function fetchFinalEntries(startGroupObjectId) {
+        const where = encodeURIComponent(JSON.stringify({
+            event: { __type: 'Pointer', className: 'Event', objectId: CONFIG.eventObjectId },
+            startGroup: { __type: 'Pointer', className: 'StartGroup', objectId: startGroupObjectId },
+        }));
+        const res = await fetch(
+            `${CONFIG.parseServerUrl}/classes/FinalEntry?where=${where}&limit=100&order=finalStartNumber&include=starter`,
+            { headers: readHeaders() }
+        );
+        if (!res.ok) throw new Error(`Parse error ${res.status}`);
+        const data = await res.json();
+        return data.results ?? [];
+    }
+
+    async function fetchAllFinalEntries() {
+        const where = encodeURIComponent(JSON.stringify({
+            event: { __type: 'Pointer', className: 'Event', objectId: CONFIG.eventObjectId },
+        }));
+        const res = await fetch(
+            `${CONFIG.parseServerUrl}/classes/FinalEntry?where=${where}&limit=500&order=finalStartNumber&include=starter,startGroup`,
+            { headers: readHeaders() }
+        );
+        if (!res.ok) throw new Error(`Parse error ${res.status}`);
+        const data = await res.json();
+        return data.results ?? [];
+    }
+
+    function subscribeFinalEntries(onChange) {
+        const ws = new WebSocket(CONFIG.parseLiveQueryUrl);
+        ws.addEventListener('open', () => {
+            ws.send(JSON.stringify({ op: 'connect', applicationId: CONFIG.parseAppId, javascriptKey: CONFIG.parseJsKey }));
+        });
+        ws.addEventListener('message', e => {
+            const msg = JSON.parse(e.data);
+            if (msg.op === 'connected') {
+                ws.send(JSON.stringify({
+                    op: 'subscribe', requestId: 30,
+                    query: { className: 'FinalEntry', where: {
+                        event: { __type: 'Pointer', className: 'Event', objectId: CONFIG.eventObjectId },
+                    }},
+                }));
+            }
+            if (['create', 'update', 'delete'].includes(msg.op)) onChange();
+        });
+        ws.addEventListener('close', () => setTimeout(() => subscribeFinalEntries(onChange), 3000));
+        return ws;
+    }
+
+    return { login, logout, fetchAllEvents, fetchEvent, fetchJudges, fetchStartGroups, updateStartGroupQualiClosed, subscribeStartGroups, updateStarterStatus, createFinal, fetchFinalEntries, fetchAllFinalEntries, subscribeFinalEntries, fetchStarters, saveStarter, deleteStarter, saveJuryScore, fetchJuryScores, fetchScoreCountByStarter, fetchAllJuryScores, subscribeAllJuryScores, subscribeJuryScores, publishActiveStarter, subscribeActiveStarter, heartbeat, removePresence, fetchPresence, subscribePresence };
 })();

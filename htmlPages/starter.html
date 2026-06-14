@@ -1,0 +1,1323 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Heldentag – Rennleitung</title>
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎤</text></svg>">
+    <link rel="stylesheet" href="../jury.css">
+    <style>
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .retry-icon {
+            width: 0.7rem;
+            height: 0.7rem;
+            border: 2px solid var(--border);
+            border-top-color: var(--muted);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            flex-shrink: 0;
+        }
+
+        .presence-dot {
+            width: 0.45rem;
+            height: 0.45rem;
+            border-radius: 50%;
+            background: var(--border);
+            flex-shrink: 0;
+        }
+
+        .presence-dot.online {
+            background: var(--green);
+        }
+
+        #presence-chips {
+            display: flex;
+            flex-direction: column;
+            gap: 0.05rem;
+            align-items: center;
+        }
+
+        #presence-overlay {
+            position: relative !important;
+            flex: 1;
+            inset: unset;
+        }
+
+        .pchip {
+            width: 8rem;
+            border-radius: 8px;
+            background: transparent;
+            padding: 0.25rem 0.6rem 0.35rem;
+        }
+
+        .pchip.small {
+            width: 5.5rem;
+            padding: 0.1rem 0.4rem;
+        }
+
+        .pchip-label {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text);
+            white-space: nowrap;
+        }
+
+        .pchip.small .pchip-label {
+            font-size: 0.65rem;
+        }
+
+        .pchip-track {
+            margin-top: 0.2rem;
+            height: 3px;
+            border-radius: 999px;
+            background: var(--border);
+            overflow: hidden;
+        }
+
+        .pchip-bar {
+            height: 100%;
+            transform-origin: left;
+            transition: transform 1s linear, background 0.3s;
+        }
+
+        .picker-item.done {
+            opacity: 0.4;
+            cursor: default;
+            pointer-events: none;
+        }
+
+        .picker-item-done-badge {
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: var(--green);
+            background: color-mix(in srgb, var(--green) 15%, transparent);
+            border-radius: 4px;
+            padding: 0.1rem 0.4rem;
+            white-space: nowrap;
+            align-self: center;
+        }
+
+        .mode-toggle {
+            display: flex;
+            gap: 0.35rem;
+            margin-bottom: 0.4rem;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .mode-chip {
+            flex: 1;
+            padding: 0.45rem 0;
+            border-radius: 8px;
+            border: 1.5px solid var(--border);
+            background: transparent;
+            color: var(--muted);
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: border-color 0.15s, color 0.15s, background 0.15s;
+        }
+
+        .mode-chip.active {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: color-mix(in srgb, var(--accent) 10%, transparent);
+        }
+
+        .mode-chip.finale.active {
+            border-color: var(--green);
+            color: var(--green);
+            background: color-mix(in srgb, var(--green) 10%, transparent);
+        }
+
+        /* ── Verwaltung drawer ── */
+        .drawer-btn {
+            background: none;
+            border: none;
+            color: var(--muted);
+            cursor: pointer;
+            padding: 0.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            transition: color 0.15s, background 0.15s;
+        }
+
+        .drawer-btn:active,
+        .drawer-btn.open {
+            color: var(--text);
+            background: var(--border);
+        }
+
+        .drawer-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 80;
+        }
+
+        .drawer-overlay.open {
+            display: block;
+        }
+
+        .drawer {
+            position: fixed;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: min(360px, 92vw);
+            background: var(--card);
+            border-left: 1px solid var(--border);
+            z-index: 90;
+            display: flex;
+            flex-direction: column;
+            transform: translateX(100%);
+            transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+        }
+
+        .drawer.open {
+            transform: translateX(0);
+        }
+
+        .drawer-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.6rem 1rem;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .drawer-title {
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .drawer-close {
+            background: none;
+            border: none;
+            color: var(--muted);
+            cursor: pointer;
+            font-size: 1.1rem;
+            padding: 0.1rem 0.3rem;
+            border-radius: 4px;
+        }
+
+        .drawer-close:active {
+            background: var(--border);
+        }
+
+        .drawer-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0.5rem 0 1rem;
+        }
+
+        .drawer-panel {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            margin: 0 0.75rem 0.5rem;
+            overflow: hidden;
+            background: var(--bg);
+        }
+
+        .drawer-panel-hdr {
+            display: grid;
+            grid-template-columns: 1fr auto auto auto;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.6rem 0.75rem;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .drawer-panel-hdr:active {
+            background: var(--border);
+        }
+
+        .drawer-panel-title {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .drawer-panel-title.closed {
+            color: var(--green);
+        }
+
+        .drawer-panel-count {
+            font-size: 0.65rem;
+            background: var(--border);
+            color: var(--muted);
+            border-radius: 4px;
+            padding: 0.1rem 0.35rem;
+        }
+
+        .drawer-panel-body {
+            display: none;
+            border-top: 1px solid var(--border);
+        }
+
+        .drawer-panel.open .drawer-panel-body {
+            display: block;
+        }
+
+        .drawer-panel-chevron {
+            font-size: 0.65rem;
+            color: var(--muted);
+            transition: transform 0.2s;
+        }
+
+        .drawer-panel.open .drawer-panel-chevron {
+            transform: rotate(180deg);
+        }
+
+        .drawer-item {
+            display: grid;
+            grid-template-columns: 2rem 1fr auto auto;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.55rem 0.75rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .drawer-item:last-child {
+            border-bottom: none;
+        }
+
+        .drawer-item.disqualified {
+            opacity: 0.45;
+        }
+
+        .drawer-item.removed {
+            opacity: 0.25;
+        }
+
+        .drawer-item-num {
+            font-size: 0.85rem;
+            font-weight: 800;
+            color: var(--accent);
+            text-align: right;
+        }
+
+        .drawer-item-name {
+            display: flex;
+            flex-direction: column;
+            gap: 0.02rem;
+            min-width: 0;
+        }
+
+        .drawer-item-first {
+            font-size: 0.6rem;
+            color: var(--muted);
+        }
+
+        .drawer-item-last {
+            font-size: 0.8rem;
+            font-weight: 700;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .drawer-item-badge {
+            font-size: 0.6rem;
+            font-weight: 700;
+            border-radius: 4px;
+            padding: 0.1rem 0.35rem;
+            white-space: nowrap;
+        }
+
+        .drawer-item-badge.dq {
+            color: #e74c3c;
+            background: color-mix(in srgb, #e74c3c 15%, transparent);
+        }
+
+        .drawer-item-badge.done {
+            color: var(--green);
+            background: color-mix(in srgb, var(--green) 15%, transparent);
+        }
+
+        .drawer-item-badge.runs {
+            color: var(--accent);
+            background: color-mix(in srgb, var(--accent) 15%, transparent);
+        }
+
+        .drawer-item-badge.removed {
+            color: var(--muted);
+            background: var(--border);
+        }
+
+        .drawer-item-actions {
+            display: flex;
+            gap: 0.25rem;
+        }
+
+        .dact {
+            font-size: 0.6rem;
+            font-weight: 700;
+            padding: 0.2rem 0.4rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--muted);
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .dact:active {
+            background: var(--border);
+        }
+
+        .dact.dq {
+            border-color: #e74c3c;
+            color: #e74c3c;
+            background: color-mix(in srgb, #e74c3c 12%, transparent);
+        }
+
+        .dact.rm {
+            border-color: var(--muted);
+            color: var(--muted);
+            background: var(--border);
+        }
+
+        .drawer-panel-footer {
+            padding: 0.5rem 0.75rem;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 0.4rem;
+            justify-content: flex-end;
+        }
+
+        .quali-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 0.25rem 0.6rem;
+            border-radius: 999px;
+            border: 1.5px solid var(--border);
+            background: transparent;
+            color: var(--muted);
+            font-size: 0.65rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: border-color 0.2s, color 0.2s, background 0.2s;
+            line-height: 1;
+        }
+
+        .quali-toggle:active {
+            opacity: 0.7;
+        }
+
+        .quali-toggle.closed {
+            border-color: var(--green);
+            color: var(--green);
+            background: color-mix(in srgb, var(--green) 12%, transparent);
+        }
+
+        .quali-toggle svg,
+        .final-btn svg {
+            width: 0.75rem;
+            height: 0.75rem;
+            flex-shrink: 0;
+        }
+
+        .final-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 0.25rem 0.6rem;
+            border-radius: 999px;
+            border: 1.5px solid var(--accent);
+            background: color-mix(in srgb, var(--accent) 12%, transparent);
+            color: var(--accent);
+            font-size: 0.65rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            cursor: pointer;
+            white-space: nowrap;
+            line-height: 1;
+        }
+
+        .final-btn:active {
+            opacity: 0.7;
+        }
+
+        .final-btn:disabled {
+            opacity: 0.35;
+            cursor: default;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="header-group">
+            <div class="header-label">Event</div>
+            <div class="header-value" id="event-display">—</div>
+            <div class="header-label" id="quali-display"
+                style="display:none;color:var(--muted);font-size:0.75rem;margin-top:0.1rem"></div>
+            <div class="header-label" id="final-display"
+                style="display:none;color:var(--accent);font-size:0.75rem;margin-top:0.05rem"></div>
+        </div>
+        <div class="header-group" id="presence-group">
+            <div class="header-label">Kampfrichter</div>
+            <div id="presence-chips"></div>
+        </div>
+        <button class="drawer-btn" id="drawer-btn" title="Verwaltung">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3" />
+                <path
+                    d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            </svg>
+        </button>
+    </header>
+
+    <!-- Verwaltung drawer -->
+    <div class="drawer-overlay" id="drawer-overlay"></div>
+    <div class="drawer" id="drawer">
+        <div class="drawer-header">
+            <span class="drawer-title">Verwaltung</span>
+            <button class="drawer-close" id="drawer-close">✕</button>
+        </div>
+        <div class="drawer-body" id="drawer-body"></div>
+    </div>
+
+    <div class="content-center">
+        <!-- Waiting overlay — shown while a starter is on the floor -->
+        <div id="waiting-overlay" class="waiting hidden">
+            <div class="waiting-dots">
+                <div class="waiting-dot"></div>
+                <div class="waiting-dot"></div>
+                <div class="waiting-dot"></div>
+            </div>
+            <div id="waiting-name" style="font-size:2rem;font-weight:800;color:var(--accent);margin-top:0.5rem"></div>
+            <div id="run-chip"
+                style="display:none;margin-top:0.5rem;background:color-mix(in srgb,var(--accent) 15%,transparent);color:var(--accent);border:1px solid var(--accent);border-radius:999px;padding:0.2rem 0.9rem;font-size:0.75rem;font-weight:700;letter-spacing:0.06em">
+            </div>
+            <div id="waiting-label" class="waiting-label"></div>
+            <div id="jury-grid" class="jcard-grid" style="margin-top:1rem"></div>
+            <button id="next-btn" class="submit-btn"
+                style="display:none;margin-top:1.25rem;max-width:480px;width:calc(100% - 2rem)">
+                Nächster Starter
+            </button>
+        </div>
+
+        <!-- Presence overlay — shown when not all judges are online -->
+        <div id="presence-overlay" class="waiting hidden" style="position:relative;flex:1">
+            <div class="waiting-dots">
+                <div class="waiting-dot"></div>
+                <div class="waiting-dot"></div>
+                <div class="waiting-dot"></div>
+            </div>
+            <div class="waiting-label">Warte auf Kampfrichter</div>
+        </div>
+
+        <!-- Picker — hidden while waiting for scores or judges -->
+        <div id="picker-section" style="display:none">
+            <div id="picker-button-row">
+                <div
+                    style="display:grid;grid-template-columns:1fr auto;gap:0.5rem;padding:0.5rem 1rem 0;max-width:480px;margin:0 auto;width:100%;box-sizing:border-box">
+                    <button class="submit-btn" id="start-btn" disabled>
+                        Starter auswählen
+                    </button>
+                    <button class="modal-cancel" id="clear-btn" disabled>✕</button>
+                </div>
+            </div>
+            <div id="picker-controls">
+                <div id="mode-toggle" class="mode-toggle" style="display:none">
+                    <button class="mode-chip active" id="mode-quali">Qualifikation</button>
+                    <button class="mode-chip finale" id="mode-finale">Finale</button>
+                </div>
+                <div class="picker-input-wrap">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8" />
+                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    </svg>
+                    <input class="picker-input" id="filter-input" type="text" inputmode="numeric"
+                        placeholder="Startnummer suchen …" autocomplete="off">
+                </div>
+                <div id="filter-chips-groups" class="filter-chips" style="display:none"></div>
+                <div id="filter-chips-runs" class="filter-chips" style="display:none"></div>
+                <div class="picker-results-label" id="results-label"></div>
+            </div>
+            <div class="picker-list" id="picker-list"></div>
+        </div>
+    </div>
+
+    <footer>
+        <img src="../assets/weraceLogo.png" alt="WeRace">
+    </footer>
+
+    <script src="../config.js"></script>
+    <script src="../parse-api.js"></script>
+    <script>
+        // START_NUMBERS is now loaded from Parse — populated on init
+        let START_NUMBERS = [];
+        let STARTERS = [];
+
+        const JUDGE_COUNT = () => Object.keys(CONFIG.judgeTokens).length;
+        const JUDGE_NAMES = () => Object.values(CONFIG.judgeTokens);
+        const channel = new BroadcastChannel('werace-starter');
+        let selected = null;
+        let activeStarter = null;
+        let activeRunNumber = 1;
+        let scoredBy = new Set();
+        let juryScores = {};
+        let scoreWs = null;
+        let onlineJudges = new Set();
+        let lastSeenMap = {};
+        let runCounts = {};
+        let filterGroup = null;  // startGroup objectId or null = all
+        let filterRuns = null;   // run count number or null = all
+        let filterDone = false;  // show only finished starters when true
+        let closedGroups = new Set(); // objectIds of groups with qualiClosed=true
+        let _chipTicker = null;
+        const STALE_MS = CONFIG.presenceStalMs;
+
+        // ── Presence ──
+        function buildChip(name, small) {
+            const online = onlineJudges.has(name);
+
+            const chip = document.createElement('div');
+            chip.className = 'pchip' + (small ? ' small' : '');
+            chip.dataset.judge = name;
+
+            const label = document.createElement('div');
+            label.className = 'pchip-label';
+
+            const indicator = document.createElement('div');
+            if (online) {
+                indicator.className = 'presence-dot online';
+            } else {
+                indicator.className = 'retry-icon';
+            }
+            label.appendChild(indicator);
+            label.appendChild(document.createTextNode(name));
+            chip.appendChild(label);
+
+            return chip;
+        }
+
+        function renderPresenceChips() {
+            const allOnline = JUDGE_NAMES().every(n => onlineJudges.has(n));
+
+            // Header chips
+            const wrap = document.getElementById('presence-chips');
+            wrap.innerHTML = '';
+            for (const name of JUDGE_NAMES()) wrap.appendChild(buildChip(name, true));
+
+
+
+            if (!_chipTicker) _chipTicker = setInterval(renderPresenceChips, 1000);
+            // Show/hide sections
+            if (activeStarter !== null) { renderJuryGrid(); return; }
+            document.getElementById('presence-overlay').classList.toggle('hidden', allOnline);
+            document.getElementById('picker-section').style.display = allOnline ? '' : 'none';
+
+            if (allOnline && selected !== null) setStartBtn(selected);
+        }
+
+        function updateStartBtnPresence() {
+            renderPresenceChips();
+        }
+
+        async function refreshPresence() {
+            try {
+                const records = await ParseAPI.fetchPresence();
+                lastPollTime = Date.now();
+                onlineJudges = new Set(records.map(r => r.judgeName));
+                records.forEach(r => {
+                    lastSeenMap[r.judgeName] = new Date(r.lastSeen?.iso ?? r.lastSeen).getTime();
+                });
+                renderPresenceChips();
+            } catch (_) { }
+        }
+
+        refreshPresence();
+        setInterval(refreshPresence, CONFIG.presencePollMs);
+        ParseAPI.subscribePresence(refreshPresence);
+
+        const filterInput = document.getElementById('filter-input');
+        const pickerList = document.getElementById('picker-list');
+        const resultsLabel = document.getElementById('results-label');
+        const startBtn = document.getElementById('start-btn');
+        const clearBtn = document.getElementById('clear-btn');
+        const display = document.getElementById('selected-display');
+
+        function clearSelection() {
+            selected = null;
+            if (display) display.textContent = '—';
+            setStartBtn(null);
+            renderList(filterInput.value);
+        }
+
+        function renderFilterChips() {
+            const groupBar = document.getElementById('filter-chips-groups');
+            const runsBar = document.getElementById('filter-chips-runs');
+
+            const finalGroupIds = new Set(Object.keys(finalEntriesByGroup).filter(gid => finalEntriesByGroup[gid].length > 0));
+
+            const groups = [];
+            const seenG = new Set();
+            for (const s of STARTERS) {
+                if (s.startGroup && !seenG.has(s.startGroup.objectId) && !finalGroupIds.has(s.startGroup.objectId)) {
+                    seenG.add(s.startGroup.objectId);
+                    groups.push({ id: s.startGroup.objectId, name: s.startGroup.name ?? s.startGroup.objectId });
+                }
+            }
+            groups.sort((a, b) => a.name.localeCompare(b.name));
+
+            const runSet = new Set(STARTERS.map(s => Math.floor((runCounts[s.startNumber] ?? 0) / JUDGE_COUNT())));
+            const runs = [...runSet].sort((a, b) => a - b);
+
+            // Groups row
+            groupBar.style.display = groups.length ? '' : 'none';
+            groupBar.innerHTML = '';
+            for (const g of groups) {
+                const chip = document.createElement('button');
+                const isClosed = closedGroups.has(g.id);
+                chip.className = 'fchip' + (filterGroup === g.id ? ' active' : '') + (isClosed ? ' closed-group' : '');
+                chip.textContent = isClosed ? `🔒 ${g.name}` : g.name;
+                chip.addEventListener('click', () => {
+                    filterGroup = filterGroup === g.id ? null : g.id;
+                    renderFilterChips();
+                    renderList(filterInput.value);
+                });
+                groupBar.appendChild(chip);
+            }
+
+            // Runs row — skip the chip for qualiRuns count since "✓ Fertig" covers it
+            const filteredRuns = runs.filter(r => CONFIG.qualiRuns == null || r < CONFIG.qualiRuns);
+            runsBar.style.display = filteredRuns.length > 1 || (filteredRuns.length === 1 && filteredRuns[0] > 0) ? '' : 'none';
+            runsBar.innerHTML = '';
+            for (const r of filteredRuns) {
+                const chip = document.createElement('button');
+                chip.className = 'fchip runs' + (filterRuns === r ? ' active' : '');
+                chip.textContent = r === 0 ? '0×' : `${r}×`;
+                chip.addEventListener('click', () => {
+                    filterRuns = filterRuns === r ? null : r;
+                    filterDone = false;
+                    renderFilterChips();
+                    renderList(filterInput.value);
+                });
+                runsBar.appendChild(chip);
+            }
+
+            // "✓ Fertig" chip — only when qualiRuns is configured
+            if (CONFIG.qualiRuns != null) {
+                const hasDone = START_NUMBERS.some(n => Math.floor((runCounts[n] ?? 0) / JUDGE_COUNT()) >= CONFIG.qualiRuns);
+                if (hasDone) {
+                    runsBar.style.display = '';
+                    const chip = document.createElement('button');
+                    chip.className = 'fchip done' + (filterDone ? ' active' : '');
+                    chip.textContent = '✓ Fertig';
+                    chip.addEventListener('click', () => {
+                        filterDone = !filterDone;
+                        filterRuns = null;
+                        renderFilterChips();
+                        renderList(filterInput.value);
+                    });
+                    runsBar.appendChild(chip);
+                }
+            }
+        }
+
+        function renderList(filter) {
+            pickerList.innerHTML = '';
+
+            if (mode === 'finale') {
+                // ── Finale mode: show each finalized group ──
+                const groups = Object.entries(finalEntriesByGroup).filter(([, e]) => e.length > 0);
+                if (!groups.length) {
+                    const inner = document.createElement('div');
+                    inner.className = 'picker-list-inner';
+                    const empty = document.createElement('div');
+                    empty.className = 'picker-empty';
+                    empty.textContent = 'Noch kein Finale erstellt';
+                    inner.appendChild(empty);
+                    pickerList.appendChild(inner);
+                    resultsLabel.textContent = '';
+                    return;
+                }
+                let total = 0;
+                for (const [, entries] of groups) {
+                    const groupName = entries[0].startGroup?.name ?? 'Finale';
+                    const label = document.createElement('div');
+                    label.className = 'picker-results-label';
+                    label.style.cssText = 'color:var(--green);padding-top:0.5rem';
+                    label.textContent = `Finale – ${groupName}`;
+                    pickerList.appendChild(label);
+
+                    const inner = document.createElement('div');
+                    inner.className = 'picker-list-inner';
+                    for (const entry of entries) {
+                        const starter = entry.starter;
+                        const item = document.createElement('div');
+                        item.className = 'picker-item' + (entry.startNumber === selected ? ' selected' : '');
+                        item.innerHTML =
+                            `<span class="picker-item-num" style="min-width:1.5rem;color:var(--muted)">${entry.finalStartNumber}</span>` +
+                            `<span class="picker-item-num">${entry.startNumber}</span>` +
+                            `<span class="picker-item-name">` +
+                            `<span class="picker-item-first">${starter?.firstName ?? ''}</span>` +
+                            `<span class="picker-item-last">${starter?.lastName ?? entry.startNumber}</span>` +
+                            `</span>` +
+                            `<span class="picker-item-runs" style="color:var(--muted)">${entry.qualiScore?.toFixed(1) ?? ''}</span>`;
+                        item.addEventListener('click', () => {
+                            selected = entry.startNumber;
+                            if (display) display.textContent = entry.startNumber;
+                            setStartBtn(entry.startNumber);
+                            renderList('');
+                        });
+                        inner.appendChild(item);
+                        total++;
+                    }
+                    pickerList.appendChild(inner);
+                }
+                resultsLabel.textContent = `${total} Finalisten`;
+                return;
+            }
+
+            // ── Quali mode ──
+            const term = filter.trim();
+            const finalGroupIds = new Set(Object.keys(finalEntriesByGroup).filter(gid => finalEntriesByGroup[gid].length > 0));
+            let matches = START_NUMBERS.filter(n => String(n).includes(term));
+
+            // Exclude finalized groups
+            if (finalGroupIds.size > 0) {
+                matches = matches.filter(n => {
+                    const s = STARTERS.find(x => x.startNumber === n);
+                    return !s?.startGroup?.objectId || !finalGroupIds.has(s.startGroup.objectId);
+                });
+            }
+
+            // Split done / active
+            if (CONFIG.qualiRuns != null) {
+                if (filterDone) {
+                    matches = matches.filter(n => Math.floor((runCounts[n] ?? 0) / JUDGE_COUNT()) >= CONFIG.qualiRuns);
+                } else {
+                    matches = matches.filter(n => Math.floor((runCounts[n] ?? 0) / JUDGE_COUNT()) < CONFIG.qualiRuns);
+                }
+            }
+
+            if (filterGroup !== null) {
+                matches = matches.filter(n => {
+                    const s = STARTERS.find(x => x.startNumber === n);
+                    return s?.startGroup?.objectId === filterGroup;
+                });
+            }
+            if (filterRuns !== null) {
+                matches = matches.filter(n => Math.floor((runCounts[n] ?? 0) / JUDGE_COUNT()) === filterRuns);
+            }
+
+            const total = (filterGroup !== null || filterRuns !== null || filterDone)
+                ? matches.length + ' von ' + START_NUMBERS.filter(n => String(n).includes(term)).length
+                : matches.length;
+            resultsLabel.textContent = term
+                ? `${total} Ergebnis${matches.length !== 1 ? 'se' : ''}`
+                : `${total} Starter`;
+
+            const inner = document.createElement('div');
+            inner.className = 'picker-list-inner';
+            if (!matches.length) {
+                const empty = document.createElement('div');
+                empty.className = 'picker-empty';
+                empty.textContent = 'Keine Startnummer gefunden';
+                inner.appendChild(empty);
+                pickerList.appendChild(inner);
+                return;
+            }
+            for (const num of matches) {
+                const starter = STARTERS.find(s => s.startNumber === num);
+                const runs = Math.floor((runCounts[num] ?? 0) / JUDGE_COUNT());
+                const groupClosed = starter?.startGroup?.objectId && closedGroups.has(starter.startGroup.objectId);
+                const done = CONFIG.qualiRuns != null && runs >= CONFIG.qualiRuns;
+                const item = document.createElement('div');
+                item.className = 'picker-item' + (num === selected ? ' selected' : '') + ((done || groupClosed) ? ' done' : '');
+                if (starter?.firstName || starter?.lastName) {
+                    item.innerHTML =
+                        `<span class="picker-item-num">${num}</span>` +
+                        `<span class="picker-item-name">` +
+                        `<span class="picker-item-first">${starter.firstName ?? ''}</span>` +
+                        `<span class="picker-item-last">${starter.lastName ?? ''}</span>` +
+                        `</span>` +
+                        (starter.startGroup ? `<span class="picker-item-group">${starter.startGroup.name ?? ''}</span>` : '') +
+                        (done
+                            ? `<span class="picker-item-done-badge">✓ Fertig</span>`
+                            : groupClosed
+                                ? `<span class="picker-item-done-badge">🔒 Quali zu</span>`
+                                : (runs > 0 ? `<span class="picker-item-runs">${runs}×</span>` : ''));
+                } else {
+                    item.textContent = num;
+                }
+                if (!done && !groupClosed) {
+                    item.addEventListener('click', () => {
+                        selected = num;
+                        if (display) display.textContent = num;
+                        setStartBtn(num);
+                        filterInput.value = '';
+                        renderList('');
+                    });
+                }
+                inner.appendChild(item);
+            }
+            pickerList.appendChild(inner);
+        }
+
+        function setStartBtn(num) {
+            if (num === null) {
+                startBtn.innerHTML = 'Starter auswählen';
+                startBtn.disabled = true;
+                clearBtn.disabled = true;
+            } else {
+                startBtn.innerHTML = `<span style="font-size:1.3rem">✓</span> Jetzt starten <span class="badge">${num}</span>`;
+                startBtn.disabled = false;
+                clearBtn.disabled = false;
+            }
+        }
+
+        function renderJuryGrid() {
+            const grid = document.getElementById('jury-grid');
+            const nextBtn = document.getElementById('next-btn');
+            const label = document.getElementById('waiting-label');
+            const allScored = scoredBy.size >= JUDGE_COUNT();
+
+            const chip = document.getElementById('run-chip');
+            chip.textContent = `Lauf ${activeRunNumber}`;
+            chip.style.display = '';
+            label.textContent = allScored ? 'Alle Wertungen eingegangen' : 'Warte auf Wertungen';
+            nextBtn.style.display = allScored ? '' : 'none';
+
+            grid.innerHTML = '';
+            for (const name of JUDGE_NAMES()) {
+                const s = juryScores[name];
+                const card = document.createElement('div');
+                card.className = 'jcard' + (s ? ' scored' : '');
+
+                const dot = document.createElement('div');
+                dot.className = 'presence-dot' + (onlineJudges.has(name) ? ' online' : '');
+                const hdr = document.createElement('div');
+                hdr.className = 'jcard-header';
+                hdr.appendChild(dot);
+                hdr.appendChild(document.createTextNode(name));
+                card.appendChild(hdr);
+
+                if (s) {
+                    const scoreGrid = document.createElement('div');
+                    scoreGrid.className = 'jcard-scores';
+                    CONFIG.criteria.forEach(c => {
+                        const col = document.createElement('div');
+                        col.className = 'jcard-crit';
+                        col.innerHTML =
+                            `<div class="jcard-crit-label">${c.shortLabel}</div>` +
+                            `<div class="jcard-crit-val">${s[c.key] ?? '—'}</div>`;
+                        scoreGrid.appendChild(col);
+                    });
+                    card.appendChild(scoreGrid);
+
+                    const div = document.createElement('div');
+                    div.className = 'jcard-divider';
+                    card.appendChild(div);
+
+                    const total = document.createElement('div');
+                    total.className = 'jcard-total';
+                    total.innerHTML =
+                        `<span class="jcard-total-label">Total</span>` +
+                        `<span class="jcard-total-val">${s.total ?? '—'}</span>`;
+                    card.appendChild(total);
+                } else {
+                    const pending = document.createElement('div');
+                    pending.className = 'jcard-pending';
+                    pending.textContent = 'Ausstehend';
+                    card.appendChild(pending);
+                }
+
+                grid.appendChild(card);
+            }
+        }
+
+        function enterWaitingForScores(startNumber) {
+            activeStarter = startNumber;
+            activeRunNumber = Math.floor((runCounts[startNumber] ?? 0) / JUDGE_COUNT()) + 1;
+            scoredBy = new Set();
+            juryScores = {};
+            const runStartedAt = new Date();
+
+            const starter = STARTERS.find(s => s.startNumber === startNumber);
+            const name = starter ? `${starter.firstName ?? ''} ${starter.lastName ?? ''}`.trim() : String(startNumber);
+            document.getElementById('waiting-name').textContent = `#${startNumber}  ${name}`;
+            document.getElementById('waiting-overlay').classList.remove('hidden');
+            document.getElementById('picker-section').style.display = 'none';
+            renderJuryGrid();
+
+            if (scoreWs) scoreWs.close();
+            scoreWs = ParseAPI.subscribeJuryScores(startNumber, score => {
+                if (score.judgeName) {
+                    scoredBy.add(score.judgeName);
+                    juryScores[score.judgeName] = score;
+                }
+                renderJuryGrid();
+            });
+
+            ParseAPI.fetchJuryScores(startNumber).then(existing => {
+                existing.forEach(s => {
+                    const createdAt = new Date(s.createdAt?.iso ?? s.createdAt);
+                    if (s.judgeName && createdAt >= runStartedAt) {
+                        scoredBy.add(s.judgeName);
+                        juryScores[s.judgeName] = s;
+                    }
+                });
+                renderJuryGrid();
+            }).catch(() => { });
+        }
+
+        function exitWaitingForScores() {
+            if (scoreWs) { scoreWs.close(); scoreWs = null; }
+            activeStarter = null;
+            juryScores = {};
+            filterDone = false;
+            document.getElementById('next-btn').style.display = 'none';
+            document.getElementById('run-chip').style.display = 'none';
+            document.getElementById('waiting-overlay').classList.add('hidden');
+            document.getElementById('picker-section').style.display = '';
+            selected = null;
+            if (display) display.textContent = '—';
+            setStartBtn(null);
+            ParseAPI.fetchScoreCountByStarter().then(m => { runCounts = m; drawerRunCounts = m; renderFilterChips(); renderList(filterInput.value); }).catch(() => { });
+            renderList(filterInput.value);
+        }
+
+        filterInput.addEventListener('input', () => renderList(filterInput.value));
+        clearBtn.addEventListener('click', clearSelection);
+        document.getElementById('next-btn').addEventListener('click', exitWaitingForScores);
+
+        function setMode(m) {
+            mode = m;
+            document.getElementById('mode-quali').classList.toggle('active', m === 'quali');
+            document.getElementById('mode-finale').classList.toggle('active', m === 'finale');
+            document.querySelector('.picker-input-wrap').style.display = m === 'quali' ? '' : 'none';
+            if (m === 'quali') {
+                // Re-render filter chips so they show/hide correctly
+                renderFilterChips();
+            } else {
+                document.getElementById('filter-chips-groups').style.display = 'none';
+                document.getElementById('filter-chips-runs').style.display = 'none';
+            }
+            clearSelection();
+            renderList('');
+        }
+
+        document.getElementById('mode-quali').addEventListener('click', () => setMode('quali'));
+        document.getElementById('mode-finale').addEventListener('click', () => setMode('finale'));
+
+        // ── Verwaltung drawer ──
+        let drawerGroups = [];
+        let drawerStarters = [];
+        let drawerRunCounts = {};
+        let finalEntriesByGroup = {}; // groupObjectId → sorted FinalEntry[]
+        let mode = 'quali'; // 'quali' | 'finale'
+
+        function openDrawer() {
+            document.getElementById('drawer').classList.add('open');
+            document.getElementById('drawer-overlay').classList.add('open');
+            document.getElementById('drawer-btn').classList.add('open');
+            renderDrawer();
+        }
+
+        function closeDrawer() {
+            document.getElementById('drawer').classList.remove('open');
+            document.getElementById('drawer-overlay').classList.remove('open');
+            document.getElementById('drawer-btn').classList.remove('open');
+        }
+
+        document.getElementById('drawer-btn').addEventListener('click', () => {
+            document.getElementById('drawer').classList.contains('open') ? closeDrawer() : openDrawer();
+        });
+        document.getElementById('drawer-overlay').addEventListener('click', closeDrawer);
+        document.getElementById('drawer-close').addEventListener('click', closeDrawer);
+
+        async function drawerSetStatus(starter, status) {
+            const newStatus = starter.status === status ? 'active' : status;
+            try {
+                await ParseAPI.updateStarterStatus(starter.objectId, newStatus);
+                starter.status = newStatus;
+                renderDrawer();
+                renderList(filterInput.value);
+                renderFilterChips();
+            } catch (_) { }
+        }
+
+        async function drawerToggleQualiClosed(group) {
+            const newVal = !group.qualiClosed;
+            try {
+                await ParseAPI.updateStartGroupQualiClosed(group.objectId, newVal);
+                group.qualiClosed = newVal;
+                closedGroups = newVal
+                    ? new Set([...closedGroups, group.objectId])
+                    : new Set([...closedGroups].filter(id => id !== group.objectId));
+                renderDrawer();
+                renderFilterChips();
+                renderList(filterInput.value);
+            } catch (_) { }
+        }
+
+        async function drawerCreateFinal(group, btn) {
+            btn.disabled = true;
+            btn.textContent = '…';
+            try {
+                const result = await ParseAPI.createFinal(group.objectId);
+                btn.textContent = `✓ ${result.created}`;
+                setTimeout(() => renderDrawer(), 1500);
+            } catch (e) {
+                btn.textContent = '✕';
+                btn.disabled = false;
+            }
+        }
+
+        function renderDrawer() {
+            const body = document.getElementById('drawer-body');
+            const openIds = new Set(
+                [...body.querySelectorAll('.drawer-panel.open')].map(el => el.dataset.gid)
+            );
+            body.innerHTML = '';
+
+            const grouped = {};
+            const noGroup = [];
+            for (const s of drawerStarters) {
+                const gid = s.startGroup?.objectId;
+                if (gid) { if (!grouped[gid]) grouped[gid] = []; grouped[gid].push(s); }
+                else noGroup.push(s);
+            }
+
+            const renderGroup = (starters, group) => {
+                const gid = group?.objectId ?? '__none__';
+                const isClosed = group ? (closedGroups.has(gid)) : false;
+                const jc = JUDGE_COUNT();
+                const doneCount = starters.filter(s =>
+                    s.status !== 'removed' && CONFIG.qualiRuns != null &&
+                    Math.floor((drawerRunCounts[s.startNumber] ?? 0) / jc) >= CONFIG.qualiRuns
+                ).length;
+                const activeCount = starters.filter(s => s.status !== 'removed').length;
+
+                const panel = document.createElement('div');
+                panel.className = 'drawer-panel' + (openIds.has(gid) ? ' open' : '');
+                panel.dataset.gid = gid;
+
+                // Header
+                const hdr = document.createElement('div');
+                hdr.className = 'drawer-panel-hdr';
+                hdr.innerHTML =
+                    `<div class="drawer-panel-title${isClosed ? ' closed' : ''}">${(isClosed ? '🔒 ' : '') + (group?.name ?? 'Keine Gruppe')}</div>` +
+                    `<span class="drawer-panel-count">${doneCount}/${activeCount}</span>`;
+
+                if (group) {
+                    const toggle = document.createElement('button');
+                    toggle.className = 'quali-toggle' + (isClosed ? ' closed' : '');
+                    toggle.innerHTML = isClosed
+                        ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`
+                        : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>`;
+                    toggle.addEventListener('click', e => { e.stopPropagation(); drawerToggleQualiClosed(group); });
+                    hdr.appendChild(toggle);
+                }
+
+                const chevron = document.createElement('span');
+                chevron.className = 'drawer-panel-chevron';
+                chevron.textContent = '▼';
+                hdr.appendChild(chevron);
+                hdr.addEventListener('click', () => panel.classList.toggle('open'));
+                panel.appendChild(hdr);
+
+                // Body
+                const panelBody = document.createElement('div');
+                panelBody.className = 'drawer-panel-body';
+
+                for (const s of starters) {
+                    const runs = Math.floor((drawerRunCounts[s.startNumber] ?? 0) / JUDGE_COUNT());
+                    const done = CONFIG.qualiRuns != null && runs >= CONFIG.qualiRuns;
+                    const status = s.status ?? 'active';
+
+                    const item = document.createElement('div');
+                    item.className = 'drawer-item' +
+                        (status === 'disqualified' ? ' disqualified' : '') +
+                        (status === 'removed' ? ' removed' : '');
+
+                    const num = document.createElement('div');
+                    num.className = 'drawer-item-num';
+                    num.textContent = s.startNumber;
+
+                    const name = document.createElement('div');
+                    name.className = 'drawer-item-name';
+                    name.innerHTML =
+                        `<span class="drawer-item-first">${s.firstName ?? ''}</span>` +
+                        `<span class="drawer-item-last">${s.lastName ?? s.startNumber}</span>`;
+
+                    const badge = document.createElement('span');
+                    badge.className = 'drawer-item-badge';
+                    if (status === 'disqualified') { badge.textContent = 'DSQ'; badge.classList.add('dq'); }
+                    else if (status === 'removed') { badge.textContent = 'Weg'; badge.classList.add('removed'); }
+                    else if (done) { badge.textContent = '✓'; badge.classList.add('done'); }
+                    else if (runs > 0) { badge.textContent = `${runs}×`; badge.classList.add('runs'); }
+
+                    const actions = document.createElement('div');
+                    actions.className = 'drawer-item-actions';
+
+                    const dqBtn = document.createElement('button');
+                    dqBtn.className = 'dact' + (status === 'disqualified' ? ' dq' : '');
+                    dqBtn.textContent = status === 'disqualified' ? '↺' : 'DSQ';
+                    dqBtn.addEventListener('click', () => drawerSetStatus(s, 'disqualified'));
+                    actions.appendChild(dqBtn);
+
+                    const rmBtn = document.createElement('button');
+                    rmBtn.className = 'dact' + (status === 'removed' ? ' rm' : '');
+                    rmBtn.textContent = status === 'removed' ? '↺' : '✕';
+                    rmBtn.addEventListener('click', () => drawerSetStatus(s, 'removed'));
+                    actions.appendChild(rmBtn);
+
+                    item.appendChild(num);
+                    item.appendChild(name);
+                    item.appendChild(badge);
+                    item.appendChild(actions);
+                    panelBody.appendChild(item);
+                }
+
+                // Footer with finale button (only when closed)
+                if (group && isClosed) {
+                    const footer = document.createElement('div');
+                    footer.className = 'drawer-panel-footer';
+                    const finalBtn = document.createElement('button');
+                    finalBtn.className = 'final-btn';
+                    finalBtn.innerHTML =
+                        `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>FINALE`;
+                    finalBtn.addEventListener('click', () => drawerCreateFinal(group, finalBtn));
+                    footer.appendChild(finalBtn);
+                    panelBody.appendChild(footer);
+                }
+
+                panel.appendChild(panelBody);
+                body.appendChild(panel);
+            };
+
+            for (const group of drawerGroups) renderGroup(grouped[group.objectId] ?? [], group);
+            if (noGroup.length) renderGroup(noGroup, null);
+        }
+
+        async function init() {
+            await Promise.all([ParseAPI.fetchEvent(), ParseAPI.fetchJudges()]).catch(() => { });
+            document.title = `${CONFIG.eventName} – Rennleitung`;
+
+            // Show event name + qualiRuns in header center
+            const qualiRuns = CONFIG.qualiRuns;
+            document.getElementById('event-label') && (document.getElementById('event-label').textContent = qualiRuns != null ? 'Event / Läufe' : 'Event');
+            document.getElementById('event-display').textContent = CONFIG.eventName;
+            const qualiEl = document.getElementById('quali-display');
+            if (qualiRuns != null) {
+                qualiEl.textContent = `${qualiRuns}× Qualifikation`;
+                qualiEl.style.display = '';
+            }
+            const finalEl = document.getElementById('final-display');
+            if (CONFIG.finalRuns != null) {
+                finalEl.textContent = `${CONFIG.finalRuns}× Finale`;
+                finalEl.style.display = '';
+            }
+
+            // Load start groups and subscribe to qualiClosed changes
+            ParseAPI.fetchStartGroups().then(groups => {
+                drawerGroups = groups;
+                closedGroups = new Set(groups.filter(g => g.qualiClosed).map(g => g.objectId));
+                renderFilterChips();
+                renderList(filterInput.value);
+            }).catch(() => { });
+
+            ParseAPI.subscribeStartGroups(msg => {
+                const sg = drawerGroups.find(g => g.objectId === msg.object?.objectId);
+                if (sg && msg.object != null) {
+                    sg.qualiClosed = msg.object.qualiClosed;
+                    if (msg.object.qualiClosed) closedGroups.add(sg.objectId);
+                    else closedGroups.delete(sg.objectId);
+                    renderFilterChips();
+                    renderList(filterInput.value);
+                    if (document.getElementById('drawer').classList.contains('open')) renderDrawer();
+                }
+            });
+
+            resultsLabel.textContent = 'Lade Starter …';
+            try {
+                [STARTERS, runCounts] = await Promise.all([
+                    ParseAPI.fetchStarters(),
+                    ParseAPI.fetchScoreCountByStarter(),
+                ]);
+                START_NUMBERS = STARTERS.map(s => s.startNumber);
+                drawerStarters = STARTERS;
+                drawerRunCounts = runCounts;
+            } catch (e) {
+                resultsLabel.textContent = 'Fehler beim Laden';
+            }
+
+            // Load final entries and subscribe
+            async function refreshFinalEntries() {
+                try {
+                    const all = await ParseAPI.fetchAllFinalEntries();
+                    finalEntriesByGroup = {};
+                    for (const e of all) {
+                        const gid = e.startGroup?.objectId ?? '__none__';
+                        if (!finalEntriesByGroup[gid]) finalEntriesByGroup[gid] = [];
+                        finalEntriesByGroup[gid].push(e);
+                    }
+                    const hasFinals = Object.values(finalEntriesByGroup).some(e => e.length > 0);
+                    document.getElementById('mode-toggle').style.display = hasFinals ? '' : 'none';
+                    renderFilterChips();
+                    renderList(filterInput.value);
+                } catch (_) { }
+            }
+            refreshFinalEntries();
+            ParseAPI.subscribeFinalEntries(refreshFinalEntries);
+
+            renderFilterChips();
+            renderList('');
+        }
+
+        init();
+
+        startBtn.addEventListener('click', async () => {
+            if (selected === null) return;
+            startBtn.disabled = true;
+            startBtn.innerHTML = '…';
+            try {
+                await ParseAPI.publishActiveStarter(selected);
+                channel.postMessage({ startnumber: selected });
+                startBtn.innerHTML = '✓ Gestartet';
+                setTimeout(() => enterWaitingForScores(selected), 800);
+            } catch (e) {
+                startBtn.innerHTML = '✕ Fehler';
+                startBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+
+</html>

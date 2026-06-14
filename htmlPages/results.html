@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ergebnisse</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏆</text></svg>">
-    <link rel="stylesheet" href="jury.css">
+    <link rel="stylesheet" href="../jury.css">
     <style>
         .results-controls {
             flex-shrink: 0;
@@ -93,6 +93,16 @@
             font-weight: 700;
             color: var(--accent);
             background: color-mix(in srgb, var(--accent) 15%, transparent);
+            border-radius: 4px;
+            padding: 0.1rem 0.35rem;
+            white-space: nowrap;
+        }
+
+        .result-done-badge {
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: var(--green);
+            background: color-mix(in srgb, var(--green) 15%, transparent);
             border-radius: 4px;
             padding: 0.1rem 0.35rem;
             white-space: nowrap;
@@ -202,6 +212,76 @@
             padding: 3rem 1rem;
         }
 
+        /* Excluded starters expansion panels */
+        .excl-panel {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            margin-bottom: 0.5rem;
+            overflow: hidden;
+            background: var(--card);
+        }
+
+        .excl-panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.6rem 1rem;
+            cursor: pointer;
+            user-select: none;
+            gap: 0.6rem;
+        }
+
+        .excl-panel-header:active { background: var(--border); }
+
+        .excl-panel-title {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .excl-panel-title.dq  { color: #e74c3c; }
+        .excl-panel-title.removed { color: var(--muted); }
+
+        .excl-count {
+            font-size: 0.65rem;
+            font-weight: 600;
+            background: var(--border);
+            color: var(--muted);
+            border-radius: 4px;
+            padding: 0.1rem 0.4rem;
+        }
+
+        .excl-chevron {
+            font-size: 0.7rem;
+            color: var(--muted);
+            margin-left: auto;
+            transition: transform 0.2s;
+        }
+
+        .excl-panel.open .excl-chevron { transform: rotate(180deg); }
+
+        .excl-body {
+            display: none;
+            border-top: 1px solid var(--border);
+        }
+
+        .excl-panel.open .excl-body { display: block; }
+
+        .excl-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.6rem 1rem;
+            border-bottom: 1px solid var(--border);
+            opacity: 0.6;
+        }
+
+        .excl-item:last-child { border-bottom: none; }
+
         .results-count-label {
             padding: 0.4rem 0.25rem 0.25rem;
             font-size: 0.7rem;
@@ -248,15 +328,16 @@
     </div>
 
     <footer>
-        <img src="assets/weraceLogo.png" alt="WeRace">
+        <img src="../assets/weraceLogo.png" alt="WeRace">
     </footer>
 
-    <script src="config.js"></script>
-    <script src="parse-api.js"></script>
+    <script src="../config.js"></script>
+    <script src="../parse-api.js"></script>
     <script>
         let starters = [];
         let allScores = [];
-        let filterGroup = null; // startGroup objectId or null = all
+        let filterGroup = null;
+        let startGroups = [];
 
         function buildResults() {
             const judgeCount = Object.keys(CONFIG.judgeTokens).length;
@@ -273,6 +354,7 @@
                 const num = Number(numStr);
                 const starter = starters.find(s => s.startNumber === num);
 
+                if (starter?.status === 'disqualified' || starter?.status === 'removed') continue;
                 if (filterGroup !== null && starter?.startGroup?.objectId !== filterGroup) continue;
 
                 const runs = [];
@@ -292,6 +374,31 @@
             return results;
         }
 
+        function buildExcluded(statusFilter) {
+            const judgeCount = Object.keys(CONFIG.judgeTokens).length;
+            const byStarter = {};
+            for (const s of allScores) {
+                const n = s.startnumber;
+                if (!byStarter[n]) byStarter[n] = [];
+                byStarter[n].push(s);
+            }
+            const results = [];
+            for (const [numStr, scores] of Object.entries(byStarter)) {
+                const num = Number(numStr);
+                const starter = starters.find(s => s.startNumber === num);
+                if ((starter?.status ?? 'active') !== statusFilter) continue;
+                if (filterGroup !== null && starter?.startGroup?.objectId !== filterGroup) continue;
+                const runs = [];
+                for (let i = 0; i + judgeCount <= scores.length; i += judgeCount) {
+                    const chunk = scores.slice(i, i + judgeCount);
+                    runs.push({ scores: chunk, total: chunk.reduce((a, s) => a + (s.total ?? 0), 0) });
+                }
+                const best = runs.length ? Math.max(...runs.map(r => r.total)) : null;
+                results.push({ num, starter, runs, best });
+            }
+            return results;
+        }
+
         function renderGroupChips() {
             const bar = document.getElementById('group-chips');
             const groups = [];
@@ -307,9 +414,11 @@
             bar.style.display = groups.length ? '' : 'none';
             bar.innerHTML = '';
             for (const g of groups) {
+                const sg = startGroups.find(x => x.objectId === g.id);
+                const isClosed = sg?.qualiClosed ?? false;
                 const chip = document.createElement('button');
                 chip.className = 'fchip' + (filterGroup === g.id ? ' active' : '');
-                chip.textContent = g.name;
+                chip.textContent = isClosed ? `🔒 ${g.name}` : g.name;
                 chip.addEventListener('click', () => {
                     filterGroup = filterGroup === g.id ? null : g.id;
                     renderGroupChips();
@@ -348,6 +457,7 @@
                 const firstName = starter?.firstName ?? '';
                 const lastName = starter?.lastName ?? String(num);
                 const groupName = starter?.startGroup?.name ?? '';
+                const isDone = CONFIG.qualiRuns != null && runs.length >= CONFIG.qualiRuns;
 
                 const header = document.createElement('div');
                 header.className = 'result-header';
@@ -357,7 +467,7 @@
                     `<div class="result-meta">` +
                     `<span class="result-num">#${num}</span>` +
                     (groupName ? `<span class="result-group-badge">${groupName}</span>` : '') +
-                    `<span class="result-runs-badge">${runs.length}×</span>` +
+                    (isDone ? `<span class="result-done-badge">✓ Fertig</span>` : `<span class="result-runs-badge">${runs.length}×</span>`) +
                     `</div>` +
                     `<span class="result-first">${firstName}</span>` +
                     `<span class="result-last">${lastName}</span>` +
@@ -404,6 +514,54 @@
                 card.appendChild(runsDiv);
                 list.appendChild(card);
             });
+
+            // Excluded panels — DSQ and Removed
+            const renderExclPanel = (statusFilter, label, titleClass, icon) => {
+                const excluded = buildExcluded(statusFilter);
+                if (!excluded.length) return;
+
+                const panelId = `excl-${statusFilter}`;
+                const wasOpen = list.querySelector(`[data-excl="${statusFilter}"]`)?.classList.contains('open');
+
+                const panel = document.createElement('div');
+                panel.className = 'excl-panel' + (wasOpen ? ' open' : '');
+                panel.dataset.excl = statusFilter;
+
+                const hdr = document.createElement('div');
+                hdr.className = 'excl-panel-header';
+                hdr.innerHTML =
+                    `<div class="excl-panel-title ${titleClass}">${icon} ${label}</div>` +
+                    `<span class="excl-count">${excluded.length}</span>` +
+                    `<span class="excl-chevron">▼</span>`;
+                hdr.addEventListener('click', () => panel.classList.toggle('open'));
+                panel.appendChild(hdr);
+
+                const body = document.createElement('div');
+                body.className = 'excl-body';
+
+                for (const { num, starter, runs, best } of excluded) {
+                    const item = document.createElement('div');
+                    item.className = 'excl-item';
+                    const firstName = starter?.firstName ?? '';
+                    const lastName = starter?.lastName ?? String(num);
+                    const groupName = starter?.startGroup?.name ?? '';
+                    item.innerHTML =
+                        `<span class="result-num">#${num}</span>` +
+                        `<span class="result-name" style="flex:1">` +
+                        `<span class="result-first">${firstName}</span>` +
+                        `<span class="result-last">${lastName}</span>` +
+                        `</span>` +
+                        (groupName ? `<span class="result-group-badge">${groupName}</span>` : '') +
+                        (best != null ? `<span style="font-size:0.95rem;font-weight:800;color:var(--muted)">${best.toFixed(1)}</span>` : '');
+                    body.appendChild(item);
+                }
+
+                panel.appendChild(body);
+                list.appendChild(panel);
+            };
+
+            renderExclPanel('disqualified', 'Disqualifiziert', 'dq', '⊘');
+            renderExclPanel('removed', 'Entfernt', 'removed', '✕');
         }
 
         // Helper for unfiltered count used in label
@@ -417,7 +575,10 @@
 
         async function refresh() {
             try {
-                allScores = await ParseAPI.fetchAllJuryScores();
+                [allScores, starters] = await Promise.all([
+                    ParseAPI.fetchAllJuryScores(),
+                    ParseAPI.fetchStarters(),
+                ]);
                 render();
             } catch (_) {}
         }
@@ -427,11 +588,18 @@
             document.getElementById('event-name').textContent = CONFIG.eventName;
             document.title = `${CONFIG.eventName} – Ergebnisse`;
 
-            starters = await ParseAPI.fetchStarters().catch(() => []);
+            [starters, startGroups] = await Promise.all([
+                ParseAPI.fetchStarters().catch(() => []),
+                ParseAPI.fetchStartGroups().catch(() => []),
+            ]);
             renderGroupChips();
             await refresh();
 
             ParseAPI.subscribeAllJuryScores(refresh);
+            ParseAPI.subscribeStartGroups(msg => {
+                const sg = startGroups.find(g => g.objectId === msg.object?.objectId);
+                if (sg && msg.object) { sg.qualiClosed = msg.object.qualiClosed; renderGroupChips(); }
+            });
         }
 
         init();

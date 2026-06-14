@@ -2,6 +2,7 @@ config.js
 
 *.log
 *.yml
+!.github/workflows/*.yml
 *.png
 *-schema.json
 

@@ -391,6 +391,11 @@ main {
     cursor: pointer;
 }
 
+.modal-cancel:disabled {
+    color: var(--border);
+    cursor: default;
+}
+
 .modal-confirm {
     padding: 0.85rem;
     background: var(--green);
@@ -582,6 +587,18 @@ main {
     background: color-mix(in srgb, var(--accent) 20%, transparent);
     border-color: var(--accent);
     color: var(--accent);
+}
+
+.fchip.done.active {
+    background: color-mix(in srgb, var(--green) 20%, transparent);
+    border-color: var(--green);
+    color: var(--green);
+}
+
+.fchip.closed-group {
+    border-color: var(--muted);
+    color: var(--muted);
+    opacity: 0.6;
 }
 
 .picker-item:active {

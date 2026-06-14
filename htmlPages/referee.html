@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Obmann</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📋</text></svg>">
+    <link rel="stylesheet" href="../jury.css">
+    <style>
+        .group-section {
+            flex-shrink: 0;
+            max-width: 600px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 0.5rem 1rem 0;
+            box-sizing: border-box;
+        }
+
+        .panel {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--card);
+            margin-bottom: 0.5rem;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            display: grid;
+            grid-template-columns: 1fr auto auto auto;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.7rem 1rem;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .panel-header:active { background: var(--border); }
+
+        .panel-title {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .panel-title.closed { color: var(--green); }
+
+        .panel-count {
+            font-size: 0.7rem;
+            color: var(--muted);
+            background: var(--border);
+            border-radius: 4px;
+            padding: 0.1rem 0.4rem;
+        }
+
+        .panel-chevron {
+            font-size: 0.7rem;
+            color: var(--muted);
+            transition: transform 0.2s;
+            flex-shrink: 0;
+        }
+
+        .panel.open .panel-chevron { transform: rotate(180deg); }
+
+        .panel-body {
+            display: none;
+            border-top: 1px solid var(--border);
+        }
+
+        .panel.open .panel-body { display: block; }
+
+        .quali-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 0.25rem 0.6rem;
+            border-radius: 999px;
+            border: 1.5px solid var(--border);
+            background: transparent;
+            color: var(--muted);
+            font-size: 0.65rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: border-color 0.2s, color 0.2s, background 0.2s;
+            line-height: 1;
+        }
+
+        .quali-toggle:active { opacity: 0.7; }
+
+        .quali-toggle.closed {
+            border-color: var(--green);
+            color: var(--green);
+            background: color-mix(in srgb, var(--green) 12%, transparent);
+        }
+
+        .final-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 0.25rem 0.6rem;
+            border-radius: 999px;
+            border: 1.5px solid var(--accent);
+            background: color-mix(in srgb, var(--accent) 12%, transparent);
+            color: var(--accent);
+            font-size: 0.65rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: opacity 0.15s;
+            line-height: 1;
+        }
+
+        .final-btn:active { opacity: 0.7; }
+        .final-btn:disabled { opacity: 0.35; cursor: default; }
+
+        .quali-toggle svg {
+            width: 0.75rem;
+            height: 0.75rem;
+            flex-shrink: 0;
+        }
+
+        .ref-list {
+            background: var(--card);
+        }
+
+        .ref-item {
+            display: grid;
+            grid-template-columns: 2.5rem 1fr auto auto;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.7rem 0.75rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .ref-item:last-child { border-bottom: none; }
+
+        .ref-item.disqualified { opacity: 0.45; }
+        .ref-item.removed { opacity: 0.25; }
+
+        .ref-num {
+            font-size: 1rem;
+            font-weight: 800;
+            color: var(--accent);
+            text-align: right;
+        }
+
+        .ref-name {
+            display: flex;
+            flex-direction: column;
+            gap: 0.05rem;
+            min-width: 0;
+        }
+
+        .ref-first {
+            font-size: 0.7rem;
+            color: var(--muted);
+        }
+
+        .ref-last {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .ref-status {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 0.2rem;
+            flex-shrink: 0;
+        }
+
+        .ref-runs-badge {
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: var(--accent);
+            background: color-mix(in srgb, var(--accent) 15%, transparent);
+            border-radius: 4px;
+            padding: 0.1rem 0.35rem;
+            white-space: nowrap;
+        }
+
+        .ref-done-badge {
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: var(--green);
+            background: color-mix(in srgb, var(--green) 15%, transparent);
+            border-radius: 4px;
+            padding: 0.1rem 0.35rem;
+            white-space: nowrap;
+        }
+
+        .ref-dq-badge {
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: #e74c3c;
+            background: color-mix(in srgb, #e74c3c 15%, transparent);
+            border-radius: 4px;
+            padding: 0.1rem 0.35rem;
+            white-space: nowrap;
+        }
+
+        .ref-removed-badge {
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: var(--muted);
+            background: var(--border);
+            border-radius: 4px;
+            padding: 0.1rem 0.35rem;
+            white-space: nowrap;
+        }
+
+        .ref-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+            flex-shrink: 0;
+        }
+
+        .ref-action-btn {
+            font-size: 0.65rem;
+            font-weight: 700;
+            padding: 0.2rem 0.5rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--muted);
+            cursor: pointer;
+            white-space: nowrap;
+            transition: background 0.1s, color 0.1s, border-color 0.1s;
+        }
+
+        .ref-action-btn:active { background: var(--border); }
+
+        .ref-action-btn.dq {
+            border-color: #e74c3c;
+            color: #e74c3c;
+            background: color-mix(in srgb, #e74c3c 12%, transparent);
+        }
+
+        .ref-action-btn.remove-active {
+            border-color: var(--muted);
+            color: var(--muted);
+            background: var(--border);
+        }
+
+        .referee-list {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            padding-bottom: 1rem;
+        }
+
+        .access-denied {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+            gap: 0.75rem;
+            color: var(--muted);
+        }
+
+        .access-denied-title {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: var(--accent);
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-group">
+            <div class="header-label">WeRace</div>
+            <div class="header-value" style="color:var(--accent)" id="event-name">Obmann</div>
+        </div>
+        <div class="header-group">
+            <div class="header-label">Starter</div>
+            <div class="header-value" id="starter-count">—</div>
+        </div>
+        <div class="header-group">
+            <div class="header-label">Fertig</div>
+            <div class="header-value" id="done-count" style="color:var(--green)">—</div>
+        </div>
+    </header>
+
+    <div class="content-center" id="content">
+        <div class="access-denied" id="access-denied" style="display:none">
+            <div class="access-denied-title">Zugang verweigert</div>
+            <div style="font-size:0.85rem">Kein gültiger Token</div>
+        </div>
+        <div class="referee-list" id="referee-list"></div>
+    </div>
+
+    <footer>
+        <img src="../assets/weraceLogo.png" alt="WeRace">
+    </footer>
+
+    <script src="../config.js"></script>
+    <script src="../parse-api.js"></script>
+    <script>
+        // Token check
+        const token = new URLSearchParams(location.search).get('token');
+        const REFEREE_TOKEN = () => CONFIG.refereeToken;
+
+        let starters = [];
+        let runCounts = {};
+        let startGroups = [];
+
+        function judgeCount() { return Math.max(1, Object.keys(CONFIG.judgeTokens).length); }
+
+        function runsDone(startnumber) {
+            return Math.floor((runCounts[startnumber] ?? 0) / judgeCount());
+        }
+
+        function isDone(startnumber) {
+            return CONFIG.qualiRuns != null && runsDone(startnumber) >= CONFIG.qualiRuns;
+        }
+
+        function renderGroupChips() {} // no-op — panels replace chips
+
+        async function setStatus(starter, status) {
+            const newStatus = starter.status === status ? 'active' : status;
+            try {
+                await ParseAPI.updateStarterStatus(starter.objectId, newStatus);
+                starter.status = newStatus;
+                render();
+            } catch (_) {}
+        }
+
+        async function toggleQualiClosed(group) {
+            const newVal = !group.qualiClosed;
+            try {
+                await ParseAPI.updateStartGroupQualiClosed(group.objectId, newVal);
+                group.qualiClosed = newVal;
+                render();
+            } catch (_) {}
+        }
+
+        async function triggerCreateFinal(group, btn) {
+            btn.disabled = true;
+            btn.textContent = '…';
+            try {
+                const result = await ParseAPI.createFinal(group.objectId);
+                btn.textContent = `✓ ${result.created} Finalisten`;
+                setTimeout(() => render(), 1500);
+            } catch (e) {
+                btn.textContent = '✕ Fehler';
+                btn.disabled = false;
+            }
+        }
+
+        function render() {
+            const list = document.getElementById('referee-list');
+            const activeStarters = starters.filter(s => s.status !== 'removed');
+            const doneCount = activeStarters.filter(s => isDone(s.startNumber)).length;
+            document.getElementById('starter-count').textContent = activeStarters.length;
+            document.getElementById('done-count').textContent = doneCount;
+
+            // Preserve which panels are open
+            const openIds = new Set(
+                [...list.querySelectorAll('.panel.open')].map(el => el.dataset.groupId)
+            );
+
+            list.innerHTML = '';
+
+            const grouped = {};
+            const noGroup = [];
+            for (const s of starters) {
+                if (s.startGroup?.objectId) {
+                    const gid = s.startGroup.objectId;
+                    if (!grouped[gid]) grouped[gid] = [];
+                    grouped[gid].push(s);
+                } else {
+                    noGroup.push(s);
+                }
+            }
+
+            const renderGroup = (groupStarters, group) => {
+                const gid = group?.objectId ?? '__none__';
+                const isClosed = group?.qualiClosed ?? false;
+                const isOpen = openIds.has(gid);
+                const doneInGroup = groupStarters.filter(s => isDone(s.startNumber) && s.status !== 'removed').length;
+                const totalInGroup = groupStarters.filter(s => s.status !== 'removed').length;
+
+                const section = document.createElement('div');
+                section.className = 'group-section';
+
+                const panel = document.createElement('div');
+                panel.className = 'panel' + (isOpen ? ' open' : '');
+                panel.dataset.groupId = gid;
+
+                // Panel header (clickable to expand)
+                const panelHdr = document.createElement('div');
+                panelHdr.className = 'panel-header';
+                panelHdr.innerHTML =
+                    `<div class="panel-title${isClosed ? ' closed' : ''}">` +
+                    (isClosed ? '🔒 ' : '') +
+                    (group?.name ?? 'Ohne Gruppe') +
+                    `</div>` +
+                    `<span class="panel-count">${doneInGroup}/${totalInGroup} fertig</span>`;
+
+                if (group) {
+                    const toggle = document.createElement('button');
+                    toggle.className = 'quali-toggle' + (isClosed ? ' closed' : '');
+                    toggle.innerHTML = isClosed
+                        ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>QUALI ZU`
+                        : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>SCHLIESSEN`;
+                    toggle.addEventListener('click', e => { e.stopPropagation(); toggleQualiClosed(group); });
+                    panelHdr.appendChild(toggle);
+
+                    if (isClosed) {
+                        const finalBtn = document.createElement('button');
+                        finalBtn.className = 'final-btn';
+                        finalBtn.innerHTML = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>FINALE`;
+                        finalBtn.addEventListener('click', e => { e.stopPropagation(); triggerCreateFinal(group, finalBtn); });
+                        panelHdr.appendChild(finalBtn);
+                    }
+                }
+
+                const chevron = document.createElement('span');
+                chevron.className = 'panel-chevron';
+                chevron.textContent = '▼';
+                panelHdr.appendChild(chevron);
+
+                panelHdr.addEventListener('click', () => panel.classList.toggle('open'));
+                panel.appendChild(panelHdr);
+
+                // Panel body
+                const panelBody = document.createElement('div');
+                panelBody.className = 'panel-body';
+
+                const refList = document.createElement('div');
+                refList.className = 'ref-list';
+
+                for (const s of groupStarters) {
+                    const runs = runsDone(s.startNumber);
+                    const done = isDone(s.startNumber);
+                    const status = s.status ?? 'active';
+
+                    const item = document.createElement('div');
+                    item.className = 'ref-item' +
+                        (status === 'disqualified' ? ' disqualified' : '') +
+                        (status === 'removed' ? ' removed' : '');
+
+                    const num = document.createElement('div');
+                    num.className = 'ref-num';
+                    num.textContent = s.startNumber;
+
+                    const name = document.createElement('div');
+                    name.className = 'ref-name';
+                    name.innerHTML =
+                        `<span class="ref-first">${s.firstName ?? ''}</span>` +
+                        `<span class="ref-last">${s.lastName ?? s.startNumber}</span>`;
+
+                    const statusDiv = document.createElement('div');
+                    statusDiv.className = 'ref-status';
+                    if (status === 'disqualified') {
+                        statusDiv.innerHTML = `<span class="ref-dq-badge">DSQ</span>`;
+                    } else if (status === 'removed') {
+                        statusDiv.innerHTML = `<span class="ref-removed-badge">Entfernt</span>`;
+                    } else if (done) {
+                        statusDiv.innerHTML = `<span class="ref-done-badge">✓ Fertig</span>`;
+                    } else if (runs > 0) {
+                        statusDiv.innerHTML = `<span class="ref-runs-badge">${runs}×</span>`;
+                    }
+
+                    const actions = document.createElement('div');
+                    actions.className = 'ref-actions';
+
+                    const dqBtn = document.createElement('button');
+                    dqBtn.className = 'ref-action-btn' + (status === 'disqualified' ? ' dq' : '');
+                    dqBtn.textContent = status === 'disqualified' ? '↺ DSQ' : 'DSQ';
+                    dqBtn.addEventListener('click', e => { e.stopPropagation(); setStatus(s, 'disqualified'); });
+                    actions.appendChild(dqBtn);
+
+                    const rmBtn = document.createElement('button');
+                    rmBtn.className = 'ref-action-btn' + (status === 'removed' ? ' remove-active' : '');
+                    rmBtn.textContent = status === 'removed' ? '↺ Zurück' : 'Entfernen';
+                    rmBtn.addEventListener('click', e => { e.stopPropagation(); setStatus(s, 'removed'); });
+                    actions.appendChild(rmBtn);
+
+                    item.appendChild(num);
+                    item.appendChild(name);
+                    item.appendChild(statusDiv);
+                    item.appendChild(actions);
+                    refList.appendChild(item);
+                }
+
+                panelBody.appendChild(refList);
+                panel.appendChild(panelBody);
+                section.appendChild(panel);
+                list.appendChild(section);
+            };
+
+            for (const group of startGroups) {
+                const groupStarters = grouped[group.objectId] ?? [];
+                if (groupStarters.length) renderGroup(groupStarters, group);
+            }
+            if (noGroup.length) renderGroup(noGroup, null);
+        }
+
+        async function refresh() {
+            try {
+                [starters, runCounts] = await Promise.all([
+                    ParseAPI.fetchStarters(),
+                    ParseAPI.fetchScoreCountByStarter(),
+                ]);
+                render();
+            } catch (_) {}
+        }
+
+        async function init() {
+            await Promise.all([ParseAPI.fetchEvent(), ParseAPI.fetchJudges()]).catch(() => {});
+
+            // Token guard — checked after fetchEvent so refereeToken is populated
+            if (!CONFIG.refereeToken || token !== CONFIG.refereeToken) {
+                document.getElementById('access-denied').style.display = '';
+                document.getElementById('referee-list').style.display = 'none';
+                return;
+            }
+
+            document.getElementById('event-name').textContent = CONFIG.eventName;
+            document.title = `${CONFIG.eventName} – Obmann`;
+
+            startGroups = await ParseAPI.fetchStartGroups().catch(() => []);
+            await refresh();
+
+            ParseAPI.subscribeAllJuryScores(refresh);
+            ParseAPI.subscribeStartGroups(msg => {
+                const sg = startGroups.find(g => g.objectId === msg.object?.objectId);
+                if (sg && msg.object) {
+                    sg.qualiClosed = msg.object.qualiClosed;
+                    render();
+                }
+            });
+        }
+
+        init();
+    </script>
+</body>
+</html>

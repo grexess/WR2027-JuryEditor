@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Heldentag – Wertung</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏅</text></svg>">
-    <link rel="stylesheet" href="jury.css">
+    <link rel="stylesheet" href="../jury.css">
 </head>
 
 <body>
@@ -14,6 +14,11 @@
         <div class="header-group">
             <div class="header-label">Startnummer</div>
             <div class="header-value" id="startnumber">—</div>
+        </div>
+        <div class="header-group" id="final-group" style="display:none">
+            <div class="header-label">Finale Startnr.</div>
+            <div class="header-value" id="finalnum-value" style="color:var(--accent)">—</div>
+            <div class="header-label" id="mode-label" style="font-size:0.65rem;color:var(--green);margin-top:0.1rem">Finale</div>
         </div>
         <div class="header-group">
             <div class="header-label">Kampfrichter</div>
@@ -60,11 +65,11 @@
     </div>
 
     <footer>
-        <img src="assets/weraceLogo.png" alt="WeRace">
+        <img src="../assets/weraceLogo.png" alt="WeRace">
     </footer>
 
-    <script src="config.js"></script>
-    <script src="parse-api.js"></script>
+    <script src="../config.js"></script>
+    <script src="../parse-api.js"></script>
     <script>
         const params = new URLSearchParams(location.search);
         const token  = params.get('token');
@@ -115,6 +120,21 @@
             CRITERIA.forEach(c => scores[c] = 50);
             renderCriteria();
             renderNumpad();
+            updateModeHeader(Number(num));
+        }
+
+        async function updateModeHeader(num) {
+            try {
+                const entries = await ParseAPI.fetchAllFinalEntries();
+                const entry = entries.find(e => e.startNumber === num);
+                const group = document.getElementById('final-group');
+                if (entry) {
+                    document.getElementById('finalnum-value').textContent = entry.finalStartNumber;
+                    group.style.display = '';
+                } else {
+                    group.style.display = 'none';
+                }
+            } catch (_) {}
         }
 
         // Live Query — receives starter from any device via Parse
