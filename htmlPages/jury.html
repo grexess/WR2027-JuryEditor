@@ -69,6 +69,10 @@
     </footer>
 
     <script src="../config.js"></script>
+    <script>
+        const _seedOverride = localStorage.getItem('seedEventOverride');
+        if (_seedOverride) CONFIG.eventObjectId = _seedOverride;
+    </script>
     <script src="../parse-api.js"></script>
     <script>
         const params = new URLSearchParams(location.search);

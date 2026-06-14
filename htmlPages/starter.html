@@ -146,6 +146,66 @@
             background: color-mix(in srgb, var(--green) 10%, transparent);
         }
 
+        .fchip.finale-group.active {
+            background: var(--green);
+            border-color: var(--green);
+            color: #fff;
+        }
+
+        .finale-panel {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 0.5rem;
+        }
+
+        .finale-panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.6rem 1rem;
+            cursor: pointer;
+            user-select: none;
+            background: var(--card);
+            gap: 0.6rem;
+        }
+
+        .finale-panel-header:active { background: var(--border); }
+
+        .finale-panel-title {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--green);
+            flex: 1;
+        }
+
+        .finale-panel-count {
+            font-size: 0.65rem;
+            font-weight: 600;
+            background: color-mix(in srgb, var(--green) 15%, transparent);
+            color: var(--green);
+            border-radius: 4px;
+            padding: 0.1rem 0.4rem;
+        }
+
+        .finale-panel-chevron {
+            font-size: 0.7rem;
+            color: var(--muted);
+            transition: transform 0.2s;
+        }
+
+        .finale-panel.open .finale-panel-chevron { transform: rotate(180deg); }
+
+        .finale-panel-body {
+            display: none;
+            border-top: 1px solid var(--border);
+            background: var(--card);
+        }
+
+        .finale-panel.open .finale-panel-body { display: block; }
+
         /* ── Verwaltung drawer ── */
         .drawer-btn {
             background: none;
@@ -553,6 +613,7 @@
                     <button class="mode-chip active" id="mode-quali">Qualifikation</button>
                     <button class="mode-chip finale" id="mode-finale">Finale</button>
                 </div>
+                <div id="filter-chips-finale" class="filter-chips" style="display:none"></div>
                 <div class="picker-input-wrap">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -575,6 +636,10 @@
     </footer>
 
     <script src="../config.js"></script>
+    <script>
+        const _seedOverride = localStorage.getItem('seedEventOverride');
+        if (_seedOverride) CONFIG.eventObjectId = _seedOverride;
+    </script>
     <script src="../parse-api.js"></script>
     <script>
         // START_NUMBERS is now loaded from Parse — populated on init
@@ -594,6 +659,7 @@
         let lastSeenMap = {};
         let runCounts = {};
         let filterGroup = null;  // startGroup objectId or null = all
+        let filterFinalGroup = null; // finale group filter
         let filterRuns = null;   // run count number or null = all
         let filterDone = false;  // show only finished starters when true
         let closedGroups = new Set(); // objectIds of groups with qualiClosed=true
@@ -658,10 +724,6 @@
                 renderPresenceChips();
             } catch (_) { }
         }
-
-        refreshPresence();
-        setInterval(refreshPresence, CONFIG.presencePollMs);
-        ParseAPI.subscribePresence(refreshPresence);
 
         const filterInput = document.getElementById('filter-input');
         const pickerList = document.getElementById('picker-list');
@@ -748,12 +810,33 @@
             }
         }
 
+        function renderFinalChips() {
+            const bar = document.getElementById('filter-chips-finale');
+            bar.innerHTML = '';
+            const groups = Object.entries(finalEntriesByGroup).filter(([, e]) => e.length > 0);
+            if (groups.length <= 1) { bar.style.display = 'none'; return; }
+            bar.style.display = '';
+            for (const [gid, entries] of groups) {
+                const name = entries[0].startGroup?.name ?? gid;
+                const chip = document.createElement('button');
+                chip.className = 'fchip finale-group' + (filterFinalGroup === gid ? ' active' : '');
+                chip.textContent = name;
+                chip.addEventListener('click', () => {
+                    filterFinalGroup = filterFinalGroup === gid ? null : gid;
+                    renderFinalChips();
+                    renderList('');
+                });
+                bar.appendChild(chip);
+            }
+        }
+
         function renderList(filter) {
             pickerList.innerHTML = '';
 
             if (mode === 'finale') {
-                // ── Finale mode: show each finalized group ──
-                const groups = Object.entries(finalEntriesByGroup).filter(([, e]) => e.length > 0);
+                let groups = Object.entries(finalEntriesByGroup).filter(([, e]) => e.length > 0);
+                if (filterFinalGroup) groups = groups.filter(([gid]) => gid === filterFinalGroup);
+
                 if (!groups.length) {
                     const inner = document.createElement('div');
                     inner.className = 'picker-list-inner';
@@ -765,18 +848,28 @@
                     resultsLabel.textContent = '';
                     return;
                 }
-                let total = 0;
-                for (const [, entries] of groups) {
-                    const groupName = entries[0].startGroup?.name ?? 'Finale';
-                    const label = document.createElement('div');
-                    label.className = 'picker-results-label';
-                    label.style.cssText = 'color:var(--green);padding-top:0.5rem';
-                    label.textContent = `Finale – ${groupName}`;
-                    pickerList.appendChild(label);
 
-                    const inner = document.createElement('div');
-                    inner.className = 'picker-list-inner';
-                    for (const entry of entries) {
+                let total = 0;
+                groups.forEach(([gid, entries], idx) => {
+                    const groupName = entries[0].startGroup?.name ?? 'Finale';
+                    const panel = document.createElement('div');
+                    panel.className = 'finale-panel' + (idx === 0 ? ' open' : '');
+
+                    const hdr = document.createElement('div');
+                    hdr.className = 'finale-panel-header';
+                    hdr.innerHTML =
+                        `<span class="finale-panel-title">Finale – ${groupName}</span>` +
+                        `<span class="finale-panel-count">${entries.length}</span>` +
+                        `<span class="finale-panel-chevron">▼</span>`;
+                    hdr.addEventListener('click', () => panel.classList.toggle('open'));
+                    panel.appendChild(hdr);
+
+                    const body = document.createElement('div');
+                    body.className = 'finale-panel-body picker-list-inner';
+                    body.style.borderRadius = '0';
+                    body.style.border = 'none';
+
+                    for (const entry of [...entries].reverse()) {
                         const starter = entry.starter;
                         const item = document.createElement('div');
                         item.className = 'picker-item' + (entry.startNumber === selected ? ' selected' : '');
@@ -794,11 +887,12 @@
                             setStartBtn(entry.startNumber);
                             renderList('');
                         });
-                        inner.appendChild(item);
+                        body.appendChild(item);
                         total++;
                     }
-                    pickerList.appendChild(inner);
-                }
+                    panel.appendChild(body);
+                    pickerList.appendChild(panel);
+                });
                 resultsLabel.textContent = `${total} Finalisten`;
                 return;
             }
@@ -1022,11 +1116,13 @@
             document.getElementById('mode-finale').classList.toggle('active', m === 'finale');
             document.querySelector('.picker-input-wrap').style.display = m === 'quali' ? '' : 'none';
             if (m === 'quali') {
-                // Re-render filter chips so they show/hide correctly
                 renderFilterChips();
+                document.getElementById('filter-chips-finale').style.display = 'none';
             } else {
                 document.getElementById('filter-chips-groups').style.display = 'none';
                 document.getElementById('filter-chips-runs').style.display = 'none';
+                filterFinalGroup = null;
+                renderFinalChips();
             }
             clearSelection();
             renderList('');
@@ -1230,6 +1326,11 @@
             await Promise.all([ParseAPI.fetchEvent(), ParseAPI.fetchJudges()]).catch(() => { });
             document.title = `${CONFIG.eventName} – Rennleitung`;
 
+            // Start presence polling now that CONFIG.judgeTokens is populated from the live event
+            refreshPresence();
+            setInterval(refreshPresence, CONFIG.presencePollMs);
+            ParseAPI.subscribePresence(refreshPresence);
+
             // Show event name + qualiRuns in header center
             const qualiRuns = CONFIG.qualiRuns;
             document.getElementById('event-label') && (document.getElementById('event-label').textContent = qualiRuns != null ? 'Event / Läufe' : 'Event');
@@ -1291,6 +1392,7 @@
                     const hasFinals = Object.values(finalEntriesByGroup).some(e => e.length > 0);
                     document.getElementById('mode-toggle').style.display = hasFinals ? '' : 'none';
                     renderFilterChips();
+                    if (mode === 'finale') renderFinalChips();
                     renderList(filterInput.value);
                 } catch (_) { }
             }

@@ -332,6 +332,11 @@
     </footer>
 
     <script src="../config.js"></script>
+    <script>
+        // Allow seed.html to redirect results to the test event
+        const _seedOverride = localStorage.getItem('seedEventOverride');
+        if (_seedOverride) CONFIG.eventObjectId = _seedOverride;
+    </script>
     <script src="../parse-api.js"></script>
     <script>
         let starters = [];

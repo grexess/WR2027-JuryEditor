@@ -71,9 +71,7 @@ const ParseAPI = (() => {
         if (!res.ok) throw new Error(`Parse error ${res.status}`);
         const data = await res.json();
         const judges = data.results ?? [];
-        if (judges.length) {
-            CONFIG.judgeTokens = Object.fromEntries(judges.map(j => [j.token, j.name]));
-        }
+        CONFIG.judgeTokens = Object.fromEntries(judges.map(j => [j.token, j.name]));
         return judges;
     }
 

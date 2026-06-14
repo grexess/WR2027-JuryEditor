@@ -305,6 +305,10 @@
     </footer>
 
     <script src="../config.js"></script>
+    <script>
+        const _seedOverride = localStorage.getItem('seedEventOverride');
+        if (_seedOverride) CONFIG.eventObjectId = _seedOverride;
+    </script>
     <script src="../parse-api.js"></script>
     <script>
         // Token check
@@ -350,8 +354,8 @@
             btn.textContent = '…';
             try {
                 const result = await ParseAPI.createFinal(group.objectId);
-                btn.textContent = `✓ ${result.created} Finalisten`;
-                setTimeout(() => render(), 1500);
+                group.finalistCount = result.created;
+                render();
             } catch (e) {
                 btn.textContent = '✕ Fehler';
                 btn.disabled = false;
@@ -420,7 +424,12 @@
                     if (isClosed) {
                         const finalBtn = document.createElement('button');
                         finalBtn.className = 'final-btn';
-                        finalBtn.innerHTML = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>FINALE`;
+                        if (group.finalistCount != null) {
+                            finalBtn.textContent = `✓ ${group.finalistCount} Finalisten`;
+                            finalBtn.disabled = true;
+                        } else {
+                            finalBtn.innerHTML = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>FINALE`;
+                        }
                         finalBtn.addEventListener('click', e => { e.stopPropagation(); triggerCreateFinal(group, finalBtn); });
                         panelHdr.appendChild(finalBtn);
                     }
@@ -521,8 +530,8 @@
         async function init() {
             await Promise.all([ParseAPI.fetchEvent(), ParseAPI.fetchJudges()]).catch(() => {});
 
-            // Token guard — checked after fetchEvent so refereeToken is populated
-            if (!CONFIG.refereeToken || token !== CONFIG.refereeToken) {
+            // Token guard — skipped when no refereeToken is configured on the event
+            if (CONFIG.refereeToken && token !== CONFIG.refereeToken) {
                 document.getElementById('access-denied').style.display = '';
                 document.getElementById('referee-list').style.display = 'none';
                 return;
@@ -532,6 +541,20 @@
             document.title = `${CONFIG.eventName} – Obmann`;
 
             startGroups = await ParseAPI.fetchStartGroups().catch(() => []);
+
+            // Pre-populate finalistCount from existing FinalEntry records
+            try {
+                const all = await ParseAPI.fetchAllFinalEntries();
+                const countByGroup = {};
+                for (const e of all) {
+                    const gid = e.startGroup?.objectId;
+                    if (gid) countByGroup[gid] = (countByGroup[gid] ?? 0) + 1;
+                }
+                for (const g of startGroups) {
+                    if (countByGroup[g.objectId]) g.finalistCount = countByGroup[g.objectId];
+                }
+            } catch (_) {}
+
             await refresh();
 
             ParseAPI.subscribeAllJuryScores(refresh);

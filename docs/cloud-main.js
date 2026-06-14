@@ -7,7 +7,7 @@ Parse.Cloud.define('refereeUpdate', async (request) => {
         request.params.eventObjectId ?? await getEventObjectId(),
         { useMasterKey: true }
     );
-    if (!event || event.get('refereeToken') !== refereeToken) {
+    if (event.get('refereeToken') && event.get('refereeToken') !== refereeToken) {
         throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Invalid referee token');
     }
 
@@ -95,7 +95,7 @@ async function createFinal(event, startGroupObjectId) {
     await Parse.Object.destroyAll(existing, { useMasterKey: true });
 
     // Create new FinalEntry records:
-    // Best qualifier (index 0) gets finalStartNumber = finalists.length (starts last)
+    // Best qualifier (index 0) gets finalStartNumber = 1
     const FinalEntry = Parse.Object.extend('FinalEntry');
     const entries = finalists.map(({ starter, best }, i) => {
         const e = new FinalEntry();
@@ -104,7 +104,7 @@ async function createFinal(event, startGroupObjectId) {
         e.set('starter', starter);
         e.set('startNumber', starter.get('startNumber'));
         e.set('qualiScore', best);
-        e.set('finalStartNumber', finalists.length - i); // best = highest = starts last
+        e.set('finalStartNumber', i + 1); // best qualifier = 1
         return e;
     });
     await Parse.Object.saveAll(entries, { useMasterKey: true });

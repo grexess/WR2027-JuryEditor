@@ -1,5 +1,46 @@
 # Jury Editor – Einrichtungsanleitung
 
+## Übersicht der Seiten
+
+Das System besteht aus fünf Seiten für unterschiedliche Rollen:
+
+| Seite | Rolle | Gerät |
+|---|---|---|
+| `jury.html?token=…` | Kampfrichter | Tablet je Kampfrichter |
+| `starter.html` | Rennleitung / Ansager | Zentrales Gerät am Startbereich |
+| `referee.html` | Obmann | Tablet Obmann |
+| `results.html` | Ergebnisanzeige | Großbildschirm / Zuschauer |
+| `starterMaintenance.html` | Starterverwaltung | Büro / Vorbereitung |
+
+---
+
+## starter.html – Rennleitung
+
+Dies ist das operative Hauptgerät, das die Person am Startbereich bedient. Es steuert den gesamten Ablauf eines Laufs:
+
+- **Starter auswählen:** Aus der Starterliste wird der nächste Starter per Klick bestätigt. Das löst per LiveQuery sofort eine Aktualisierung auf allen Jury-Tablets aus – die Kampfrichter sehen automatisch den neuen Starter.
+- **Anwesenheit der Kampfrichter:** Farbige Chips zeigen in Echtzeit, welche Kampfrichter aktiv verbunden sind. Der Start-Button ist erst freigegeben, wenn alle erwarteten Kampfrichter präsent sind.
+- **Jury-Grid:** Während ein Starter auf der Strecke ist, zeigt die Seite ein Live-Scoring-Grid mit den eingehenden Wertungen jedes Kampfrichters.
+- **Quali/Final-Umschaltung:** Ein seitliches Verwaltungs-Drawer enthält dieselben Verwaltungsfunktionen wie `referee.html` (Quali schließen, Finale erstellen, Starter disqualifizieren) – für die Rennleitung ohne Seitenwechsel erreichbar.
+
+`starter.html` benötigt kein Token und ist damit für alle erreichbar, die die URL kennen. Die Seite sollte nur auf dem dafür vorgesehenen Gerät geöffnet werden.
+
+---
+
+## referee.html – Obmann
+
+Eine eigenständige Verwaltungsseite für den Obmann (Chef-Kampfrichter). Sie ist nicht am laufenden Betrieb beteiligt, sondern dient ausschließlich der administrativen Steuerung des Wettbewerbs:
+
+- **Starter-Status:** Jeden Starter auf „Disqualifiziert" oder „Entfernt" setzen. Disqualifizierte Starter werden aus der Finalberechnung ausgeschlossen.
+- **Qualifikation schließen:** Pro Startgruppe die Qualifikationsphase beenden (`qualiClosed = true`). Danach werden keine neuen Jury-Wertungen mehr für diese Gruppe akzeptiert.
+- **Finale erstellen:** Die Cloud-Funktion `createFinal` auslösen, die die Qualifikationsergebnisse auswertet und die Finalstartliste berechnet.
+
+`referee.html` ist durch den `refereeToken` aus `config.js` gesichert – ohne gültiges Token ist die Seite gesperrt.
+
+**Abgrenzung zu `starter.html`:** Die Rennleitung kann dieselben Verwaltungsaktionen über das Drawer-Menü in `starter.html` ausführen. `referee.html` existiert als separates, token-gesichertes Panel, damit der Obmann unabhängig von der Rennleitung agieren kann – etwa von einem anderen Gerät aus oder wenn die Rennleitung keinen Zugriff auf Verwaltungsaktionen haben soll.
+
+---
+
 ## Wie der Zugang funktioniert
 
 Jeder Kampfrichter erhält eine persönliche URL mit einem geheimen Token. Ohne den richtigen Token zeigt die Seite „Zugang verweigert" und nichts funktioniert.
@@ -83,7 +124,7 @@ Was die Cloud-Funktion tut:
    | `qualiScore` | Punktzahl des besten Qualifikationslaufs |
    | `finalStartNumber` | Startreihenfolge im Finale (1 = startet zuerst) |
 
-**Startreihenfolge im Finale:** Der bestplatzierte Qualifikant erhält die höchste `finalStartNumber` und startet damit zuletzt – entsprechend der BMX-Konvention.
+**Startreihenfolge im Finale:** Der bestplatzierte Qualifikant erhält `finalStartNumber = 1` und startet damit zuerst.
 
 ### Was sich in den Anzeigen ändert
 

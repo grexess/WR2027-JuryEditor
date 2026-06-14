@@ -136,6 +136,22 @@
             color: #8b949e;
         }
 
+        a.tile .tile-sub {
+            font-size: 0.7rem;
+            font-weight: 400;
+            color: #8b949e;
+            margin-top: 0.1rem;
+        }
+
+        a.tile.accent .tile-sub {
+            color: color-mix(in srgb, #f78166 60%, #8b949e);
+        }
+
+        .tile-label {
+            display: flex;
+            flex-direction: column;
+        }
+
         a.tile.accent {
             border-color: #f78166;
             color: #f78166;
@@ -168,6 +184,10 @@
         }
     </style>
     <script src="config.js"></script>
+    <script>
+        const _seedOverride = localStorage.getItem('seedEventOverride');
+        if (_seedOverride) CONFIG.eventObjectId = _seedOverride;
+    </script>
     <script src="parse-api.js"></script>
 </head>
 
@@ -192,12 +212,17 @@
         </div>
 
         <div class="link-label">Organisation</div>
-        <a class="tile accent" href="htmlPages/starter.html" target="werace-starter" rel="noopener">Rennleitung<span
-                class="badge">↗</span></a>
+        <a class="tile accent" href="htmlPages/starter.html" target="werace-starter" rel="noopener">
+            <div class="tile-label">Rennleitung<div class="tile-sub">Zentrales Gerät am Startbereich</div></div>
+            <span class="badge">↗</span></a>
+        <a class="tile accent" id="referee-link" href="htmlPages/referee.html" target="werace-referee" rel="noopener" style="display:none">
+            <div class="tile-label">Obmann<div class="tile-sub">Tablet Obmann</div></div>
+            <span class="badge">↗</span></a>
 
         <div class="link-label" style="margin-top:0.25rem">Public</div>
-        <a class="tile" href="htmlPages/results.html" target="werace-results" rel="noopener">Ergebnisse <span
-                class="badge">↗</span></a>
+        <a class="tile" href="htmlPages/results.html" target="werace-results" rel="noopener">
+            <div class="tile-label">Ergebnisse<div class="tile-sub">Großbildschirm / Zuschauer</div></div>
+            <span class="badge">↗</span></a>
 
         <div class="link-label" style="margin-top:0.25rem">Kampfrichter</div>
         <div id="jury-links" style="display:flex;flex-direction:column;gap:0.75rem"></div>
@@ -246,13 +271,21 @@
                 await Promise.all([ParseAPI.fetchEvent(), ParseAPI.fetchJudges()]);
                 juryLinks.innerHTML = '';
 
+                // Referee link — token is only known after fetchEvent
+                const refLink = document.getElementById('referee-link');
+                const refHref = CONFIG.refereeToken
+                    ? `htmlPages/referee.html?token=${encodeURIComponent(CONFIG.refereeToken)}`
+                    : 'htmlPages/referee.html';
+                refLink.href = refHref;
+                refLink.style.display = '';
+
                 for (const [token, name] of Object.entries(CONFIG.judgeTokens)) {
                     const a = document.createElement('a');
                     a.className = 'tile';
                     a.href = `htmlPages/jury.html?token=${encodeURIComponent(token)}`;
                     a.target = `werace-jury-${token}`;
                     a.rel = 'noopener';
-                    a.innerHTML = `Wertung – ${name} <span class="badge">↗</span>`;
+                    a.innerHTML = `<div class="tile-label">Wertung – ${name}<div class="tile-sub">Tablet Kampfrichter</div></div> <span class="badge">↗</span>`;
                     juryLinks.appendChild(a);
                 }
             } catch {

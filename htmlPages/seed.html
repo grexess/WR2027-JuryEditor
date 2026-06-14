@@ -1,16 +1,43 @@
 <!DOCTYPE html>
 <html lang="de">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WeRace – Seed</title>
     <link rel="stylesheet" href="../jury.css">
     <style>
-        body { overflow: auto; }
-        .page-wrap { max-width: 480px; margin: 0 auto; padding: 1.5rem 1rem; }
-        .seed-title { font-size: 1.4rem; font-weight: 800; color: var(--accent); margin-bottom: 1.5rem; }
-        .field-group { display: flex; flex-direction: column; gap: 0.35rem; margin-bottom: 0.75rem; }
-        .field-label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
+        body {
+            overflow: auto;
+        }
+
+        .page-wrap {
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 1.5rem 1rem;
+        }
+
+        .seed-title {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: var(--accent);
+            margin-bottom: 1.5rem;
+        }
+
+        .field-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .field-label {
+            font-size: 0.7rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
         .field-input {
             padding: 0.65rem 1rem;
             background: var(--bg);
@@ -20,14 +47,22 @@
             font-size: 1rem;
             outline: none;
         }
-        .field-input:focus { border-color: var(--accent); }
+
+        .field-input:focus {
+            border-color: var(--accent);
+        }
+
         .hint {
             font-size: 0.82rem;
             color: var(--muted);
             line-height: 1.5;
             margin-bottom: 1rem;
         }
-        .hint strong { color: var(--text); }
+
+        .hint strong {
+            color: var(--text);
+        }
+
         .log-wrap {
             display: none;
             margin-top: 1.25rem;
@@ -40,11 +75,30 @@
             font-size: 0.82rem;
             font-family: 'Segoe UI Mono', monospace;
         }
-        .log-entry { padding: 0.1rem 0; white-space: pre; }
-        .ok   { color: var(--green); }
-        .skip { color: var(--muted); }
-        .err  { color: var(--accent); }
-        .head { color: var(--text); font-weight: 700; margin-top: 0.4rem; }
+
+        .log-entry {
+            padding: 0.1rem 0;
+            white-space: pre;
+        }
+
+        .ok {
+            color: var(--green);
+        }
+
+        .skip {
+            color: var(--muted);
+        }
+
+        .err {
+            color: var(--accent);
+        }
+
+        .head {
+            color: var(--text);
+            font-weight: 700;
+            margin-top: 0.4rem;
+        }
+
         .danger-btn {
             width: 100%;
             padding: 0.75rem 1rem;
@@ -57,7 +111,12 @@
             cursor: pointer;
             margin-top: 0.5rem;
         }
-        .danger-btn:disabled { opacity: 0.45; cursor: default; }
+
+        .danger-btn:disabled {
+            opacity: 0.45;
+            cursor: default;
+        }
+
         .confirm-bar {
             display: none;
             align-items: center;
@@ -66,6 +125,7 @@
             font-size: 0.85rem;
             color: var(--muted);
         }
+
         .confirm-bar button {
             padding: 0.35rem 0.9rem;
             border-radius: 7px;
@@ -75,25 +135,30 @@
             font-size: 0.85rem;
             cursor: pointer;
         }
+
         .confirm-bar .confirm-yes {
             border-color: #c0392b;
             color: #e74c3c;
             font-weight: 700;
         }
+
         .progress-wrap {
             margin-top: 1rem;
         }
+
         .progress-label {
             font-size: 0.75rem;
             color: var(--muted);
             margin-bottom: 0.3rem;
         }
+
         .progress-track {
             height: 6px;
             background: var(--border);
             border-radius: 99px;
             overflow: hidden;
         }
+
         .progress-fill {
             height: 100%;
             width: 0%;
@@ -101,10 +166,14 @@
             border-radius: 99px;
             transition: width 0.3s ease;
         }
-        .progress-fill.done { background: var(--green); }
+
+        .progress-fill.done {
+            background: var(--green);
+        }
     </style>
     <script src="../config.js"></script>
 </head>
+
 <body>
     <div class="page-wrap">
         <div class="seed-title">Seed – Testdaten erstellen</div>
@@ -164,9 +233,11 @@
         <div id="login-section">
             <div class="field-group">
                 <div class="field-label">Master Key</div>
-                <input class="field-input" id="master-key-input" type="password" autocomplete="off" placeholder="Back4App Master Key">
+                <input class="field-input" id="master-key-input" type="password" autocomplete="off"
+                    placeholder="Back4App Master Key">
             </div>
-            <div id="login-err" style="color:var(--accent);font-size:0.85rem;min-height:1.2em;margin-bottom:0.5rem"></div>
+            <div id="login-err" style="color:var(--accent);font-size:0.85rem;min-height:1.2em;margin-bottom:0.5rem">
+            </div>
             <button class="submit-btn" id="login-btn">Weiter</button>
         </div>
 
@@ -177,9 +248,24 @@
                 zufälligen Startnummern.<br>
                 Bereits vorhandene Datensätze werden übersprungen.
             </div>
-            <button class="submit-btn" id="seed-btn">Seed erstellen</button>
+            <button class="submit-btn" id="seed-btn">Testevent erstellen</button>
 
-            <button class="danger-btn" id="clear-btn">Testdaten löschen</button>
+            <div class="hint" style="margin-top:1rem">
+                Erstellt je <strong>2 Quali-Läufe</strong> pro Starter (zufällige Scores) –
+                Voraussetzung für den Test des Quali→Finale-Übergangs.<br>
+                Bereits vorhandene JuryScores werden nicht doppelt angelegt.
+            </div>
+            <button class="submit-btn" id="scores-btn"
+                style="background:var(--card);border:1.5px solid var(--accent)">Quali-Scores erstellen</button>
+
+            <button class="danger-btn" id="scores-clear-btn" style="margin-top:0.25rem">Quali-Scores löschen</button>
+            <div class="confirm-bar" id="scores-confirm-bar">
+                Wirklich alle JuryScores löschen?
+                <button class="confirm-yes" id="scores-confirm-yes">Ja, löschen</button>
+                <button id="scores-confirm-no">Abbrechen</button>
+            </div>
+
+            <button class="danger-btn" id="clear-btn">Alle Testdaten löschen</button>
             <div class="confirm-bar" id="confirm-bar">
                 Wirklich alle Heldentag-Daten löschen?
                 <button class="confirm-yes" id="confirm-yes">Ja, löschen</button>
@@ -202,7 +288,7 @@
         function buildHeaders() {
             const h = {
                 'x-parse-application-id': CONFIG.parseAppId,
-                'x-parse-javascript-key':  CONFIG.parseJsKey,
+                'x-parse-javascript-key': CONFIG.parseJsKey,
                 'content-type': 'application/json',
             };
             if (masterKey) h['x-parse-master-key'] = masterKey;
@@ -237,7 +323,7 @@
         async function deleteAll(className, where) {
             let deleted = 0;
             while (true) {
-                const q  = encodeURIComponent(JSON.stringify(where));
+                const q = encodeURIComponent(JSON.stringify(where));
                 const res = await pGet(`/classes/${className}?where=${q}&limit=100&keys=objectId`);
                 if (!res.results?.length) break;
                 for (const obj of res.results) {
@@ -263,6 +349,7 @@
                 await pGet(`/classes/Event?limit=0`);
                 document.getElementById('login-section').style.display = 'none';
                 document.getElementById('seed-section').style.display = '';
+                refreshScoreButtons();
             } catch (e) {
                 masterKey = null;
                 errEl.textContent = 'Master Key ungültig oder Verbindungsfehler.';
@@ -284,15 +371,22 @@
 
         // ── Dummy data ──
 
-        const MALE   = ['Felix','Luca','Noah','Ben','Leon','Finn','Elias','Jonas','Tim','Max','Paul','Jan','Erik','Nico','Tom'];
-        const FEMALE = ['Lena','Anna','Laura','Sarah','Emma','Mia','Lisa','Julia','Hannah','Sophie','Lea','Marie','Nina','Katrin','Tanja'];
-        const LAST   = ['Müller','Schmidt','Schneider','Fischer','Weber','Wagner','Bauer','Koch','Richter','Hoffmann','Klein','Wolf','Schröder','Neumann','Braun'];
+        const MALE = ['Felix', 'Luca', 'Noah', 'Ben', 'Leon', 'Finn', 'Elias', 'Jonas', 'Tim', 'Max', 'Paul', 'Jan', 'Erik', 'Nico', 'Tom'];
+        const FEMALE = ['Lena', 'Anna', 'Laura', 'Sarah', 'Emma', 'Mia', 'Lisa', 'Julia', 'Hannah', 'Sophie', 'Lea', 'Marie', 'Nina', 'Katrin', 'Tanja'];
+        const LAST = ['Müller', 'Schmidt', 'Schneider', 'Fischer', 'Weber', 'Wagner', 'Bauer', 'Koch', 'Richter', 'Hoffmann', 'Klein', 'Wolf', 'Schröder', 'Neumann', 'Braun'];
 
         const GROUPS = [
-            { code: 'K', name: 'Kids',    sortOrder: 1, female: false, birthFrom: 2013, birthTo: 2017 },
+            { code: 'K', name: 'Kids', sortOrder: 1, female: false, birthFrom: 2013, birthTo: 2017 },
             { code: 'A', name: 'Amateur', sortOrder: 2, female: false, birthFrom: 1998, birthTo: 2008 },
-            { code: 'P', name: 'Pro',     sortOrder: 3, female: false, birthFrom: 1988, birthTo: 2002 },
-            { code: 'F', name: 'Frauen',  sortOrder: 4, female: true,  birthFrom: 1990, birthTo: 2008 },
+            { code: 'P', name: 'Pro', sortOrder: 3, female: false, birthFrom: 1988, birthTo: 2002 },
+            { code: 'F', name: 'Frauen', sortOrder: 4, female: true, birthFrom: 1990, birthTo: 2008 },
+        ];
+
+        // Fixed test judges — independent of config.js so the seed is always self-contained
+        const SEED_JUDGES = [
+            { token: 'SEED-J1', name: 'Judge 1' },
+            { token: 'SEED-J2', name: 'Judge 2' },
+            { token: 'SEED-J3', name: 'Judge 3' },
         ];
 
         function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
@@ -318,10 +412,10 @@
             document.getElementById('log-wrap').innerHTML = '';
             document.getElementById('progress-wrap').style.display = 'none';
 
-            const judgeCount  = Object.keys(CONFIG.judgeTokens).length;
+            const judgeCount = SEED_JUDGES.length;
             const starterCount = GROUPS.length * 10;
             // steps: 1 event + 4 groups + judges + 40 starters
-            const totalSteps  = 1 + GROUPS.length + judgeCount + starterCount;
+            const totalSteps = 1 + GROUPS.length + judgeCount + starterCount;
             let step = 0;
 
             try {
@@ -329,7 +423,7 @@
                 setProgress(step, totalSteps, 'Event anlegen …');
                 log('Event "Heldentag"', 'head');
                 const evWhere = encodeURIComponent(JSON.stringify({ name: 'Heldentag' }));
-                const evRes   = await pGet(`/classes/Event?where=${evWhere}&limit=1`);
+                const evRes = await pGet(`/classes/Event?where=${evWhere}&limit=1`);
                 let eventId;
                 if (evRes.results?.length) {
                     eventId = evRes.results[0].objectId;
@@ -338,7 +432,7 @@
                     const ev = await pPost('/classes/Event', {
                         name: 'Heldentag',
                         date: { __type: 'Date', iso: '2026-08-15T08:00:00.000Z' },
-                        criteria:       CONFIG.criteria,
+                        criteria: CONFIG.criteria,
                         presenceStalMs: CONFIG.presenceStalMs,
                         presencePollMs: CONFIG.presencePollMs,
                     });
@@ -348,13 +442,12 @@
                 step++;
 
                 const eventPtr = { __type: 'Pointer', className: 'Event', objectId: eventId };
-
-                // 2. StartGroups
+                localStorage.setItem('seedEventOverride', eventId);
                 log('Startgruppen', 'head');
                 const groupIds = {};
                 for (const g of GROUPS) {
                     setProgress(step, totalSteps, `Startgruppe ${g.name} …`);
-                    const where    = encodeURIComponent(JSON.stringify({ name: g.name, event: eventPtr }));
+                    const where = encodeURIComponent(JSON.stringify({ name: g.name, event: eventPtr }));
                     const existing = await pGet(`/classes/StartGroup?where=${where}&limit=1`);
                     if (existing.results?.length) {
                         groupIds[g.code] = existing.results[0].objectId;
@@ -371,9 +464,9 @@
 
                 // 3. Judges
                 log('Kampfrichter', 'head');
-                for (const [token, name] of Object.entries(CONFIG.judgeTokens)) {
+                for (const { token, name } of SEED_JUDGES) {
                     setProgress(step, totalSteps, `Kampfrichter ${name} …`);
-                    const where    = encodeURIComponent(JSON.stringify({ token, event: eventPtr }));
+                    const where = encodeURIComponent(JSON.stringify({ token, event: eventPtr }));
                     const existing = await pGet(`/classes/Judge?where=${where}&limit=1`);
                     if (existing.results?.length) {
                         log(`  ↳ ${name.padEnd(10)} vorhanden`, 'skip');
@@ -394,18 +487,18 @@
                     for (let j = 0; j < 10; j++) {
                         const startNumber = startNums[idx++];
                         setProgress(step, totalSteps, `Starter #${startNumber} (${g.name}) …`);
-                        const where    = encodeURIComponent(JSON.stringify({ startNumber, event: eventPtr }));
+                        const where = encodeURIComponent(JSON.stringify({ startNumber, event: eventPtr }));
                         const existing = await pGet(`/classes/Starter?where=${where}&limit=1`);
                         if (existing.results?.length) {
                             log(`    ↳ #${String(startNumber).padStart(3)} vorhanden`, 'skip');
                         } else {
                             const firstName = g.female ? pick(FEMALE) : pick([...MALE, ...MALE, ...FEMALE]);
-                            const lastName  = pick(LAST);
-                            const gender    = g.female ? 'f' : (firstName in Object.fromEntries(FEMALE.map(n => [n, 1])) ? 'f' : 'm');
+                            const lastName = pick(LAST);
+                            const gender = g.female ? 'f' : (firstName in Object.fromEntries(FEMALE.map(n => [n, 1])) ? 'f' : 'm');
                             await pPost('/classes/Starter', {
                                 startNumber, firstName, lastName, gender,
-                                birthday:   { __type: 'Date', iso: rndDate(g.birthFrom, g.birthTo) },
-                                event:      eventPtr,
+                                birthday: { __type: 'Date', iso: rndDate(g.birthFrom, g.birthTo) },
+                                event: eventPtr,
                                 startGroup: groupPtr,
                             });
                             log(`    ↳ #${String(startNumber).padStart(3)}  ${firstName} ${lastName}`, 'ok');
@@ -426,18 +519,192 @@
             }
         }
 
+        // ── Seed Scores ──
+
+        const QUALI_RUNS = 2;
+
+        async function scoreCount(eventPtr) {
+            try {
+                const res = await pGet(`/classes/JuryScore?where=${encodeURIComponent(JSON.stringify({ event: eventPtr }))}&limit=0&count=1`);
+                return res.count ?? 0;
+            } catch (_) {
+                return 0;
+            }
+        }
+
+        async function refreshScoreButtons() {
+            const createBtn = document.getElementById('scores-btn');
+            const clearBtn = document.getElementById('scores-clear-btn');
+            const confirmBar = document.getElementById('scores-confirm-bar');
+            try {
+                const evWhere = encodeURIComponent(JSON.stringify({ name: 'Heldentag' }));
+                const evRes = await pGet(`/classes/Event?where=${evWhere}&limit=1`);
+                if (!evRes.results?.length) {
+                    createBtn.style.display = '';
+                    clearBtn.style.display = 'none';
+                    confirmBar.style.display = 'none';
+                    return;
+                }
+                const eventPtr = { __type: 'Pointer', className: 'Event', objectId: evRes.results[0].objectId };
+                const count = await scoreCount(eventPtr);
+                createBtn.style.display = count === 0 ? '' : 'none';
+                clearBtn.style.display = count > 0 ? '' : 'none';
+                if (count === 0) confirmBar.style.display = 'none';
+            } catch (_) {
+                createBtn.style.display = '';
+                clearBtn.style.display = 'none';
+            }
+        }
+
+        async function runSeedScores() {
+            const btn = document.getElementById('scores-btn');
+            btn.disabled = true;
+            document.getElementById('log-wrap').innerHTML = '';
+            document.getElementById('progress-wrap').style.display = 'none';
+
+            try {
+                setProgress(0, 1, 'Event suchen …');
+                const evWhere = encodeURIComponent(JSON.stringify({ name: 'Heldentag' }));
+                const evRes = await pGet(`/classes/Event?where=${evWhere}&limit=1`);
+                if (!evRes.results?.length) {
+                    log('✕ Event "Heldentag" nicht gefunden – zuerst Testevent erstellen.', 'err');
+                    document.getElementById('progress-wrap').style.display = 'none';
+                    btn.disabled = false;
+                    return;
+                }
+                const eventId = evRes.results[0].objectId;
+                const eventPtr = { __type: 'Pointer', className: 'Event', objectId: eventId };
+                log(`Event gefunden  ${eventId}`, 'ok');
+
+                // Load judges
+                const judgeRes = await pGet(`/classes/Judge?where=${encodeURIComponent(JSON.stringify({ event: eventPtr }))}&limit=100&keys=name`);
+                const judgeNames = (judgeRes.results ?? []).map(j => j.name);
+                if (!judgeNames.length) {
+                    log('✕ Keine Kampfrichter gefunden – zuerst Testevent erstellen.', 'err');
+                    document.getElementById('progress-wrap').style.display = 'none';
+                    btn.disabled = false;
+                    return;
+                }
+                log(`${judgeNames.length} Kampfrichter: ${judgeNames.join(', ')}`, 'ok');
+
+                // Load all starters
+                const starterRes = await pGet(`/classes/Starter?where=${encodeURIComponent(JSON.stringify({ event: eventPtr }))}&limit=500&keys=startNumber`);
+                const starters = starterRes.results ?? [];
+                if (!starters.length) {
+                    log('✕ Keine Starter gefunden – zuerst Testevent erstellen.', 'err');
+                    document.getElementById('progress-wrap').style.display = 'none';
+                    btn.disabled = false;
+                    return;
+                }
+
+                // totalSteps = starters × runs × judges
+                const totalSteps = starters.length * QUALI_RUNS * judgeNames.length;
+                let step = 0;
+                log(`Erstelle ${QUALI_RUNS} Läufe × ${starters.length} Starter × ${judgeNames.length} Kampfrichter = ${totalSteps} Scores`, 'head');
+
+                for (const starter of starters) {
+                    const startNumber = starter.startNumber;
+                    for (let run = 0; run < QUALI_RUNS; run++) {
+                        for (const judgeName of judgeNames) {
+                            setProgress(step, totalSteps, `#${startNumber} · Lauf ${run + 1} · ${judgeName} …`);
+                            const scores = {};
+                            let total = 0;
+                            for (const c of CONFIG.criteria) {
+                                const val = Math.round((Math.random() * 8 + 2) * 10) / 10; // 2.0–10.0
+                                scores[c.key] = val;
+                                total += val;
+                            }
+                            total = Math.round(total * 10) / 10;
+                            await pPost('/classes/JuryScore', {
+                                startnumber: Number(startNumber),
+                                judgeName,
+                                total,
+                                event: eventPtr,
+                                ...scores,
+                            });
+                            step++;
+                        }
+                    }
+                    log(`  #${String(startNumber).padStart(3)}  ${QUALI_RUNS} Läufe erstellt`, 'ok');
+                }
+
+                log('', '');
+                log(`✓ ${totalSteps} JuryScores erstellt.`, 'ok');
+                setProgressDone();
+                btn.textContent = '✓ Fertig';
+                setTimeout(() => { btn.disabled = false; btn.textContent = 'Quali-Scores erstellen'; refreshScoreButtons(); }, 2000);
+            } catch (e) {
+                log(`✕ Fehler: ${e.message}`, 'err');
+                document.getElementById('progress-wrap').style.display = 'none';
+                btn.disabled = false;
+                btn.textContent = 'Quali-Scores erstellen';
+            }
+        }
+
+        async function runClearScores() {
+            document.getElementById('scores-confirm-bar').style.display = 'none';
+            const btn = document.getElementById('scores-clear-btn');
+            btn.disabled = true;
+            btn.textContent = '…';
+            document.getElementById('log-wrap').innerHTML = '';
+            document.getElementById('progress-wrap').style.display = 'none';
+
+            try {
+                setProgress(0, 1, 'Event suchen …');
+                const evWhere = encodeURIComponent(JSON.stringify({ name: 'Heldentag' }));
+                const evRes = await pGet(`/classes/Event?where=${evWhere}&limit=1`);
+                if (!evRes.results?.length) {
+                    log('Event "Heldentag" nicht gefunden – nichts zu tun.', 'skip');
+                    setProgressDone();
+                    btn.disabled = false; btn.textContent = 'Quali-Scores löschen';
+                    await refreshScoreButtons();
+                    return;
+                }
+                const eventPtr = { __type: 'Pointer', className: 'Event', objectId: evRes.results[0].objectId };
+
+                const total = await scoreCount(eventPtr);
+                log(`JuryScores löschen (${total} Einträge)`, 'head');
+
+                let deleted = 0;
+                while (true) {
+                    const batch = await pGet(`/classes/JuryScore?where=${encodeURIComponent(JSON.stringify({ event: eventPtr }))}&limit=100&keys=objectId`);
+                    if (!batch.results?.length) break;
+                    for (const obj of batch.results) {
+                        await pDelete('JuryScore', obj.objectId);
+                        deleted++;
+                        setProgress(deleted, Math.max(total, deleted), `${deleted} / ${total} gelöscht …`);
+                    }
+                }
+
+                log('FinalEntries löschen', 'head');
+                const fe = await safeDeleteAll('FinalEntry', { event: eventPtr });
+                log(`  ↳ ${fe} gelöscht`, fe ? 'ok' : 'skip');
+
+                log('', '');
+                log(`✓ ${deleted} JuryScores gelöscht.`, 'ok');
+                setProgressDone();
+                btn.textContent = '✓ Gelöscht';
+                setTimeout(() => { btn.disabled = false; btn.textContent = 'Quali-Scores löschen'; refreshScoreButtons(); }, 2000);
+            } catch (e) {
+                log(`✕ Fehler: ${e.message}`, 'err');
+                document.getElementById('progress-wrap').style.display = 'none';
+                btn.disabled = false;
+                btn.textContent = 'Quali-Scores löschen';
+            }
+        }
+
         // ── Clear ──
 
         // Classes deleted in dependency order — all now carry an event pointer
         const CLEAR_STEPS = [
-            { className: 'JuryScore',     label: 'JuryScores' },
-            { className: 'JudgeScore',    label: 'JudgeScores' },
+            { className: 'JuryScore', label: 'JuryScores' },
+            { className: 'JudgeScore', label: 'JudgeScores' },
             { className: 'ActiveStarter', label: 'ActiveStarters' },
-            { className: 'FinalEntry',    label: 'FinalEntries' },
-            { className: 'JuryPresence',  label: 'JuryPresence' },
-            { className: 'Starter',       label: 'Starter' },
-            { className: 'Judge',         label: 'Kampfrichter' },
-            { className: 'StartGroup',    label: 'Startgruppen' },
+            { className: 'FinalEntry', label: 'FinalEntries' },
+            { className: 'JuryPresence', label: 'JuryPresence' },
+            { className: 'Starter', label: 'Starter' },
+            { className: 'Judge', label: 'Kampfrichter' },
+            { className: 'StartGroup', label: 'Startgruppen' },
         ];
 
         async function safeDeleteAll(className, where) {
@@ -452,7 +719,7 @@
         function setProgress(step, total, label) {
             const wrap = document.getElementById('progress-wrap');
             const fill = document.getElementById('progress-fill');
-            const lbl  = document.getElementById('progress-label');
+            const lbl = document.getElementById('progress-label');
             wrap.style.display = '';
             fill.classList.remove('done');
             fill.style.width = `${Math.round((step / total) * 100)}%`;
@@ -461,7 +728,7 @@
 
         function setProgressDone() {
             const fill = document.getElementById('progress-fill');
-            const lbl  = document.getElementById('progress-label');
+            const lbl = document.getElementById('progress-label');
             fill.style.width = '100%';
             fill.classList.add('done');
             lbl.textContent = 'Abgeschlossen';
@@ -483,14 +750,14 @@
                 setProgress(step, totalSteps, 'Event suchen …');
                 log('Event "Heldentag" suchen', 'head');
                 const evWhere = encodeURIComponent(JSON.stringify({ name: 'Heldentag' }));
-                const evRes   = await pGet(`/classes/Event?where=${evWhere}&limit=1`);
+                const evRes = await pGet(`/classes/Event?where=${evWhere}&limit=1`);
                 if (!evRes.results?.length) {
                     log('  ↳ nicht gefunden – nichts zu tun.', 'skip');
                     setProgressDone();
                     btn.disabled = false; btn.textContent = 'Testdaten löschen';
                     return;
                 }
-                const eventId  = evRes.results[0].objectId;
+                const eventId = evRes.results[0].objectId;
                 const eventPtr = { __type: 'Pointer', className: 'Event', objectId: eventId };
                 log(`  ↳ gefunden  ${eventId}`, 'ok');
                 step++;
@@ -510,6 +777,7 @@
 
                 log('', '');
                 log('✓ Alle Testdaten gelöscht.', 'ok');
+                localStorage.removeItem('seedEventOverride');
                 setProgressDone();
                 btn.textContent = '✓ Gelöscht';
                 setTimeout(() => { btn.disabled = false; btn.textContent = 'Testdaten löschen'; }, 2500);
@@ -523,6 +791,18 @@
 
         document.getElementById('login-btn').addEventListener('click', doLogin);
         document.getElementById('seed-btn').addEventListener('click', runSeed);
+
+        document.getElementById('scores-btn').addEventListener('click', runSeedScores);
+        document.getElementById('scores-clear-btn').addEventListener('click', () => {
+            document.getElementById('scores-confirm-bar').style.display = 'flex';
+            document.getElementById('scores-clear-btn').disabled = true;
+        });
+        document.getElementById('scores-confirm-no').addEventListener('click', () => {
+            document.getElementById('scores-confirm-bar').style.display = 'none';
+            document.getElementById('scores-clear-btn').disabled = false;
+        });
+        document.getElementById('scores-confirm-yes').addEventListener('click', runClearScores);
+
         document.getElementById('clear-btn').addEventListener('click', () => {
             document.getElementById('confirm-bar').style.display = 'flex';
             document.getElementById('clear-btn').disabled = true;
@@ -537,4 +817,5 @@
         });
     </script>
 </body>
+
 </html>
