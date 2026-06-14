@@ -45,12 +45,121 @@
         .skip { color: var(--muted); }
         .err  { color: var(--accent); }
         .head { color: var(--text); font-weight: 700; margin-top: 0.4rem; }
+        .danger-btn {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: transparent;
+            border: 1.5px solid #c0392b;
+            border-radius: 10px;
+            color: #e74c3c;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 0.5rem;
+        }
+        .danger-btn:disabled { opacity: 0.45; cursor: default; }
+        .confirm-bar {
+            display: none;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--muted);
+        }
+        .confirm-bar button {
+            padding: 0.35rem 0.9rem;
+            border-radius: 7px;
+            border: 1px solid var(--border);
+            background: var(--card);
+            color: var(--text);
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+        .confirm-bar .confirm-yes {
+            border-color: #c0392b;
+            color: #e74c3c;
+            font-weight: 700;
+        }
+        .progress-wrap {
+            margin-top: 1rem;
+        }
+        .progress-label {
+            font-size: 0.75rem;
+            color: var(--muted);
+            margin-bottom: 0.3rem;
+        }
+        .progress-track {
+            height: 6px;
+            background: var(--border);
+            border-radius: 99px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: var(--accent);
+            border-radius: 99px;
+            transition: width 0.3s ease;
+        }
+        .progress-fill.done { background: var(--green); }
     </style>
     <script src="../config.js"></script>
 </head>
 <body>
     <div class="page-wrap">
         <div class="seed-title">Seed – Testdaten erstellen</div>
+
+        <details style="margin-bottom:1rem">
+            <summary style="cursor:pointer;font-size:0.82rem;color:var(--muted);user-select:none">
+                Was wird erstellt? ▸
+            </summary>
+            <div style="margin-top:0.75rem;display:flex;flex-direction:column;gap:0.6rem">
+
+                <div class="hint" style="margin-bottom:0">
+                    <strong>Event</strong><br>
+                    Ein einzelnes Event mit dem Namen <em>Heldentag</em> und dem Datum
+                    <em>15. August 2026</em>. Bewertungskriterien und Heartbeat-Intervalle
+                    werden direkt aus der lokalen <code>config.js</code> übernommen.
+                </div>
+
+                <div class="hint" style="margin-bottom:0">
+                    <strong>Startgruppen</strong><br>
+                    Vier Gruppen werden dem Event zugeordnet:
+                    <ul style="margin:0.3rem 0 0 1.1rem;padding:0;line-height:1.8">
+                        <li><strong>Kids</strong> – Jahrgänge 2013–2017, männlich</li>
+                        <li><strong>Amateur</strong> – Jahrgänge 1998–2008, männlich</li>
+                        <li><strong>Pro</strong> – Jahrgänge 1988–2002, männlich</li>
+                        <li><strong>Frauen</strong> – Jahrgänge 1990–2008, weiblich</li>
+                    </ul>
+                </div>
+
+                <div class="hint" style="margin-bottom:0">
+                    <strong>Kampfrichter</strong><br>
+                    Für jeden Eintrag in <code>config.judgeTokens</code> wird ein
+                    Kampfrichter-Datensatz angelegt, der Name und Token aus der Konfiguration
+                    übernimmt und dem Event zugeordnet wird.
+                </div>
+
+                <div class="hint" style="margin-bottom:0">
+                    <strong>Starter</strong><br>
+                    Pro Gruppe werden <strong>10 Starter</strong> erzeugt – insgesamt 40.
+                    Die Startnummern werden einmalig zufällig aus dem Bereich <em>1–200</em>
+                    gezogen (keine Doppelungen). Namen werden zufällig aus deutschen
+                    Vornamen- und Nachnamenlisten zusammengesetzt; das Geburtsdatum
+                    liegt zufällig im jeweiligen Jahrgangsfenster der Gruppe.
+                    Für die Gruppe <em>Frauen</em> werden ausschließlich weibliche
+                    Vornamen verwendet.
+                </div>
+
+                <div class="hint" style="margin-bottom:0">
+                    <strong>Idempotenz</strong><br>
+                    Der Seed kann mehrfach ausgeführt werden. Bereits vorhandene Datensätze
+                    (Event, Startgruppen, Kampfrichter, Starter) werden erkannt und
+                    übersprungen – es entstehen keine Duplikate.
+                </div>
+
+            </div>
+        </details>
 
         <div id="login-section">
             <div class="field-group">
@@ -69,6 +178,19 @@
                 Bereits vorhandene Datensätze werden übersprungen.
             </div>
             <button class="submit-btn" id="seed-btn">Seed erstellen</button>
+
+            <button class="danger-btn" id="clear-btn">Testdaten löschen</button>
+            <div class="confirm-bar" id="confirm-bar">
+                Wirklich alle Heldentag-Daten löschen?
+                <button class="confirm-yes" id="confirm-yes">Ja, löschen</button>
+                <button id="confirm-no">Abbrechen</button>
+            </div>
+            <div class="progress-wrap" id="progress-wrap" style="display:none">
+                <div class="progress-label" id="progress-label"></div>
+                <div class="progress-track">
+                    <div class="progress-fill" id="progress-fill"></div>
+                </div>
+            </div>
         </div>
 
         <div class="log-wrap" id="log-wrap"></div>
@@ -100,6 +222,30 @@
             const data = await res.json();
             if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
             return data;
+        }
+
+        async function pDelete(className, objectId) {
+            const res = await fetch(`${CONFIG.parseServerUrl}/classes/${className}/${objectId}`, {
+                method: 'DELETE', headers: buildHeaders(),
+            });
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                throw new Error(data.error ?? `HTTP ${res.status}`);
+            }
+        }
+
+        async function deleteAll(className, where) {
+            let deleted = 0;
+            while (true) {
+                const q  = encodeURIComponent(JSON.stringify(where));
+                const res = await pGet(`/classes/${className}?where=${q}&limit=100&keys=objectId`);
+                if (!res.results?.length) break;
+                for (const obj of res.results) {
+                    await pDelete(className, obj.objectId);
+                    deleted++;
+                }
+            }
+            return deleted;
         }
 
         // ── Login ──
@@ -170,9 +316,17 @@
             const btn = document.getElementById('seed-btn');
             btn.disabled = true;
             document.getElementById('log-wrap').innerHTML = '';
+            document.getElementById('progress-wrap').style.display = 'none';
+
+            const judgeCount  = Object.keys(CONFIG.judgeTokens).length;
+            const starterCount = GROUPS.length * 10;
+            // steps: 1 event + 4 groups + judges + 40 starters
+            const totalSteps  = 1 + GROUPS.length + judgeCount + starterCount;
+            let step = 0;
 
             try {
                 // 1. Event
+                setProgress(step, totalSteps, 'Event anlegen …');
                 log('Event "Heldentag"', 'head');
                 const evWhere = encodeURIComponent(JSON.stringify({ name: 'Heldentag' }));
                 const evRes   = await pGet(`/classes/Event?where=${evWhere}&limit=1`);
@@ -184,13 +338,14 @@
                     const ev = await pPost('/classes/Event', {
                         name: 'Heldentag',
                         date: { __type: 'Date', iso: '2026-08-15T08:00:00.000Z' },
-                        criteria:      CONFIG.criteria,
+                        criteria:       CONFIG.criteria,
                         presenceStalMs: CONFIG.presenceStalMs,
                         presencePollMs: CONFIG.presencePollMs,
                     });
                     eventId = ev.objectId;
                     log(`  ↳ erstellt   ${eventId}`, 'ok');
                 }
+                step++;
 
                 const eventPtr = { __type: 'Pointer', className: 'Event', objectId: eventId };
 
@@ -198,6 +353,7 @@
                 log('Startgruppen', 'head');
                 const groupIds = {};
                 for (const g of GROUPS) {
+                    setProgress(step, totalSteps, `Startgruppe ${g.name} …`);
                     const where    = encodeURIComponent(JSON.stringify({ name: g.name, event: eventPtr }));
                     const existing = await pGet(`/classes/StartGroup?where=${where}&limit=1`);
                     if (existing.results?.length) {
@@ -210,11 +366,13 @@
                         groupIds[g.code] = sg.objectId;
                         log(`  ↳ ${g.name.padEnd(8)} erstellt`, 'ok');
                     }
+                    step++;
                 }
 
                 // 3. Judges
                 log('Kampfrichter', 'head');
                 for (const [token, name] of Object.entries(CONFIG.judgeTokens)) {
+                    setProgress(step, totalSteps, `Kampfrichter ${name} …`);
                     const where    = encodeURIComponent(JSON.stringify({ token, event: eventPtr }));
                     const existing = await pGet(`/classes/Judge?where=${where}&limit=1`);
                     if (existing.results?.length) {
@@ -223,47 +381,157 @@
                         await pPost('/classes/Judge', { name, token, event: eventPtr });
                         log(`  ↳ ${name.padEnd(10)} erstellt`, 'ok');
                     }
+                    step++;
                 }
 
                 // 4. Starters
-                log('Starter (40 zufällige Startnummern 1–200)', 'head');                const startNums = uniqueStartNumbers(40, 1, 200);
+                log('Starter (40 zufällige Startnummern 1–200)', 'head');
+                const startNums = uniqueStartNumbers(40, 1, 200);
                 let idx = 0;
                 for (const g of GROUPS) {
                     log(`  ${g.name}`, 'head');
                     const groupPtr = { __type: 'Pointer', className: 'StartGroup', objectId: groupIds[g.code] };
                     for (let j = 0; j < 10; j++) {
                         const startNumber = startNums[idx++];
-                        const where       = encodeURIComponent(JSON.stringify({ startNumber, event: eventPtr }));
-                        const existing    = await pGet(`/classes/Starter?where=${where}&limit=1`);
+                        setProgress(step, totalSteps, `Starter #${startNumber} (${g.name}) …`);
+                        const where    = encodeURIComponent(JSON.stringify({ startNumber, event: eventPtr }));
+                        const existing = await pGet(`/classes/Starter?where=${where}&limit=1`);
                         if (existing.results?.length) {
                             log(`    ↳ #${String(startNumber).padStart(3)} vorhanden`, 'skip');
-                            continue;
+                        } else {
+                            const firstName = g.female ? pick(FEMALE) : pick([...MALE, ...MALE, ...FEMALE]);
+                            const lastName  = pick(LAST);
+                            const gender    = g.female ? 'f' : (firstName in Object.fromEntries(FEMALE.map(n => [n, 1])) ? 'f' : 'm');
+                            await pPost('/classes/Starter', {
+                                startNumber, firstName, lastName, gender,
+                                birthday:   { __type: 'Date', iso: rndDate(g.birthFrom, g.birthTo) },
+                                event:      eventPtr,
+                                startGroup: groupPtr,
+                            });
+                            log(`    ↳ #${String(startNumber).padStart(3)}  ${firstName} ${lastName}`, 'ok');
                         }
-                        const firstName = g.female ? pick(FEMALE) : pick([...MALE, ...MALE, ...FEMALE]);
-                        const lastName  = pick(LAST);
-                        const gender    = g.female ? 'f' : (firstName in Object.fromEntries(FEMALE.map(n=>[n,1])) ? 'f' : 'm');
-                        await pPost('/classes/Starter', {
-                            startNumber, firstName, lastName, gender,
-                            birthday:   { __type: 'Date', iso: rndDate(g.birthFrom, g.birthTo) },
-                            event:      eventPtr,
-                            startGroup: groupPtr,
-                        });
-                        log(`    ↳ #${String(startNumber).padStart(3)}  ${firstName} ${lastName}`, 'ok');
+                        step++;
                     }
                 }
 
                 log('', '');
                 log('✓ Seed abgeschlossen.', 'ok');
+                setProgressDone();
                 btn.textContent = '✓ Fertig';
             } catch (e) {
                 log(`✕ Fehler: ${e.message}`, 'err');
+                document.getElementById('progress-wrap').style.display = 'none';
                 btn.disabled = false;
                 btn.textContent = 'Seed wiederholen';
             }
         }
 
+        // ── Clear ──
+
+        // Classes deleted in dependency order — all now carry an event pointer
+        const CLEAR_STEPS = [
+            { className: 'JuryScore',     label: 'JuryScores' },
+            { className: 'JudgeScore',    label: 'JudgeScores' },
+            { className: 'ActiveStarter', label: 'ActiveStarters' },
+            { className: 'FinalEntry',    label: 'FinalEntries' },
+            { className: 'JuryPresence',  label: 'JuryPresence' },
+            { className: 'Starter',       label: 'Starter' },
+            { className: 'Judge',         label: 'Kampfrichter' },
+            { className: 'StartGroup',    label: 'Startgruppen' },
+        ];
+
+        async function safeDeleteAll(className, where) {
+            try {
+                return await deleteAll(className, where);
+            } catch (e) {
+                // class may not exist yet — treat as 0 records
+                return 0;
+            }
+        }
+
+        function setProgress(step, total, label) {
+            const wrap = document.getElementById('progress-wrap');
+            const fill = document.getElementById('progress-fill');
+            const lbl  = document.getElementById('progress-label');
+            wrap.style.display = '';
+            fill.classList.remove('done');
+            fill.style.width = `${Math.round((step / total) * 100)}%`;
+            lbl.textContent = label;
+        }
+
+        function setProgressDone() {
+            const fill = document.getElementById('progress-fill');
+            const lbl  = document.getElementById('progress-label');
+            fill.style.width = '100%';
+            fill.classList.add('done');
+            lbl.textContent = 'Abgeschlossen';
+        }
+
+        async function runClear() {
+            document.getElementById('confirm-bar').style.display = 'none';
+            document.getElementById('progress-wrap').style.display = 'none';
+            const btn = document.getElementById('clear-btn');
+            btn.disabled = true;
+            btn.textContent = '…';
+            document.getElementById('log-wrap').innerHTML = '';
+
+            // steps: 1 lookup + CLEAR_STEPS + 1 event delete
+            const totalSteps = 1 + CLEAR_STEPS.length + 1;
+            let step = 0;
+
+            try {
+                setProgress(step, totalSteps, 'Event suchen …');
+                log('Event "Heldentag" suchen', 'head');
+                const evWhere = encodeURIComponent(JSON.stringify({ name: 'Heldentag' }));
+                const evRes   = await pGet(`/classes/Event?where=${evWhere}&limit=1`);
+                if (!evRes.results?.length) {
+                    log('  ↳ nicht gefunden – nichts zu tun.', 'skip');
+                    setProgressDone();
+                    btn.disabled = false; btn.textContent = 'Testdaten löschen';
+                    return;
+                }
+                const eventId  = evRes.results[0].objectId;
+                const eventPtr = { __type: 'Pointer', className: 'Event', objectId: eventId };
+                log(`  ↳ gefunden  ${eventId}`, 'ok');
+                step++;
+
+                for (const s of CLEAR_STEPS) {
+                    setProgress(step, totalSteps, `${s.label} löschen …`);
+                    log(`${s.label} löschen`, 'head');
+                    const n = await safeDeleteAll(s.className, { event: eventPtr });
+                    log(`  ↳ ${n} gelöscht`, n ? 'ok' : 'skip');
+                    step++;
+                }
+
+                setProgress(step, totalSteps, 'Event löschen …');
+                log('Event löschen', 'head');
+                await pDelete('Event', eventId);
+                log('  ↳ gelöscht', 'ok');
+
+                log('', '');
+                log('✓ Alle Testdaten gelöscht.', 'ok');
+                setProgressDone();
+                btn.textContent = '✓ Gelöscht';
+                setTimeout(() => { btn.disabled = false; btn.textContent = 'Testdaten löschen'; }, 2500);
+            } catch (e) {
+                log(`✕ Fehler: ${e.message}`, 'err');
+                document.getElementById('progress-wrap').style.display = 'none';
+                btn.disabled = false;
+                btn.textContent = 'Testdaten löschen';
+            }
+        }
+
         document.getElementById('login-btn').addEventListener('click', doLogin);
         document.getElementById('seed-btn').addEventListener('click', runSeed);
+        document.getElementById('clear-btn').addEventListener('click', () => {
+            document.getElementById('confirm-bar').style.display = 'flex';
+            document.getElementById('clear-btn').disabled = true;
+        });
+        document.getElementById('confirm-no').addEventListener('click', () => {
+            document.getElementById('confirm-bar').style.display = 'none';
+            document.getElementById('clear-btn').disabled = false;
+        });
+        document.getElementById('confirm-yes').addEventListener('click', runClear);
         document.addEventListener('keydown', e => {
             if (e.key === 'Enter' && !masterKey) doLogin();
         });

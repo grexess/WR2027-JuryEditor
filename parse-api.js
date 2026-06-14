@@ -264,7 +264,8 @@ const ParseAPI = (() => {
     const PRESENCE_STALE_MS = CONFIG.presenceStalMs;
 
     async function heartbeat(judgeName) {
-        const where = JSON.stringify({ judgeName });
+        const eventPtr = { __type: 'Pointer', className: 'Event', objectId: CONFIG.eventObjectId };
+        const where = JSON.stringify({ judgeName, event: eventPtr });
         const existing = await fetch(
             `${CONFIG.parseServerUrl}/classes/JuryPresence?where=${encodeURIComponent(where)}&limit=1`,
             { headers: readHeaders() }
@@ -277,12 +278,13 @@ const ParseAPI = (() => {
                 { method: 'PUT', headers: writeHeaders(), body: JSON.stringify(body) });
         } else {
             await fetch(`${CONFIG.parseServerUrl}/classes/JuryPresence`,
-                { method: 'POST', headers: writeHeaders(), body: JSON.stringify({ ...body, judgeName }) });
+                { method: 'POST', headers: writeHeaders(), body: JSON.stringify({ ...body, judgeName, event: eventPtr }) });
         }
     }
 
     async function removePresence(judgeName) {
-        const where = JSON.stringify({ judgeName });
+        const eventPtr = { __type: 'Pointer', className: 'Event', objectId: CONFIG.eventObjectId };
+        const where = JSON.stringify({ judgeName, event: eventPtr });
         const existing = await fetch(
             `${CONFIG.parseServerUrl}/classes/JuryPresence?where=${encodeURIComponent(where)}&limit=1`,
             { headers: readHeaders() }
@@ -295,8 +297,11 @@ const ParseAPI = (() => {
     }
 
     async function fetchPresence() {
+        const where = encodeURIComponent(JSON.stringify({
+            event: { __type: 'Pointer', className: 'Event', objectId: CONFIG.eventObjectId },
+        }));
         const res = await fetch(
-            `${CONFIG.parseServerUrl}/classes/JuryPresence`,
+            `${CONFIG.parseServerUrl}/classes/JuryPresence?where=${where}`,
             { headers: readHeaders() }
         );
         if (!res.ok) throw new Error(`Parse error ${res.status}`);
@@ -322,7 +327,10 @@ const ParseAPI = (() => {
                 ws.send(JSON.stringify({
                     op: 'subscribe',
                     requestId: 3,
-                    query: { className: 'JuryPresence', where: {} },
+                    query: {
+                        className: 'JuryPresence',
+                        where: { event: { __type: 'Pointer', className: 'Event', objectId: CONFIG.eventObjectId } },
+                    },
                 }));
             }
             if (['create', 'update', 'delete', 'leave'].includes(msg.op)) onChange();
