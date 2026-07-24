@@ -114,8 +114,13 @@
             document.getElementById('waiting').classList.add('hidden');
         }
 
-        function onNewStarter(num) {
+        let currentRunNumber = 1;
+        let currentPhase = 'quali';
+
+        function onNewStarter(num, runNumber, phase) {
             startNum = String(num);
+            currentRunNumber = runNumber ?? 1;
+            currentPhase = phase ?? 'quali';
             document.getElementById('startnumber').textContent = startNum;
             document.getElementById('waiting').classList.add('hidden');
             submitted = false;
@@ -146,7 +151,7 @@
 
         // BroadcastChannel — fallback for same-device tabs
         const starterChannel = new BroadcastChannel('werace-starter');
-        starterChannel.addEventListener('message', e => onNewStarter(e.data.startnumber));
+        starterChannel.addEventListener('message', e => onNewStarter(e.data.startnumber, e.data.runNumber, e.data.phase));
 
         const scores = Object.fromEntries(CRITERIA.map(c => [c, 50]));
         let submitted = false;
@@ -154,7 +159,7 @@
         let inputBuffer = '';
 
         async function saveScore(startnumber, judgeName, scores) {
-            return ParseAPI.saveJuryScore(startnumber, judgeName, scores, CRITERIA);
+            return ParseAPI.saveJuryScore(startnumber, judgeName, scores, CRITERIA, currentRunNumber, currentPhase);
         }
         function clamp(v) { return Math.max(0, Math.min(100, Math.round(v))); }
 

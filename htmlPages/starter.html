@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Heldentag – Rennleitung</title>
+    <title>Heldentag – Startbereich</title>
     <link rel="icon"
         href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎤</text></svg>">
     <link rel="stylesheet" href="../jury.css">
@@ -170,7 +170,9 @@
             gap: 0.6rem;
         }
 
-        .finale-panel-header:active { background: var(--border); }
+        .finale-panel-header:active {
+            background: var(--border);
+        }
 
         .finale-panel-title {
             font-size: 0.75rem;
@@ -196,7 +198,9 @@
             transition: transform 0.2s;
         }
 
-        .finale-panel.open .finale-panel-chevron { transform: rotate(180deg); }
+        .finale-panel.open .finale-panel-chevron {
+            transform: rotate(180deg);
+        }
 
         .finale-panel-body {
             display: none;
@@ -204,7 +208,9 @@
             background: var(--card);
         }
 
-        .finale-panel.open .finale-panel-body { display: block; }
+        .finale-panel.open .finale-panel-body {
+            display: block;
+        }
 
         /* ── Verwaltung drawer ── */
         .drawer-btn {
@@ -530,6 +536,170 @@
             opacity: 0.35;
             cursor: default;
         }
+
+        /* ── Event settings panel ── */
+        .settings-section {
+            padding: 0.6rem 0.75rem 0.25rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .settings-section:last-child {
+            border-bottom: none;
+        }
+
+        .settings-label {
+            font-size: 0.6rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--muted);
+            margin-bottom: 0.4rem;
+        }
+
+        .settings-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem;
+            padding: 0.3rem 0;
+        }
+
+        .settings-row-label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text);
+            flex: 1;
+        }
+
+        .settings-row-sub {
+            font-size: 0.65rem;
+            color: var(--muted);
+            display: block;
+            font-weight: 400;
+        }
+
+        .settings-num {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .settings-num-btn {
+            width: 1.6rem;
+            height: 1.6rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--bg);
+            color: var(--text);
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .settings-num-btn:active {
+            background: var(--border);
+        }
+
+        .settings-num-btn:disabled {
+            opacity: 0.3;
+            cursor: default;
+        }
+
+        .settings-num-val {
+            min-width: 2rem;
+            text-align: center;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .settings-toggle {
+            display: flex;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .settings-toggle-btn {
+            padding: 0.25rem 0.6rem;
+            font-size: 0.7rem;
+            font-weight: 700;
+            border: none;
+            background: transparent;
+            color: var(--muted);
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .settings-toggle-btn.active {
+            background: var(--accent);
+            color: #fff;
+        }
+
+        .settings-save-btn {
+            width: calc(100% - 1.5rem);
+            margin: 0.5rem 0.75rem 0.75rem;
+            padding: 0.5rem;
+            border-radius: 8px;
+            border: none;
+            background: var(--accent);
+            color: #fff;
+            font-size: 0.8rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .settings-save-btn:active {
+            opacity: 0.8;
+        }
+
+        .settings-save-btn:disabled {
+            opacity: 0.4;
+            cursor: default;
+        }
+
+        .group-status-badge {
+            font-size: 0.55rem;
+            font-weight: 700;
+            border-radius: 3px;
+            padding: 0.1rem 0.3rem;
+            white-space: nowrap;
+        }
+
+        .group-status-badge.quali-idle {
+            color: var(--muted);
+            background: color-mix(in srgb, var(--muted) 12%, transparent);
+        }
+
+        .group-status-badge.quali-running {
+            color: #e3a007;
+            background: color-mix(in srgb, #e3a007 18%, transparent);
+        }
+
+        .group-status-badge.quali-done {
+            color: var(--green);
+            background: color-mix(in srgb, var(--green) 18%, transparent);
+        }
+
+        .group-status-badge.final-idle {
+            color: var(--muted);
+            background: color-mix(in srgb, var(--muted) 12%, transparent);
+        }
+
+        .group-status-badge.final-running {
+            color: var(--accent);
+            background: color-mix(in srgb, var(--accent) 18%, transparent);
+        }
+
+        .group-status-badge.final-done {
+            color: #ffd700;
+            background: color-mix(in srgb, #ffd700 18%, transparent);
+        }
     </style>
 </head>
 
@@ -556,6 +726,31 @@
             </svg>
         </button>
     </header>
+
+    <!-- Toast notification -->
+    <div id="toast" style="
+        display:none;position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);
+        background:var(--card);border:1px solid var(--border);border-radius:10px;
+        padding:0.65rem 1.1rem;font-size:0.85rem;font-weight:600;color:var(--text);
+        box-shadow:0 4px 20px rgba(0,0,0,0.4);z-index:300;white-space:nowrap;
+        pointer-events:none">
+    </div>
+
+    <!-- Final-created confirmation popup -->
+    <div id="final-ready-overlay" style="
+        display:none;position:fixed;inset:0;z-index:200;
+        background:rgba(0,0,0,0.65);
+        align-items:center;justify-content:center;padding:1.5rem">
+        <div style="
+            background:var(--card);border:1px solid var(--border);border-radius:14px;
+            max-width:320px;width:100%;padding:1.5rem;text-align:center">
+            <div style="font-size:1.8rem;margin-bottom:0.5rem">🏁</div>
+            <div style="font-size:1rem;font-weight:800;color:var(--text);margin-bottom:0.35rem" id="final-ready-title">
+            </div>
+            <div style="font-size:0.85rem;color:var(--muted);margin-bottom:1.25rem" id="final-ready-msg"></div>
+            <button class="submit-btn" id="final-ready-btn" style="max-width:100%">Zum Finale wechseln</button>
+        </div>
+    </div>
 
     <!-- Verwaltung drawer -->
     <div class="drawer-overlay" id="drawer-overlay"></div>
@@ -650,6 +845,7 @@
         const JUDGE_NAMES = () => Object.values(CONFIG.judgeTokens);
         const channel = new BroadcastChannel('werace-starter');
         let selected = null;
+        let selectedFinalNumber = null;
         let activeStarter = null;
         let activeRunNumber = 1;
         let scoredBy = new Set();
@@ -658,6 +854,7 @@
         let onlineJudges = new Set();
         let lastSeenMap = {};
         let runCounts = {};
+        let finalRunCounts = {};
         let filterGroup = null;  // startGroup objectId or null = all
         let filterFinalGroup = null; // finale group filter
         let filterRuns = null;   // run count number or null = all
@@ -706,7 +903,7 @@
             document.getElementById('presence-overlay').classList.toggle('hidden', allOnline);
             document.getElementById('picker-section').style.display = allOnline ? '' : 'none';
 
-            if (allOnline && selected !== null) setStartBtn(selected);
+            if (allOnline && selected !== null) setStartBtn(selected, selectedFinalNumber);
         }
 
         function updateStartBtnPresence() {
@@ -734,6 +931,7 @@
 
         function clearSelection() {
             selected = null;
+            selectedFinalNumber = null;
             if (display) display.textContent = '—';
             setStartBtn(null);
             renderList(filterInput.value);
@@ -755,7 +953,7 @@
             }
             groups.sort((a, b) => a.name.localeCompare(b.name));
 
-            const runSet = new Set(STARTERS.map(s => Math.floor((runCounts[s.startNumber] ?? 0) / JUDGE_COUNT())));
+            const runSet = new Set(STARTERS.map(s => runCounts[s.startNumber] ?? 0));
             const runs = [...runSet].sort((a, b) => a - b);
 
             // Groups row
@@ -793,7 +991,7 @@
 
             // "✓ Fertig" chip — only when qualiRuns is configured
             if (CONFIG.qualiRuns != null) {
-                const hasDone = START_NUMBERS.some(n => Math.floor((runCounts[n] ?? 0) / JUDGE_COUNT()) >= CONFIG.qualiRuns);
+                const hasDone = START_NUMBERS.some(n => (runCounts[n] ?? 0) >= CONFIG.qualiRuns);
                 if (hasDone) {
                     runsBar.style.display = '';
                     const chip = document.createElement('button');
@@ -871,8 +1069,14 @@
 
                     for (const entry of [...entries].reverse()) {
                         const starter = entry.starter;
+                        const finalRuns = finalRunCounts[entry.startNumber] ?? 0;
+                        const finalTotal = CONFIG.finalRuns ?? '?';
+                        const finalDone = CONFIG.finalRuns != null && finalRuns >= CONFIG.finalRuns;
+                        const badgeColor = finalDone ? 'var(--green)' : finalRuns > 0 ? 'var(--accent)' : 'var(--muted)';
                         const item = document.createElement('div');
-                        item.className = 'picker-item' + (entry.startNumber === selected ? ' selected' : '');
+                        item.className = 'picker-item' +
+                            (entry.startNumber === selected ? ' selected' : '') +
+                            (finalDone ? ' done' : '');
                         item.innerHTML =
                             `<span class="picker-item-num" style="min-width:1.5rem;color:var(--muted)">${entry.finalStartNumber}</span>` +
                             `<span class="picker-item-num">${entry.startNumber}</span>` +
@@ -880,11 +1084,12 @@
                             `<span class="picker-item-first">${starter?.firstName ?? ''}</span>` +
                             `<span class="picker-item-last">${starter?.lastName ?? entry.startNumber}</span>` +
                             `</span>` +
-                            `<span class="picker-item-runs" style="color:var(--muted)">${entry.qualiScore?.toFixed(1) ?? ''}</span>`;
+                            `<span class="picker-item-runs" style="color:${badgeColor}">${finalRuns}/${finalTotal}</span>`;
                         item.addEventListener('click', () => {
                             selected = entry.startNumber;
+                            selectedFinalNumber = entry.finalStartNumber;
                             if (display) display.textContent = entry.startNumber;
-                            setStartBtn(entry.startNumber);
+                            setStartBtn(entry.startNumber, entry.finalStartNumber);
                             renderList('');
                         });
                         body.appendChild(item);
@@ -913,9 +1118,9 @@
             // Split done / active
             if (CONFIG.qualiRuns != null) {
                 if (filterDone) {
-                    matches = matches.filter(n => Math.floor((runCounts[n] ?? 0) / JUDGE_COUNT()) >= CONFIG.qualiRuns);
+                    matches = matches.filter(n => (runCounts[n] ?? 0) >= CONFIG.qualiRuns);
                 } else {
-                    matches = matches.filter(n => Math.floor((runCounts[n] ?? 0) / JUDGE_COUNT()) < CONFIG.qualiRuns);
+                    matches = matches.filter(n => (runCounts[n] ?? 0) < CONFIG.qualiRuns);
                 }
             }
 
@@ -926,7 +1131,7 @@
                 });
             }
             if (filterRuns !== null) {
-                matches = matches.filter(n => Math.floor((runCounts[n] ?? 0) / JUDGE_COUNT()) === filterRuns);
+                matches = matches.filter(n => (runCounts[n] ?? 0) === filterRuns);
             }
 
             const total = (filterGroup !== null || filterRuns !== null || filterDone)
@@ -948,7 +1153,7 @@
             }
             for (const num of matches) {
                 const starter = STARTERS.find(s => s.startNumber === num);
-                const runs = Math.floor((runCounts[num] ?? 0) / JUDGE_COUNT());
+                const runs = runCounts[num] ?? 0;
                 const groupClosed = starter?.startGroup?.objectId && closedGroups.has(starter.startGroup.objectId);
                 const done = CONFIG.qualiRuns != null && runs >= CONFIG.qualiRuns;
                 const item = document.createElement('div');
@@ -983,11 +1188,18 @@
             pickerList.appendChild(inner);
         }
 
-        function setStartBtn(num) {
+        function setStartBtn(num, finalNum) {
             if (num === null) {
                 startBtn.innerHTML = 'Starter auswählen';
                 startBtn.disabled = true;
                 clearBtn.disabled = true;
+            } else if (finalNum != null) {
+                startBtn.innerHTML =
+                    `<span style="font-size:1.3rem">✓</span> Jetzt starten` +
+                    ` <span class="badge" style="opacity:0.6">#${num}</span>` +
+                    ` <span class="badge">Final ${finalNum}.</span>`;
+                startBtn.disabled = false;
+                clearBtn.disabled = false;
             } else {
                 startBtn.innerHTML = `<span style="font-size:1.3rem">✓</span> Jetzt starten <span class="badge">${num}</span>`;
                 startBtn.disabled = false;
@@ -1057,7 +1269,9 @@
 
         function enterWaitingForScores(startNumber) {
             activeStarter = startNumber;
-            activeRunNumber = Math.floor((runCounts[startNumber] ?? 0) / JUDGE_COUNT()) + 1;
+            activeRunNumber = mode === 'finale'
+                ? (finalRunCounts[startNumber] ?? 0) + 1
+                : (runCounts[startNumber] ?? 0) + 1;
             scoredBy = new Set();
             juryScores = {};
             const runStartedAt = new Date();
@@ -1090,8 +1304,26 @@
             }).catch(() => { });
         }
 
+        let _toastTimer = null;
+        function showToast(msg, durationMs = 3500) {
+            const el = document.getElementById('toast');
+            el.textContent = msg;
+            el.style.display = '';
+            clearTimeout(_toastTimer);
+            _toastTimer = setTimeout(() => { el.style.display = 'none'; }, durationMs);
+        }
+
         function exitWaitingForScores() {
             if (scoreWs) { scoreWs.close(); scoreWs = null; }
+            const completedStarter = activeStarter;
+            if (completedStarter != null) {
+                if (mode === 'finale') {
+                    finalRunCounts[completedStarter] = (finalRunCounts[completedStarter] ?? 0) + 1;
+                } else {
+                    runCounts[completedStarter] = (runCounts[completedStarter] ?? 0) + 1;
+                    drawerRunCounts[completedStarter] = runCounts[completedStarter];
+                }
+            }
             activeStarter = null;
             juryScores = {};
             filterDone = false;
@@ -1100,10 +1332,49 @@
             document.getElementById('waiting-overlay').classList.add('hidden');
             document.getElementById('picker-section').style.display = '';
             selected = null;
+            selectedFinalNumber = null;
             if (display) display.textContent = '—';
-            setStartBtn(null);
-            ParseAPI.fetchScoreCountByStarter().then(m => { runCounts = m; drawerRunCounts = m; renderFilterChips(); renderList(filterInput.value); }).catch(() => { });
+            setStartBtn(null); Promise.all([
+                ParseAPI.fetchScoreCountByStarter(),
+                ParseAPI.fetchFinalScoreCountByStarter(),
+            ]).then(([m, fm]) => { runCounts = m; finalRunCounts = fm; drawerRunCounts = m; renderFilterChips(); renderList(filterInput.value); }).catch(() => { });
             renderList(filterInput.value);
+
+            // Auto-transition: if all starters in the group finished quali, close + create final
+            if (mode === 'quali' && completedStarter != null && CONFIG.qualiRuns != null) {
+                const completedStarterObj = STARTERS.find(s => s.startNumber === completedStarter);
+                const gid = completedStarterObj?.startGroup?.objectId;
+                if (gid && !closedGroups.has(gid)) {
+                    const groupStarters = STARTERS.filter(s =>
+                        s.startGroup?.objectId === gid &&
+                        s.status !== 'removed' && s.status !== 'disqualified'
+                    );
+                    const allDone = groupStarters.length > 0 && groupStarters.every(s =>
+                        (runCounts[s.startNumber] ?? 0) >= CONFIG.qualiRuns
+                    );
+                    if (allDone) {
+                        const groupName = completedStarterObj.startGroup?.name ?? 'Gruppe';
+                        const group = drawerGroups.find(g => g.objectId === gid);
+                        if (group) {
+                            showToast(`🏁 ${groupName}: Finale wird erstellt …`, 5000);
+                            ParseAPI.updateStartGroupQualiClosed(gid, true).then(() => {
+                                group.qualiClosed = true;
+                                closedGroups.add(gid);
+                                return ParseAPI.createFinal(gid);
+                            }).then(async result => {
+                                await refreshFinalEntries();
+                                renderDrawer(); renderFilterChips(); renderList(filterInput.value);
+                                document.getElementById('toast').style.display = 'none';
+                                document.getElementById('final-ready-title').textContent = `${groupName} – Finale bereit`;
+                                document.getElementById('final-ready-msg').textContent =
+                                    `${result.created} Finalisten wurden ermittelt.`;
+                                const overlay = document.getElementById('final-ready-overlay');
+                                overlay.style.display = 'flex';
+                            }).catch(() => showToast(`✕ Fehler beim Erstellen des Finals`));
+                        }
+                    }
+                }
+            }
         }
 
         filterInput.addEventListener('input', () => renderList(filterInput.value));
@@ -1138,6 +1409,23 @@
         let finalEntriesByGroup = {}; // groupObjectId → sorted FinalEntry[]
         let mode = 'quali'; // 'quali' | 'finale'
 
+        async function refreshFinalEntries() {
+            try {
+                const all = await ParseAPI.fetchAllFinalEntries();
+                finalEntriesByGroup = {};
+                for (const e of all) {
+                    const gid = e.startGroup?.objectId ?? '__none__';
+                    if (!finalEntriesByGroup[gid]) finalEntriesByGroup[gid] = [];
+                    finalEntriesByGroup[gid].push(e);
+                }
+                const hasFinals = Object.values(finalEntriesByGroup).some(e => e.length > 0);
+                document.getElementById('mode-toggle').style.display = hasFinals ? '' : 'none';
+                renderFilterChips();
+                if (mode === 'finale') renderFinalChips();
+                renderList(filterInput.value);
+            } catch (_) { }
+        }
+
         function openDrawer() {
             document.getElementById('drawer').classList.add('open');
             document.getElementById('drawer-overlay').classList.add('open');
@@ -1149,6 +1437,7 @@
             document.getElementById('drawer').classList.remove('open');
             document.getElementById('drawer-overlay').classList.remove('open');
             document.getElementById('drawer-btn').classList.remove('open');
+            _settingsDraft = null;
         }
 
         document.getElementById('drawer-btn').addEventListener('click', () => {
@@ -1156,6 +1445,11 @@
         });
         document.getElementById('drawer-overlay').addEventListener('click', closeDrawer);
         document.getElementById('drawer-close').addEventListener('click', closeDrawer);
+
+        document.getElementById('final-ready-btn').addEventListener('click', () => {
+            document.getElementById('final-ready-overlay').style.display = 'none';
+            setMode('finale');
+        });
 
         async function drawerSetStatus(starter, status) {
             const newStatus = starter.status === status ? 'active' : status;
@@ -1179,20 +1473,242 @@
                 renderDrawer();
                 renderFilterChips();
                 renderList(filterInput.value);
+                if (newVal) {
+                    // Closing → create final automatically
+                    showToast(`🏁 ${group.name}: Finale wird erstellt …`, 5000);
+                    try {
+                        const result = await ParseAPI.createFinal(group.objectId);
+                        await refreshFinalEntries();
+                        renderDrawer();
+                        showToast(`✓ ${group.name}: ${result.created} Finalisten ermittelt`, 4000);
+                    } catch (_) {
+                        showToast(`✕ Fehler beim Erstellen des Finals`);
+                    }
+                }
             } catch (_) { }
         }
 
-        async function drawerCreateFinal(group, btn) {
-            btn.disabled = true;
-            btn.textContent = '…';
-            try {
-                const result = await ParseAPI.createFinal(group.objectId);
-                btn.textContent = `✓ ${result.created}`;
-                setTimeout(() => renderDrawer(), 1500);
-            } catch (e) {
-                btn.textContent = '✕';
-                btn.disabled = false;
+        // ── Event settings panel inside the Verwaltung drawer ──
+        let _settingsDraft = null; // { qualiRuns, finalRuns, bestOf, qualiScoreMode } — null = not editing
+
+        function buildEventSettingsPanel(wasOpen) {
+            const panel = document.createElement('div');
+            panel.className = 'drawer-panel' + (wasOpen ? ' open' : '');
+            panel.dataset.gid = '__settings__';
+
+            const hdr = document.createElement('div');
+            hdr.className = 'drawer-panel-hdr';
+            hdr.style.gridTemplateColumns = '1fr auto';
+            hdr.innerHTML =
+                `<div class="drawer-panel-title">Event-Einstellungen</div>`;
+            const chevron = document.createElement('span');
+            chevron.className = 'drawer-panel-chevron';
+            chevron.textContent = '▼';
+            hdr.appendChild(chevron);
+            hdr.addEventListener('click', () => {
+                panel.classList.toggle('open');
+                if (panel.classList.contains('open') && !_settingsDraft) {
+                    _settingsDraft = {
+                        qualiRuns: CONFIG.qualiRuns,
+                        finalRuns: CONFIG.finalRuns,
+                        bestOf: CONFIG.bestOf ?? 8,
+                        qualiScoreMode: CONFIG.qualiScoreMode ?? 'sum',
+                        finalScoreMode: CONFIG.finalScoreMode ?? 'sum',
+                    };
+                    rebuildSettingsBody();
+                }
+            });
+            panel.appendChild(hdr);
+
+            const panelBody = document.createElement('div');
+            panelBody.className = 'drawer-panel-body';
+            panelBody.id = 'settings-panel-body';
+            panel.appendChild(panelBody);
+
+            if (wasOpen && !_settingsDraft) {
+                _settingsDraft = {
+                    qualiRuns: CONFIG.qualiRuns,
+                    finalRuns: CONFIG.finalRuns,
+                    bestOf: CONFIG.bestOf ?? 8,
+                    qualiScoreMode: CONFIG.qualiScoreMode ?? 'sum',
+                    finalScoreMode: CONFIG.finalScoreMode ?? 'sum',
+                };
             }
+            if (wasOpen) return panel; // rebuildSettingsBody() called by renderDrawer after append
+
+            return panel;
+        }
+
+        function rebuildSettingsBody() {
+            const body = document.getElementById('settings-panel-body');
+            if (!body || !_settingsDraft) return;
+            body.innerHTML = '';
+
+            const d = _settingsDraft;
+
+            // Helper: numeric stepper row
+            const makeNumRow = (label, sub, key, min, max, nullLabel) => {
+                const sec = document.createElement('div');
+                sec.className = 'settings-section';
+
+                const lbl = document.createElement('div');
+                lbl.className = 'settings-row';
+
+                const textWrap = document.createElement('div');
+                textWrap.className = 'settings-row-label';
+                textWrap.innerHTML = label + (sub ? `<span class="settings-row-sub">${sub}</span>` : '');
+
+                const ctrl = document.createElement('div');
+                ctrl.className = 'settings-num';
+
+                const dec = document.createElement('button');
+                dec.className = 'settings-num-btn';
+                dec.textContent = '−';
+                dec.disabled = d[key] === null || d[key] <= min;
+                dec.addEventListener('click', () => {
+                    if (d[key] === null) return;
+                    d[key] = Math.max(min, d[key] - 1);
+                    rebuildSettingsBody();
+                });
+
+                const val = document.createElement('div');
+                val.className = 'settings-num-val';
+                val.textContent = d[key] === null ? (nullLabel ?? '∞') : d[key];
+
+                const inc = document.createElement('button');
+                inc.className = 'settings-num-btn';
+                inc.textContent = '+';
+                inc.disabled = d[key] !== null && d[key] >= max;
+                inc.addEventListener('click', () => {
+                    if (d[key] === null) d[key] = min;
+                    else d[key] = Math.min(max, d[key] + 1);
+                    rebuildSettingsBody();
+                });
+
+                // null-toggle (∞ button)
+                if (nullLabel !== undefined) {
+                    const inf = document.createElement('button');
+                    inf.className = 'settings-num-btn';
+                    inf.style.fontSize = '0.75rem';
+                    inf.title = d[key] === null ? 'Feste Anzahl setzen' : 'Unbegrenzt';
+                    inf.textContent = d[key] === null ? '#' : '∞';
+                    inf.addEventListener('click', () => {
+                        d[key] = d[key] === null ? min : null;
+                        rebuildSettingsBody();
+                    });
+                    ctrl.appendChild(dec);
+                    ctrl.appendChild(val);
+                    ctrl.appendChild(inc);
+                    ctrl.appendChild(inf);
+                } else {
+                    ctrl.appendChild(dec);
+                    ctrl.appendChild(val);
+                    ctrl.appendChild(inc);
+                }
+
+                lbl.appendChild(textWrap);
+                lbl.appendChild(ctrl);
+                sec.appendChild(lbl);
+                body.appendChild(sec);
+            };
+
+            makeNumRow('Quali-Läufe', 'Läufe pro Starter in der Qualifikation', 'qualiRuns', 1, 10, '∞');
+            makeNumRow('Final-Läufe', 'Läufe pro Finalist im Finale', 'finalRuns', 1, 10, '∞');
+            makeNumRow('Finalisten (Best-Of)', 'Anzahl Starter die ins Finale einziehen', 'bestOf', 1, 30);
+
+            // Helper: scoring mode toggle row — only shown when runs > 1 (sum == best when runs=1)
+            const makeModeRow = (label, sub, key, runs) => {
+                const multiRun = runs === null || runs > 1;
+                if (!multiRun) return; // sum always equals best for a single run
+                const sec = document.createElement('div');
+                sec.className = 'settings-section';
+                const row = document.createElement('div');
+                row.className = 'settings-row';
+                const lbl = document.createElement('div');
+                lbl.className = 'settings-row-label';
+                lbl.innerHTML = label + (sub ? `<span class="settings-row-sub">${sub}</span>` : '');
+                const toggle = document.createElement('div');
+                toggle.className = 'settings-toggle';
+                ['sum', 'best'].forEach(m => {
+                    const btn = document.createElement('button');
+                    btn.className = 'settings-toggle-btn' + (d[key] === m ? ' active' : '');
+                    btn.textContent = m === 'sum' ? 'Summe' : 'Bester Lauf';
+                    btn.addEventListener('click', () => { d[key] = m; rebuildSettingsBody(); });
+                    toggle.appendChild(btn);
+                });
+                row.appendChild(lbl);
+                row.appendChild(toggle);
+                sec.appendChild(row);
+                body.appendChild(sec);
+            };
+
+            makeModeRow('Quali-Wertung', 'Wie wird die Qualiplatzierung berechnet?', 'qualiScoreMode', d.qualiRuns);
+            makeModeRow('Final-Wertung', 'Wie wird die Finalplatzierung berechnet?', 'finalScoreMode', d.finalRuns);
+
+            // Save button
+            const saveBtn = document.createElement('button');
+            saveBtn.className = 'settings-save-btn';
+            saveBtn.textContent = 'Einstellungen speichern';
+            saveBtn.addEventListener('click', async () => {
+                saveBtn.disabled = true;
+                saveBtn.textContent = '…';
+                try {
+                    await ParseAPI.updateEventSettings({
+                        qualiRuns: d.qualiRuns,
+                        finalRuns: d.finalRuns,
+                        bestOf: d.bestOf,
+                        qualiScoreMode: d.qualiScoreMode,
+                        finalScoreMode: d.finalScoreMode,
+                    });
+                    // Apply locally
+                    CONFIG.qualiRuns = d.qualiRuns;
+                    CONFIG.finalRuns = d.finalRuns;
+                    CONFIG.bestOf = d.bestOf;
+                    CONFIG.qualiScoreMode = d.qualiScoreMode;
+                    CONFIG.finalScoreMode = d.finalScoreMode;
+                    _settingsDraft = null;
+                    saveBtn.textContent = '✓ Gespeichert';
+                    // Update header display
+                    const qualiEl = document.getElementById('quali-display');
+                    const finalEl = document.getElementById('final-display');
+                    if (CONFIG.qualiRuns != null) { qualiEl.textContent = `${CONFIG.qualiRuns}× Qualifikation`; qualiEl.style.display = ''; }
+                    else qualiEl.style.display = 'none';
+                    if (CONFIG.finalRuns != null) { finalEl.textContent = `${CONFIG.finalRuns}× Finale`; finalEl.style.display = ''; }
+                    else finalEl.style.display = 'none';
+                    renderFilterChips();
+                    renderList(filterInput.value);
+                    setTimeout(() => renderDrawer(), 1200);
+                } catch (_) {
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = '✕ Fehler – nochmal versuchen';
+                }
+            });
+            body.appendChild(saveBtn);
+        }
+
+        // Returns one of 6 status strings for a group, mirroring groupMode() in results.html
+        function drawerGroupStatus(gid) {
+            const isClosed = closedGroups.has(gid);
+            const groupStarters = drawerStarters.filter(s =>
+                s.startGroup?.objectId === gid && s.status !== 'removed' && s.status !== 'disqualified'
+            );
+            if (!isClosed) {
+                const anyRun = groupStarters.some(s => (runCounts[s.startNumber] ?? 0) > 0);
+                if (!anyRun) return 'quali-idle';
+                if (CONFIG.qualiRuns == null) return 'quali-running';
+                const allDone = groupStarters.length > 0 && groupStarters.every(s =>
+                    (runCounts[s.startNumber] ?? 0) >= CONFIG.qualiRuns
+                );
+                return allDone ? 'quali-done' : 'quali-running';
+            }
+            // closed → final phase
+            const finalistNums = new Set((finalEntriesByGroup[gid] ?? []).map(fe => fe.startNumber ?? fe.starter?.startNumber));
+            if (!finalistNums.size) return 'final-idle';
+            const anyFinalRun = [...finalistNums].some(n => (finalRunCounts[n] ?? 0) > 0);
+            if (!anyFinalRun) return 'final-idle';
+            if (CONFIG.finalRuns == null) return 'final-running';
+            const allFinalDone = [...finalistNums].every(n => (finalRunCounts[n] ?? 0) >= CONFIG.finalRuns);
+            return allFinalDone ? 'final-done' : 'final-running';
         }
 
         function renderDrawer() {
@@ -1201,6 +1717,10 @@
                 [...body.querySelectorAll('.drawer-panel.open')].map(el => el.dataset.gid)
             );
             body.innerHTML = '';
+
+            // Event settings panel (always first)
+            body.appendChild(buildEventSettingsPanel(openIds.has('__settings__')));
+            if (openIds.has('__settings__')) rebuildSettingsBody(); // DOM is ready now
 
             const grouped = {};
             const noGroup = [];
@@ -1213,10 +1733,9 @@
             const renderGroup = (starters, group) => {
                 const gid = group?.objectId ?? '__none__';
                 const isClosed = group ? (closedGroups.has(gid)) : false;
-                const jc = JUDGE_COUNT();
                 const doneCount = starters.filter(s =>
                     s.status !== 'removed' && CONFIG.qualiRuns != null &&
-                    Math.floor((drawerRunCounts[s.startNumber] ?? 0) / jc) >= CONFIG.qualiRuns
+                    (drawerRunCounts[s.startNumber] ?? 0) >= CONFIG.qualiRuns
                 ).length;
                 const activeCount = starters.filter(s => s.status !== 'removed').length;
 
@@ -1227,19 +1746,24 @@
                 // Header
                 const hdr = document.createElement('div');
                 hdr.className = 'drawer-panel-hdr';
+
+                const statusLabels = {
+                    'quali-idle': 'Quali nicht gestartet',
+                    'quali-running': 'Quali läuft',
+                    'quali-done': 'Quali fertig',
+                    'final-idle': 'Finale nicht gestartet',
+                    'final-running': 'Final läuft',
+                    'final-done': 'Final beendet',
+                };
+                const status = group ? drawerGroupStatus(gid) : null;
+                const statusBadge = status
+                    ? `<span class="group-status-badge ${status}">${statusLabels[status]}</span>`
+                    : '';
+
                 hdr.innerHTML =
                     `<div class="drawer-panel-title${isClosed ? ' closed' : ''}">${(isClosed ? '🔒 ' : '') + (group?.name ?? 'Keine Gruppe')}</div>` +
+                    statusBadge +
                     `<span class="drawer-panel-count">${doneCount}/${activeCount}</span>`;
-
-                if (group) {
-                    const toggle = document.createElement('button');
-                    toggle.className = 'quali-toggle' + (isClosed ? ' closed' : '');
-                    toggle.innerHTML = isClosed
-                        ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`
-                        : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>`;
-                    toggle.addEventListener('click', e => { e.stopPropagation(); drawerToggleQualiClosed(group); });
-                    hdr.appendChild(toggle);
-                }
 
                 const chevron = document.createElement('span');
                 chevron.className = 'drawer-panel-chevron';
@@ -1253,7 +1777,7 @@
                 panelBody.className = 'drawer-panel-body';
 
                 for (const s of starters) {
-                    const runs = Math.floor((drawerRunCounts[s.startNumber] ?? 0) / JUDGE_COUNT());
+                    const runs = drawerRunCounts[s.startNumber] ?? 0;
                     const done = CONFIG.qualiRuns != null && runs >= CONFIG.qualiRuns;
                     const status = s.status ?? 'active';
 
@@ -1285,14 +1809,47 @@
                     const dqBtn = document.createElement('button');
                     dqBtn.className = 'dact' + (status === 'disqualified' ? ' dq' : '');
                     dqBtn.textContent = status === 'disqualified' ? '↺' : 'DSQ';
+                    dqBtn.title = status === 'disqualified' ? 'Disqualifikation aufheben' : 'Disqualifizieren';
                     dqBtn.addEventListener('click', () => drawerSetStatus(s, 'disqualified'));
                     actions.appendChild(dqBtn);
 
                     const rmBtn = document.createElement('button');
                     rmBtn.className = 'dact' + (status === 'removed' ? ' rm' : '');
                     rmBtn.textContent = status === 'removed' ? '↺' : '✕';
+                    rmBtn.title = status === 'removed' ? 'Starter wiederherstellen' : 'Starter entfernen';
                     rmBtn.addEventListener('click', () => drawerSetStatus(s, 'removed'));
                     actions.appendChild(rmBtn);
+
+                    // Delete-run button: only when group is closed, starter has runs, and no final scores exist yet
+                    const groupHasFinalScores = Object.values(finalRunCounts).some((_, idx) => {
+                        const num = Object.keys(finalRunCounts)[idx];
+                        const st = STARTERS.find(x => x.startNumber === Number(num));
+                        return st?.startGroup?.objectId === gid && finalRunCounts[num] > 0;
+                    });
+                    if (runs > 0 && !groupHasFinalScores && status === 'active') {
+                        const delRunBtn = document.createElement('button');
+                        delRunBtn.className = 'dact';
+                        delRunBtn.textContent = `−${runs}×`;
+                        delRunBtn.title = `Lauf ${runs} löschen und Qualifikation wieder öffnen`;
+                        delRunBtn.addEventListener('click', async () => {
+                            delRunBtn.disabled = true;
+                            try {
+                                await ParseAPI.deleteQualiRun(s.startNumber, runs);
+                                runCounts[s.startNumber] = runs - 1;
+                                drawerRunCounts[s.startNumber] = runs - 1;
+                                // Reopen group if it was closed
+                                const grp = drawerGroups.find(g => g.objectId === gid);
+                                if (grp && grp.qualiClosed) {
+                                    await ParseAPI.updateStartGroupQualiClosed(gid, false);
+                                    grp.qualiClosed = false;
+                                    closedGroups.delete(gid);
+                                }
+                                renderDrawer(); renderFilterChips(); renderList(filterInput.value);
+                                showToast(`Lauf ${runs} von #${s.startNumber} gelöscht`);
+                            } catch (_) { delRunBtn.disabled = false; }
+                        });
+                        actions.appendChild(delRunBtn);
+                    }
 
                     item.appendChild(num);
                     item.appendChild(name);
@@ -1301,20 +1858,28 @@
                     panelBody.appendChild(item);
                 }
 
-                // Footer with finale button (only when closed)
-                if (group && isClosed) {
+                panel.appendChild(panelBody);
+
+                // Footer: Quali schließen/öffnen + Finale erstellen (only for named groups)
+                if (group) {
+                    const hasFinalEntries = (finalEntriesByGroup[gid] ?? []).length > 0;
+
                     const footer = document.createElement('div');
                     footer.className = 'drawer-panel-footer';
-                    const finalBtn = document.createElement('button');
-                    finalBtn.className = 'final-btn';
-                    finalBtn.innerHTML =
-                        `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>FINALE`;
-                    finalBtn.addEventListener('click', () => drawerCreateFinal(group, finalBtn));
-                    footer.appendChild(finalBtn);
-                    panelBody.appendChild(footer);
+
+                    const qualiBtn = document.createElement('button');
+                    qualiBtn.className = 'quali-toggle';
+                    qualiBtn.innerHTML = CONFIG.qualiRuns === null
+                        ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg> Quali schließen`
+                        : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg> Finale vorzeitig starten`;
+                    const groupStatus = drawerGroupStatus(gid);
+                    qualiBtn.style.display = (isClosed || groupStatus === 'quali-idle') ? 'none' : '';
+                    qualiBtn.addEventListener('click', () => drawerToggleQualiClosed(group));
+                    footer.appendChild(qualiBtn);
+
+                    panel.appendChild(footer);
                 }
 
-                panel.appendChild(panelBody);
                 body.appendChild(panel);
             };
 
@@ -1324,7 +1889,7 @@
 
         async function init() {
             await Promise.all([ParseAPI.fetchEvent(), ParseAPI.fetchJudges()]).catch(() => { });
-            document.title = `${CONFIG.eventName} – Rennleitung`;
+            document.title = `${CONFIG.eventName} – Startbereich`;
 
             // Start presence polling now that CONFIG.judgeTokens is populated from the live event
             refreshPresence();
@@ -1368,9 +1933,10 @@
 
             resultsLabel.textContent = 'Lade Starter …';
             try {
-                [STARTERS, runCounts] = await Promise.all([
+                [STARTERS, runCounts, finalRunCounts] = await Promise.all([
                     ParseAPI.fetchStarters(),
                     ParseAPI.fetchScoreCountByStarter(),
+                    ParseAPI.fetchFinalScoreCountByStarter(),
                 ]);
                 START_NUMBERS = STARTERS.map(s => s.startNumber);
                 drawerStarters = STARTERS;
@@ -1380,22 +1946,6 @@
             }
 
             // Load final entries and subscribe
-            async function refreshFinalEntries() {
-                try {
-                    const all = await ParseAPI.fetchAllFinalEntries();
-                    finalEntriesByGroup = {};
-                    for (const e of all) {
-                        const gid = e.startGroup?.objectId ?? '__none__';
-                        if (!finalEntriesByGroup[gid]) finalEntriesByGroup[gid] = [];
-                        finalEntriesByGroup[gid].push(e);
-                    }
-                    const hasFinals = Object.values(finalEntriesByGroup).some(e => e.length > 0);
-                    document.getElementById('mode-toggle').style.display = hasFinals ? '' : 'none';
-                    renderFilterChips();
-                    if (mode === 'finale') renderFinalChips();
-                    renderList(filterInput.value);
-                } catch (_) { }
-            }
             refreshFinalEntries();
             ParseAPI.subscribeFinalEntries(refreshFinalEntries);
 
@@ -1410,8 +1960,13 @@
             startBtn.disabled = true;
             startBtn.innerHTML = '…';
             try {
-                await ParseAPI.publishActiveStarter(selected);
-                channel.postMessage({ startnumber: selected });
+                // Compute runNumber here, before the 800ms delay to enterWaitingForScores
+                const phase = mode === 'finale' ? 'final' : 'quali';
+                activeRunNumber = mode === 'finale'
+                    ? (finalRunCounts[selected] ?? 0) + 1
+                    : (runCounts[selected] ?? 0) + 1;
+                await ParseAPI.publishActiveStarter(selected, activeRunNumber, phase);
+                channel.postMessage({ startnumber: selected, runNumber: activeRunNumber, phase });
                 startBtn.innerHTML = '✓ Gestartet';
                 setTimeout(() => enterWaitingForScores(selected), 800);
             } catch (e) {

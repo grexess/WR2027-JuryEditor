@@ -56,7 +56,10 @@ const ParseAPI = (() => {
         if (ev.presencePollMs) CONFIG.presencePollMs = ev.presencePollMs;
         if (ev.qualiRuns != null)   CONFIG.qualiRuns     = ev.qualiRuns;
         if (ev.finalRuns != null)   CONFIG.finalRuns     = ev.finalRuns;
+        if (ev.bestOf    != null)   CONFIG.bestOf        = ev.bestOf;
         if (ev.refereeToken)        CONFIG.refereeToken  = ev.refereeToken;
+        if (ev.qualiScoreMode)      CONFIG.qualiScoreMode = ev.qualiScoreMode;
+        if (ev.finalScoreMode)      CONFIG.finalScoreMode = ev.finalScoreMode;
         return ev;
     }
 
@@ -103,9 +106,10 @@ const ParseAPI = (() => {
         if (!res.ok) throw new Error(`Parse error ${res.status}`);
     }
 
-    async function saveJuryScore(startnumber, judgeName, scores, criteria) {
+    async function saveJuryScore(startnumber, judgeName, scores, criteria, runNumber, phase) {
         const total = criteria.reduce((a, c) => a + scores[c], 0);
         const body  = { startnumber: Number(startnumber), judgeName, total,
+            runNumber: Number(runNumber) ?? 1, phase: phase ?? 'quali',
             event: { __type: 'Pointer', className: 'Event', objectId: CONFIG.eventObjectId } };
         for (const c of CONFIG.criteria) body[c.key] = scores[c.label];
         const res = await fetch(`${CONFIG.parseServerUrl}/classes/JuryScore`, {
@@ -120,18 +124,66 @@ const ParseAPI = (() => {
     async function fetchScoreCountByStarter() {
         const where = encodeURIComponent(JSON.stringify({
             event: { __type: 'Pointer', className: 'Event', objectId: CONFIG.eventObjectId },
+            phase: 'quali',
         }));
         const res = await fetch(
-            `${CONFIG.parseServerUrl}/classes/JuryScore?where=${where}&limit=1000&keys=startnumber`,
+            `${CONFIG.parseServerUrl}/classes/JuryScore?where=${where}&limit=2000&keys=startnumber,runNumber`,
             { headers: readHeaders() }
         );
         if (!res.ok) throw new Error(`Parse error ${res.status}`);
         const data = await res.json();
-        const map = {};
+        // Count distinct runNumbers per starter
+        const byStarter = {};
         for (const s of data.results ?? []) {
-            map[s.startnumber] = (map[s.startnumber] ?? 0) + 1;
+            if (!byStarter[s.startnumber]) byStarter[s.startnumber] = new Set();
+            byStarter[s.startnumber].add(s.runNumber ?? 1);
         }
+        const map = {};
+        for (const [num, set] of Object.entries(byStarter)) map[num] = set.size;
         return map;
+    }
+
+    async function fetchFinalScoreCountByStarter() {
+        const where = encodeURIComponent(JSON.stringify({
+            event: { __type: 'Pointer', className: 'Event', objectId: CONFIG.eventObjectId },
+            phase: 'final',
+        }));
+        const res = await fetch(
+            `${CONFIG.parseServerUrl}/classes/JuryScore?where=${where}&limit=1000&keys=startnumber,runNumber`,
+            { headers: readHeaders() }
+        );
+        if (!res.ok) throw new Error(`Parse error ${res.status}`);
+        const data = await res.json();
+        // Count distinct runNumbers per starter (each runNumber = one complete run)
+        const byStarter = {};
+        for (const s of data.results ?? []) {
+            if (!byStarter[s.startnumber]) byStarter[s.startnumber] = new Set();
+            byStarter[s.startnumber].add(s.runNumber ?? 1);
+        }
+        const map = {};
+        for (const [num, set] of Object.entries(byStarter)) map[num] = set.size;
+        return map;
+    }
+
+    async function deleteQualiRun(startnumber, runNumber) {
+        const where = encodeURIComponent(JSON.stringify({
+            event: { __type: 'Pointer', className: 'Event', objectId: CONFIG.eventObjectId },
+            startnumber: Number(startnumber),
+            phase: 'quali',
+            runNumber: Number(runNumber),
+        }));
+        const res = await fetch(
+            `${CONFIG.parseServerUrl}/classes/JuryScore?where=${where}&limit=100&keys=objectId`,
+            { headers: readHeaders() }
+        );
+        if (!res.ok) throw new Error(`Parse error ${res.status}`);
+        const { results } = await res.json();
+        for (const obj of results ?? []) {
+            const del = await fetch(`${CONFIG.parseServerUrl}/classes/JuryScore/${obj.objectId}`,
+                { method: 'DELETE', headers: readHeaders() });
+            if (!del.ok) throw new Error(`Delete failed ${del.status}`);
+        }
+        return results?.length ?? 0;
     }
 
     async function fetchJuryScores(startnumber) {
@@ -185,9 +237,7 @@ const ParseAPI = (() => {
 
     // ── Live Query ──
 
-    async function publishActiveStarter(startNumber) {
-        // Delete any existing record for this event, then create a fresh one.
-        // Back4App Live Query fires an 'update' or 'create' event on the subscriber.
+    async function publishActiveStarter(startNumber, runNumber, phase) {
         const existing = await fetch(
             `${CONFIG.parseServerUrl}/classes/ActiveStarter?where=${encodeURIComponent(JSON.stringify({ event: { __type: 'Pointer', className: 'Event', objectId: CONFIG.eventObjectId } }))}`,
             { headers: readHeaders() }
@@ -195,11 +245,11 @@ const ParseAPI = (() => {
         if (!existing.ok) throw new Error(`Parse error ${existing.status}`);
         const { results } = await existing.json();
 
+        const payload = { startNumber, runNumber: Number(runNumber) ?? 1, phase: phase ?? 'quali' };
         if (results?.length) {
-            // Update in-place so Live Query fires an 'update' event
             const res = await fetch(
                 `${CONFIG.parseServerUrl}/classes/ActiveStarter/${results[0].objectId}`,
-                { method: 'PUT', headers: writeHeaders(), body: JSON.stringify({ startNumber }) }
+                { method: 'PUT', headers: writeHeaders(), body: JSON.stringify(payload) }
             );
             if (!res.ok) throw new Error(`Parse error ${res.status}`);
         } else {
@@ -209,7 +259,7 @@ const ParseAPI = (() => {
                     method: 'POST',
                     headers: writeHeaders(),
                     body: JSON.stringify({
-                        startNumber,
+                        ...payload,
                         event: { __type: 'Pointer', className: 'Event', objectId: CONFIG.eventObjectId },
                     }),
                 }
@@ -245,7 +295,7 @@ const ParseAPI = (() => {
                 }));
             }
             if ((msg.op === 'create' || msg.op === 'update') && msg.object?.startNumber != null) {
-                onStartNumber(msg.object.startNumber);
+                onStartNumber(msg.object.startNumber, msg.object.runNumber ?? 1, msg.object.phase ?? 'quali');
             }
         });
 
@@ -487,5 +537,9 @@ const ParseAPI = (() => {
         return ws;
     }
 
-    return { login, logout, fetchAllEvents, fetchEvent, fetchJudges, fetchStartGroups, updateStartGroupQualiClosed, subscribeStartGroups, updateStarterStatus, createFinal, fetchFinalEntries, fetchAllFinalEntries, subscribeFinalEntries, fetchStarters, saveStarter, deleteStarter, saveJuryScore, fetchJuryScores, fetchScoreCountByStarter, fetchAllJuryScores, subscribeAllJuryScores, subscribeJuryScores, publishActiveStarter, subscribeActiveStarter, heartbeat, removePresence, fetchPresence, subscribePresence };
+    async function updateEventSettings(fields) {
+        return refereeUpdate({ action: 'updateEventSettings', fields });
+    }
+
+    return { login, logout, fetchAllEvents, fetchEvent, fetchJudges, fetchStartGroups, updateStartGroupQualiClosed, subscribeStartGroups, updateStarterStatus, updateEventSettings, createFinal, fetchFinalEntries, fetchAllFinalEntries, subscribeFinalEntries, fetchStarters, saveStarter, deleteStarter, saveJuryScore, deleteQualiRun, fetchJuryScores, fetchScoreCountByStarter, fetchFinalScoreCountByStarter, fetchAllJuryScores, subscribeAllJuryScores, subscribeJuryScores, publishActiveStarter, subscribeActiveStarter, heartbeat, removePresence, fetchPresence, subscribePresence };
 })();

@@ -506,6 +506,7 @@ main {
     flex-direction: column;
     gap: 0.05rem;
     line-height: 1.2;
+    flex: 1;
 }
 
 .picker-item-first {
