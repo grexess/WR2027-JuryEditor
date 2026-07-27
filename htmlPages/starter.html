@@ -700,6 +700,93 @@
             color: #ffd700;
             background: color-mix(in srgb, #ffd700 18%, transparent);
         }
+
+        /* ── Print panel ── */
+        .print-panel {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            margin: 0 0.75rem 0.5rem;
+            overflow: hidden;
+            background: var(--bg);
+        }
+
+        .print-panel-hdr {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.6rem 0.75rem;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .print-panel-hdr:active { background: var(--border); }
+
+        .print-panel-title {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .print-panel-chevron {
+            font-size: 0.65rem;
+            color: var(--muted);
+            transition: transform 0.2s;
+        }
+
+        .print-panel.open .print-panel-chevron { transform: rotate(180deg); }
+
+        .print-panel-body {
+            display: none;
+            border-top: 1px solid var(--border);
+        }
+
+        .print-panel.open .print-panel-body { display: block; }
+
+        .print-group-select {
+            width: calc(100% - 1.5rem);
+            margin: 0.6rem 0.75rem 0;
+            padding: 0.35rem 0.5rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--bg);
+            color: var(--text);
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .print-btn-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.4rem;
+            padding: 0.5rem 0.75rem 0.75rem;
+        }
+
+        .print-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.2rem;
+            padding: 0.55rem 0.4rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--bg);
+            color: var(--text);
+            font-size: 0.7rem;
+            font-weight: 700;
+            cursor: pointer;
+            text-align: center;
+            line-height: 1.25;
+            transition: border-color 0.15s, background 0.15s;
+        }
+
+        .print-btn:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); }
+        .print-btn:active { opacity: 0.75; }
+
+        .print-btn-icon {
+            font-size: 1.1rem;
+        }
     </style>
 </head>
 
@@ -1722,6 +1809,9 @@
             body.appendChild(buildEventSettingsPanel(openIds.has('__settings__')));
             if (openIds.has('__settings__')) rebuildSettingsBody(); // DOM is ready now
 
+            // Print panel
+            body.appendChild(buildPrintPanel(openIds.has('__print__')));
+
             const grouped = {};
             const noGroup = [];
             for (const s of drawerStarters) {
@@ -1885,6 +1975,380 @@
 
             for (const group of drawerGroups) renderGroup(grouped[group.objectId] ?? [], group);
             if (noGroup.length) renderGroup(noGroup, null);
+        }
+
+        // ── Print ──
+        // Shared score-grouping helpers (same logic as results.html)
+        function _groupByRunNumber(scores) {
+            if (!scores.length) return [];
+            const byRun = {};
+            for (const s of scores) {
+                const r = s.runNumber ?? 1;
+                if (!byRun[r]) byRun[r] = [];
+                byRun[r].push(s);
+            }
+            const judgeRepeatFallback = () => {
+                const runs = [], seen = new Set();
+                let chunk = [];
+                for (const sc of scores) {
+                    if (seen.has(sc.judgeName)) {
+                        if (chunk.length) runs.push(chunk);
+                        chunk = [sc]; seen.clear(); seen.add(sc.judgeName);
+                    } else { chunk.push(sc); seen.add(sc.judgeName); }
+                }
+                if (chunk.length) runs.push(chunk);
+                return runs.map(c => ({ scores: c, total: c.reduce((a, s) => a + (s.total ?? 0), 0) }));
+            };
+            const hasByRun = scores.some(s => s.runNumber != null);
+            if (!hasByRun) return judgeRepeatFallback();
+            return Object.keys(byRun).map(Number).sort((a, b) => a - b)
+                .map(r => ({ scores: byRun[r], total: byRun[r].reduce((a, s) => a + (s.total ?? 0), 0) }));
+        }
+
+        function _phaseRuns(scores) {
+            if (scores.some(s => s.phase != null)) {
+                return {
+                    qualiRuns: _groupByRunNumber(scores.filter(s => (s.phase ?? 'quali') === 'quali')),
+                    finalRuns: _groupByRunNumber(scores.filter(s => s.phase === 'final')),
+                };
+            }
+            const all = _groupByRunNumber(scores);
+            const qc = CONFIG.qualiRuns ?? all.length;
+            return { qualiRuns: all.slice(0, qc), finalRuns: all.slice(qc) };
+        }
+
+        async function printDoc(type, groupId) {
+            // Fetch all needed data fresh
+            const [allScores, allFinalEntries] = await Promise.all([
+                ParseAPI.fetchAllJuryScores(),
+                ParseAPI.fetchAllFinalEntries(),
+            ]);
+
+            const starters = STARTERS.length ? STARTERS : await ParseAPI.fetchStarters();
+            const groups = drawerGroups.length ? drawerGroups : await ParseAPI.fetchStartGroups();
+
+            // Determine which groups to print
+            const targetGroups = groupId === '__all__'
+                ? groups
+                : groups.filter(g => g.objectId === groupId);
+
+            const eventName = CONFIG.eventName ?? document.getElementById('event-display').textContent ?? 'WeRace';
+
+            const criteria = CONFIG.criteria ?? [];
+
+            // Build per-group sections
+            let sectionsHtml = '';
+
+            for (const group of targetGroups) {
+                const gid = group.objectId;
+                const groupStarters = starters.filter(s => s.startGroup?.objectId === gid && s.status !== 'removed');
+                const finalistNums = new Set(
+                    allFinalEntries.filter(fe => fe.startGroup?.objectId === gid)
+                        .map(fe => fe.startNumber ?? fe.starter?.startNumber)
+                );
+
+                if (type === 'startlist') {
+                    // a) Startliste Qualifikation
+                    const sorted = [...groupStarters].sort((a, b) => a.startNumber - b.startNumber);
+                    sectionsHtml += _printStartlist(group.name, sorted, eventName);
+
+                } else if (type === 'quali-results') {
+                    // b) Ergebnisliste Qualifikation
+                    const rows = _buildQualiResults(groupStarters, allScores, finalistNums);
+                    sectionsHtml += _printQualiResults(group.name, rows, criteria, eventName);
+
+                } else if (type === 'final-startlist') {
+                    // c) Startliste Finale
+                    const finalEntries = allFinalEntries
+                        .filter(fe => fe.startGroup?.objectId === gid)
+                        .sort((a, b) => a.finalStartNumber - b.finalStartNumber);
+                    sectionsHtml += _printFinalStartlist(group.name, finalEntries, eventName);
+
+                } else if (type === 'final-results') {
+                    // d) Ergebnisliste Finale
+                    const rows = _buildFinalResults(groupStarters, allScores, allFinalEntries, gid, finalistNums);
+                    sectionsHtml += _printFinalResults(group.name, rows, criteria, eventName);
+                }
+            }
+
+            _openPrintWindow(sectionsHtml, eventName);
+        }
+
+        function _buildQualiResults(groupStarters, allScores, finalistNums) {
+            const rows = [];
+            for (const starter of groupStarters) {
+                if (starter.status === 'disqualified') { rows.push({ starter, dq: true }); continue; }
+                const scores = allScores.filter(s => s.startnumber === starter.startNumber);
+                const { qualiRuns } = _phaseRuns(scores);
+                if (!qualiRuns.length) { rows.push({ starter, noRuns: true }); continue; }
+                const total = qualiRuns.reduce((a, r) => a + r.total, 0);
+                const best = Math.max(...qualiRuns.map(r => r.total));
+                const score = (CONFIG.qualiScoreMode ?? 'sum') === 'best' ? best : total;
+                rows.push({ starter, qualiRuns, score, isFinal: finalistNums.has(starter.startNumber) });
+            }
+            rows.sort((a, b) => {
+                if (a.dq || a.noRuns) return 1;
+                if (b.dq || b.noRuns) return -1;
+                return b.score - a.score;
+            });
+            return rows;
+        }
+
+        function _buildFinalResults(groupStarters, allScores, allFinalEntries, gid, finalistNums) {
+            const rows = [];
+            for (const starter of groupStarters) {
+                if (!finalistNums.has(starter.startNumber)) continue;
+                if (starter.status === 'disqualified') { rows.push({ starter, dq: true }); continue; }
+                const scores = allScores.filter(s => s.startnumber === starter.startNumber);
+                const { finalRuns } = _phaseRuns(scores);
+                const fe = allFinalEntries.find(e =>
+                    (e.startNumber ?? e.starter?.startNumber) === starter.startNumber && e.startGroup?.objectId === gid
+                );
+                const finalStartNum = fe?.finalStartNumber ?? '—';
+                if (!finalRuns.length) { rows.push({ starter, finalStartNum, noRuns: true }); continue; }
+                const total = finalRuns.reduce((a, r) => a + r.total, 0);
+                const best = Math.max(...finalRuns.map(r => r.total));
+                const score = (CONFIG.finalScoreMode ?? 'sum') === 'best' ? best : total;
+                rows.push({ starter, finalRuns, score, finalStartNum });
+            }
+            rows.sort((a, b) => {
+                if (a.dq || a.noRuns) return 1;
+                if (b.dq || b.noRuns) return -1;
+                return b.score - a.score;
+            });
+            return rows;
+        }
+
+        function _printStartlist(groupName, starters, eventName) {
+            const rows = starters.map((s, i) =>
+                `<tr>
+                    <td class="num">${s.startNumber}</td>
+                    <td>${s.firstName ?? ''} ${s.lastName ?? ''}</td>
+                    <td class="blank"></td>
+                </tr>`
+            ).join('');
+            return `<section>
+                <div class="doc-header">
+                    <span class="doc-event">${_esc(eventName)}</span>
+                    <span class="doc-type">Startliste Qualifikation</span>
+                    <span class="doc-group">${_esc(groupName)}</span>
+                </div>
+                <table>
+                    <thead><tr><th>Nr.</th><th>Name</th><th>Notiz</th></tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>
+                <div class="doc-footer">${starters.length} Starter · ${_nowStr()}</div>
+            </section>`;
+        }
+
+        function _printQualiResults(groupName, rows, criteria, eventName) {
+            const scoreLabel = (CONFIG.qualiScoreMode ?? 'sum') === 'best' ? 'Bester Lauf' : 'Summe';
+            const qualiRuns = CONFIG.qualiRuns ?? '?';
+            const tableRows = rows.map((r, i) => {
+                if (r.dq) return `<tr class="excluded"><td class="rank">—</td><td class="num">${r.starter.startNumber}</td><td>${_esc(r.starter.firstName ?? '')} ${_esc(r.starter.lastName ?? '')}</td><td colspan="3" class="dq-cell">DSQ</td></tr>`;
+                if (r.noRuns) return `<tr class="excluded"><td class="rank">—</td><td class="num">${r.starter.startNumber}</td><td>${_esc(r.starter.firstName ?? '')} ${_esc(r.starter.lastName ?? '')}</td><td colspan="3" class="muted">kein Lauf</td></tr>`;
+                const runScores = r.qualiRuns.map((run, ri) =>
+                    `<span class="run-pill">${ri + 1}: ${run.total}</span>`
+                ).join('');
+                return `<tr>
+                    <td class="rank">${i + 1}${r.isFinal ? '<span class="fin-badge">F</span>' : ''}</td>
+                    <td class="num">${r.starter.startNumber}</td>
+                    <td>${_esc(r.starter.firstName ?? '')} ${_esc(r.starter.lastName ?? '')}</td>
+                    <td class="runs-cell">${runScores}</td>
+                    <td class="score">${r.score}</td>
+                </tr>`;
+            }).join('');
+            return `<section>
+                <div class="doc-header">
+                    <span class="doc-event">${_esc(eventName)}</span>
+                    <span class="doc-type">Ergebnisse Qualifikation</span>
+                    <span class="doc-group">${_esc(groupName)}</span>
+                </div>
+                <table>
+                    <thead><tr><th>Platz</th><th>Nr.</th><th>Name</th><th>Läufe (${qualiRuns}×)</th><th>${_esc(scoreLabel)}</th></tr></thead>
+                    <tbody>${tableRows}</tbody>
+                </table>
+                <div class="doc-footer">${rows.filter(r => !r.dq && !r.noRuns).length} Gewertet · ${_nowStr()}</div>
+            </section>`;
+        }
+
+        function _printFinalStartlist(groupName, entries, eventName) {
+            const rows = entries.map(e => {
+                const starter = e.starter ?? STARTERS.find(s => s.startNumber === e.startNumber);
+                const name = starter ? `${starter.firstName ?? ''} ${starter.lastName ?? ''}` : `#${e.startNumber}`;
+                return `<tr>
+                    <td class="num">${e.finalStartNumber}</td>
+                    <td class="num muted">${e.startNumber ?? '—'}</td>
+                    <td>${_esc(name.trim())}</td>
+                    <td class="blank"></td>
+                </tr>`;
+            }).join('');
+            return `<section>
+                <div class="doc-header">
+                    <span class="doc-event">${_esc(eventName)}</span>
+                    <span class="doc-type">Startliste Finale</span>
+                    <span class="doc-group">${_esc(groupName)}</span>
+                </div>
+                <table>
+                    <thead><tr><th>Final-Nr.</th><th>Start-Nr.</th><th>Name</th><th>Notiz</th></tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>
+                <div class="doc-footer">${entries.length} Finalisten · ${_nowStr()}</div>
+            </section>`;
+        }
+
+        function _printFinalResults(groupName, rows, criteria, eventName) {
+            const scoreLabel = (CONFIG.finalScoreMode ?? 'sum') === 'best' ? 'Bester Lauf' : 'Summe';
+            const finalRuns = CONFIG.finalRuns ?? '?';
+            const tableRows = rows.map((r, i) => {
+                if (r.dq) return `<tr class="excluded"><td class="rank">—</td><td class="num">${r.finalStartNum}</td><td class="num muted">${r.starter.startNumber}</td><td>${_esc(r.starter.firstName ?? '')} ${_esc(r.starter.lastName ?? '')}</td><td colspan="2" class="dq-cell">DSQ</td></tr>`;
+                if (r.noRuns) return `<tr class="excluded"><td class="rank">—</td><td class="num">${r.finalStartNum}</td><td class="num muted">${r.starter.startNumber}</td><td>${_esc(r.starter.firstName ?? '')} ${_esc(r.starter.lastName ?? '')}</td><td colspan="2" class="muted">kein Lauf</td></tr>`;
+                const runScores = r.finalRuns.map((run, ri) =>
+                    `<span class="run-pill">${ri + 1}: ${run.total}</span>`
+                ).join('');
+                const medal = i === 0 ? ' 🥇' : i === 1 ? ' 🥈' : i === 2 ? ' 🥉' : '';
+                return `<tr${i < 3 ? ` class="podium podium-${i + 1}"` : ''}>
+                    <td class="rank">${i + 1}${medal}</td>
+                    <td class="num">${r.finalStartNum}</td>
+                    <td class="num muted">${r.starter.startNumber}</td>
+                    <td>${_esc(r.starter.firstName ?? '')} ${_esc(r.starter.lastName ?? '')}</td>
+                    <td class="runs-cell">${runScores}</td>
+                    <td class="score">${r.score}</td>
+                </tr>`;
+            }).join('');
+            return `<section>
+                <div class="doc-header">
+                    <span class="doc-event">${_esc(eventName)}</span>
+                    <span class="doc-type">Ergebnisse Finale</span>
+                    <span class="doc-group">${_esc(groupName)}</span>
+                </div>
+                <table>
+                    <thead><tr><th>Platz</th><th>F-Nr.</th><th>Nr.</th><th>Name</th><th>Läufe (${finalRuns}×)</th><th>${_esc(scoreLabel)}</th></tr></thead>
+                    <tbody>${tableRows}</tbody>
+                </table>
+                <div class="doc-footer">${rows.filter(r => !r.dq && !r.noRuns).length} Gewertet · ${_nowStr()}</div>
+            </section>`;
+        }
+
+        function _esc(str) {
+            return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        function _nowStr() {
+            const d = new Date();
+            return d.toLocaleDateString('de-DE') + ' ' + d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function _openPrintWindow(sectionsHtml, eventName) {
+            const win = window.open('', '_blank');
+            win.document.write(`<!DOCTYPE html><html lang="de"><head>
+<meta charset="UTF-8">
+<title>${_esc(eventName)} – Drucken</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:10pt;color:#111;background:#fff;padding:0}
+section{page-break-after:always;padding:1.2cm 1.4cm 1cm}
+section:last-child{page-break-after:avoid}
+.doc-header{display:flex;align-items:baseline;gap:0.6em;flex-wrap:wrap;margin-bottom:0.7em;border-bottom:2px solid #111;padding-bottom:0.4em}
+.doc-event{font-size:9pt;color:#555;white-space:nowrap}
+.doc-type{font-size:13pt;font-weight:800;flex:1}
+.doc-group{font-size:11pt;font-weight:700;color:#2c5282;white-space:nowrap}
+.doc-footer{margin-top:0.5em;font-size:8pt;color:#777;text-align:right}
+table{width:100%;border-collapse:collapse;font-size:9.5pt}
+thead tr{border-bottom:1.5px solid #111}
+th{padding:0.25em 0.5em;text-align:left;font-size:8.5pt;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#444;white-space:nowrap}
+td{padding:0.3em 0.5em;border-bottom:1px solid #e0e0e0;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+.rank{font-weight:800;font-size:11pt;text-align:right;width:2.5em;white-space:nowrap}
+.num{font-weight:700;text-align:right;width:3em;color:#333}
+.muted{color:#888}
+.score{font-weight:800;font-size:11pt;text-align:right;width:3.5em}
+.blank{width:4cm}
+.runs-cell{font-size:8.5pt;color:#444}
+.run-pill{display:inline-block;background:#f0f0f0;border-radius:3px;padding:0.1em 0.4em;margin:0.1em 0.15em;white-space:nowrap}
+.dq-cell{color:#c0392b;font-weight:700;font-size:8.5pt}
+.excluded td{opacity:0.55}
+.fin-badge{display:inline-block;font-size:6.5pt;font-weight:800;color:#fff;background:#2c5282;border-radius:2px;padding:0.1em 0.3em;margin-left:0.3em;vertical-align:middle}
+.podium-1 td{background:#fffbea}
+.podium-2 td{background:#f7f7f7}
+.podium-3 td{background:#fff9f5}
+@media print{
+  section{padding:0.8cm 1cm 0.7cm}
+  body{font-size:9pt}
+  .blank{width:3cm}
+}
+</style>
+</head><body>${sectionsHtml}</body></html>`);
+            win.document.close();
+            win.focus();
+            setTimeout(() => win.print(), 300);
+        }
+
+        function buildPrintPanel(isOpen) {
+            const panel = document.createElement('div');
+            panel.className = 'print-panel' + (isOpen ? ' open' : '');
+            panel.dataset.gid = '__print__';
+
+            const hdr = document.createElement('div');
+            hdr.className = 'print-panel-hdr';
+            const titleWrap = document.createElement('div');
+            titleWrap.innerHTML = `<span class="print-panel-title">🖨 Drucken</span>`;
+            const chevron = document.createElement('span');
+            chevron.className = 'print-panel-chevron';
+            chevron.textContent = '▼';
+            hdr.appendChild(titleWrap);
+            hdr.appendChild(chevron);
+            hdr.addEventListener('click', () => panel.classList.toggle('open'));
+            panel.appendChild(hdr);
+
+            const body = document.createElement('div');
+            body.className = 'print-panel-body';
+
+            // Group selector
+            const sel = document.createElement('select');
+            sel.className = 'print-group-select';
+            const optAll = document.createElement('option');
+            optAll.value = '__all__';
+            optAll.textContent = 'Alle Startgruppen';
+            sel.appendChild(optAll);
+            for (const g of drawerGroups) {
+                const opt = document.createElement('option');
+                opt.value = g.objectId;
+                opt.textContent = g.name;
+                sel.appendChild(opt);
+            }
+            body.appendChild(sel);
+
+            // Print buttons
+            const btnRow = document.createElement('div');
+            btnRow.className = 'print-btn-row';
+
+            const btns = [
+                { type: 'startlist', icon: '📋', label: 'Startliste\nQualifikation' },
+                { type: 'quali-results', icon: '📊', label: 'Ergebnisse\nQualifikation' },
+                { type: 'final-startlist', icon: '🏁', label: 'Startliste\nFinale' },
+                { type: 'final-results', icon: '🏆', label: 'Ergebnisse\nFinale' },
+            ];
+
+            for (const { type, icon, label } of btns) {
+                const btn = document.createElement('button');
+                btn.className = 'print-btn';
+                btn.innerHTML = `<span class="print-btn-icon">${icon}</span>${label.replace('\n', '<br>')}`;
+                btn.addEventListener('click', async () => {
+                    btn.style.opacity = '0.5';
+                    btn.style.pointerEvents = 'none';
+                    try {
+                        await printDoc(type, sel.value);
+                    } finally {
+                        btn.style.opacity = '';
+                        btn.style.pointerEvents = '';
+                    }
+                });
+                btnRow.appendChild(btn);
+            }
+            body.appendChild(btnRow);
+            panel.appendChild(body);
+            return panel;
         }
 
         async function init() {
