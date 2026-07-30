@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WeRace – Schema kopieren</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: system-ui, sans-serif; background: #0d1117; color: #e6edf3; padding: 2rem; }
+        h1 { font-size: 1.2rem; color: #f78166; margin-bottom: 0.25rem; }
+        .subtitle { font-size: 0.85rem; color: #8b949e; margin-bottom: 2rem; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; max-width: 900px; margin-bottom: 1rem; }
+        .card { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 1.25rem; }
+        .card-title { font-size: 0.7rem; color: #8b949e; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.75rem; }
+        label { font-size: 0.7rem; color: #8b949e; text-transform: uppercase; letter-spacing: 0.08em; display: block; margin-bottom: 0.3rem; margin-top: 0.6rem; }
+        label:first-of-type { margin-top: 0; }
+        input { width: 100%; padding: 0.6rem 0.85rem; background: #0d1117; border: 1px solid #30363d; border-radius: 8px; color: #e6edf3; font-size: 0.9rem; outline: none; }
+        input:focus { border-color: #f78166; }
+        .btn { padding: 0.7rem 1.4rem; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 700; cursor: pointer; margin-top: 1rem; }
+        .btn-primary { background: #3fb950; color: #000; }
+        .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+        .result-card { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 1.25rem; max-width: 900px; margin-bottom: 1rem; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-top: 0.75rem; }
+        th { text-align: left; font-size: 0.65rem; color: #8b949e; text-transform: uppercase; letter-spacing: 0.08em; padding: 0.3rem 0.5rem; border-bottom: 1px solid #30363d; }
+        td { padding: 0.5rem; border-bottom: 1px solid #21262d; vertical-align: middle; }
+        tr:last-child td { border-bottom: none; }
+        .status { font-size: 0.75rem; font-weight: 700; padding: 0.2em 0.55em; border-radius: 4px; white-space: nowrap; }
+        .status.pending { background: #21262d; color: #8b949e; }
+        .status.running { background: #1f3044; color: #58a6ff; }
+        .status.done    { background: #1a3a20; color: #3fb950; }
+        .status.skip    { background: #21262d; color: #8b949e; }
+        .status.error   { background: #3d1a1a; color: #f85149; }
+        .log { background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 0.75rem; font-size: 0.78rem; font-family: monospace; color: #8b949e; max-height: 260px; overflow-y: auto; margin-top: 1rem; white-space: pre-wrap; }
+        .log .ok   { color: #3fb950; }
+        .log .err  { color: #f85149; }
+        .log .info { color: #58a6ff; }
+    </style>
+</head>
+<body>
+    <h1>WeRace – Schema kopieren</h1>
+    <p class="subtitle">Kopiert die Klassen-Schemas der HT_-Klassen in eine andere Parse-App — ohne Datensätze.</p>
+
+    <div class="grid">
+        <div class="card">
+            <div class="card-title">Quell-App (mit HT_-Klassen)</div>
+            <label>Parse Server URL</label>
+            <input id="src-url" type="text" value="https://parseapi.back4app.com">
+            <label>Application ID</label>
+            <input id="src-appId" type="text" placeholder="App ID der Quell-App">
+            <label>Master Key</label>
+            <input id="src-masterKey" type="password" placeholder="Master Key der Quell-App">
+        </div>
+        <div class="card">
+            <div class="card-title">Ziel-App (neu / leer)</div>
+            <label>Parse Server URL</label>
+            <input id="dst-url" type="text" value="https://parseapi.back4app.com">
+            <label>Application ID</label>
+            <input id="dst-appId" type="text" placeholder="App ID der Ziel-App">
+            <label>Master Key</label>
+            <input id="dst-masterKey" type="password" placeholder="Master Key der Ziel-App">
+        </div>
+    </div>
+
+    <button class="btn btn-primary" id="startBtn" onclick="startCopy()">Schema kopieren</button>
+
+    <div class="result-card" style="margin-top:1rem">
+        <div class="card-title">Fortschritt</div>
+        <table>
+            <thead><tr><th>Klasse</th><th>Felder</th><th>Status</th></tr></thead>
+            <tbody id="progress-body"></tbody>
+        </table>
+        <div class="log" id="log"></div>
+    </div>
+
+    <script>
+        const CLASSES = [
+            'HT_EVENT', 'HT_STARTER', 'HT_STARTGROUP', 'HT_JUDGE',
+            'HT_JURYSCORE', 'HT_JUDGESCORE', 'HT_FINALENTRY',
+            'HT_ACTIVESTARTER', 'HT_JURYPRESENCE',
+        ];
+
+        // Built-in fields Parse adds automatically — no need to re-create these
+        const BUILTIN_FIELDS = new Set(['objectId', 'createdAt', 'updatedAt', 'ACL']);
+
+        let rows = {};
+
+        function src() {
+            return {
+                url: document.getElementById('src-url').value.trim().replace(/\/$/, ''),
+                appId: document.getElementById('src-appId').value.trim(),
+                masterKey: document.getElementById('src-masterKey').value.trim(),
+            };
+        }
+        function dst() {
+            return {
+                url: document.getElementById('dst-url').value.trim().replace(/\/$/, ''),
+                appId: document.getElementById('dst-appId').value.trim(),
+                masterKey: document.getElementById('dst-masterKey').value.trim(),
+            };
+        }
+        function hdrs(c) {
+            return {
+                'X-Parse-Application-Id': c.appId,
+                'X-Parse-Master-Key': c.masterKey,
+                'Content-Type': 'application/json',
+            };
+        }
+
+        function log(msg, cls = '') {
+            const el = document.getElementById('log');
+            el.innerHTML += `<span class="${cls}">${msg}</span>\n`;
+            el.scrollTop = el.scrollHeight;
+        }
+
+        function setStatus(cls, status, fields = '') {
+            const r = rows[cls];
+            if (!r) return;
+            r.status.className = `status ${status}`;
+            r.status.textContent = { pending: 'Ausstehend', running: 'Läuft…', done: 'Erstellt', skip: 'Bereits vorhanden', error: 'Fehler' }[status] ?? status;
+            if (fields !== '') r.fields.textContent = fields;
+        }
+
+        function buildTable() {
+            const tbody = document.getElementById('progress-body');
+            tbody.innerHTML = '';
+            rows = {};
+            for (const cls of CLASSES) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${cls}</td><td id="fld-${cls}">—</td><td id="st-${cls}"><span class="status pending">Ausstehend</span></td>`;
+                tbody.appendChild(tr);
+                rows[cls] = {
+                    fields: document.getElementById(`fld-${cls}`),
+                    status: document.getElementById(`st-${cls}`).querySelector('.status'),
+                };
+            }
+        }
+
+        async function fetchSchema(c, className) {
+            const res = await fetch(`${c.url}/schemas/${className}`, { headers: hdrs(c) });
+            const data = await res.json();
+            if (res.status === 404 || data.code === 103) return null;
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            return data;
+        }
+
+        async function copyClass(s, d, className) {
+            setStatus(className, 'running');
+            log(`\n[${className}]`, 'info');
+
+            // Fetch schema from source
+            const schema = await fetchSchema(s, className);
+            if (!schema) {
+                log(`  ⚠ Klasse nicht in Quell-App gefunden — übersprungen.`);
+                setStatus(className, 'skip', '—');
+                return;
+            }
+
+            // Check if already exists in destination
+            const existing = await fetchSchema(d, className);
+            if (existing) {
+                log(`  ⚠ Klasse existiert bereits in Ziel-App — übersprungen.`);
+                setStatus(className, 'skip', Object.keys(existing.fields ?? {}).length);
+                return;
+            }
+
+            // Build field definitions, skipping built-ins
+            const fields = {};
+            for (const [name, def] of Object.entries(schema.fields ?? {})) {
+                if (BUILTIN_FIELDS.has(name)) continue;
+                fields[name] = def;
+            }
+
+            const fieldCount = Object.keys(fields).length;
+            log(`  Felder: ${fieldCount} (${Object.keys(fields).join(', ')})`);
+
+            // POST schema to destination — creates the class and all fields in one step
+            const body = { className, fields };
+            if (schema.classLevelPermissions) body.classLevelPermissions = schema.classLevelPermissions;
+            const res = await fetch(`${d.url}/schemas/${className}`, {
+                method: 'POST',
+                headers: hdrs(d),
+                body: JSON.stringify(body),
+            });
+            if (!res.ok) {
+                const txt = await res.text();
+                throw new Error(`HTTP ${res.status} — ${txt}`);
+            }
+
+            setStatus(className, 'done', fieldCount);
+            log(`  ✓ Schema erstellt.`, 'ok');
+        }
+
+        async function startCopy() {
+            const s = src(), d = dst();
+            if (!s.appId || !s.masterKey || !d.appId || !d.masterKey) {
+                alert('Bitte alle Felder ausfüllen.');
+                return;
+            }
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('log').innerHTML = '';
+            buildTable();
+            log('Schema-Kopie gestartet…', 'info');
+
+            for (const cls of CLASSES) {
+                try {
+                    await copyClass(s, d, cls);
+                } catch (e) {
+                    setStatus(cls, 'error');
+                    log(`  ✕ Fehler bei ${cls}: ${e.message}`, 'err');
+                }
+            }
+
+            log('\nFertig.', 'ok');
+            document.getElementById('startBtn').disabled = false;
+        }
+
+        buildTable();
+    </script>
+</body>
+</html>

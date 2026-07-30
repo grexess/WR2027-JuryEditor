@@ -1,9 +1,11 @@
-// Paste this into Back4App Cloud Code → main.js
+// WeRace jury editor — cloud functions
+// Include from main.js with: require('./werace');
+// Remove by deleting that line and this file.
 
 Parse.Cloud.define('refereeUpdate', async (request) => {
     const { action, refereeToken, objectId, status, qualiClosed, startGroupObjectId, fields } = request.params;
 
-    const event = await new Parse.Query('Event').get(
+    const event = await new Parse.Query('HT_EVENT').get(
         request.params.eventObjectId ?? await getEventObjectId(),
         { useMasterKey: true }
     );
@@ -12,21 +14,21 @@ Parse.Cloud.define('refereeUpdate', async (request) => {
     }
 
     if (action === 'setStarterStatus') {
-        const obj = await new Parse.Query('Starter').get(objectId, { useMasterKey: true });
+        const obj = await new Parse.Query('HT_STARTER').get(objectId, { useMasterKey: true });
         obj.set('status', status);
         await obj.save(null, { useMasterKey: true });
         return { ok: true };
     }
 
     if (action === 'setQualiClosed') {
-        const obj = await new Parse.Query('StartGroup').get(objectId, { useMasterKey: true });
+        const obj = await new Parse.Query('HT_STARTGROUP').get(objectId, { useMasterKey: true });
         obj.set('qualiClosed', qualiClosed);
         await obj.save(null, { useMasterKey: true });
         return { ok: true };
     }
 
     if (action === 'updateEventSettings') {
-        const allowed = ['qualiRuns', 'finalRuns', 'bestOf', 'qualiScoreMode', 'finalScoreMode', 'presenceStalMs', 'presencePollMs'];
+        const allowed = ['qualiRuns', 'finalRuns', 'bestOf', 'qualiScoreMode', 'finalScoreMode', 'presenceStalMs', 'presencePollMs', 'criteria'];
         for (const key of allowed) {
             if (fields[key] !== undefined) event.set(key, fields[key]);
         }
@@ -47,13 +49,13 @@ async function createFinal(event, startGroupObjectId) {
     const bestOf = event.get('bestOf') ?? 8;
     const qualiRuns = event.get('qualiRuns') ?? null;
     const qualiScoreMode = event.get('qualiScoreMode') ?? 'sum'; // 'sum' | 'best'
-    const judgeCount = (await new Parse.Query('Judge')
+    const judgeCount = (await new Parse.Query('HT_JUDGE')
         .equalTo('event', event)
         .count({ useMasterKey: true })) || 1;
 
     // Load all starters in this group that are active
-    const startGroup = await new Parse.Query('StartGroup').get(startGroupObjectId, { useMasterKey: true });
-    const startersQuery = new Parse.Query('Starter');
+    const startGroup = await new Parse.Query('HT_STARTGROUP').get(startGroupObjectId, { useMasterKey: true });
+    const startersQuery = new Parse.Query('HT_STARTER');
     startersQuery.equalTo('startGroup', startGroup);
     startersQuery.notEqualTo('status', 'disqualified');
     startersQuery.notEqualTo('status', 'removed');
@@ -61,7 +63,7 @@ async function createFinal(event, startGroupObjectId) {
     const starters = await startersQuery.find({ useMasterKey: true });
 
     // Load all jury scores for the event
-    const scoresQuery = new Parse.Query('JuryScore');
+    const scoresQuery = new Parse.Query('HT_JURYSCORE');
     scoresQuery.equalTo('event', event);
     scoresQuery.limit(5000);
     scoresQuery.ascending('createdAt');
@@ -128,7 +130,7 @@ async function createFinal(event, startGroupObjectId) {
     const finalists = ranked.slice(0, bestOf);
 
     // Delete existing FinalEntry records for this group
-    const existingQuery = new Parse.Query('FinalEntry');
+    const existingQuery = new Parse.Query('HT_FINALENTRY');
     existingQuery.equalTo('startGroup', startGroup);
     existingQuery.equalTo('event', event);
     existingQuery.limit(500);
@@ -137,7 +139,7 @@ async function createFinal(event, startGroupObjectId) {
 
     // Create new FinalEntry records:
     // Best qualifier (index 0) gets finalStartNumber = 1
-    const FinalEntry = Parse.Object.extend('FinalEntry');
+    const FinalEntry = Parse.Object.extend('HT_FINALENTRY');
     const entries = finalists.map(({ starter, qualiScore }, i) => {
         const e = new FinalEntry();
         e.set('event', event);
@@ -154,7 +156,7 @@ async function createFinal(event, startGroupObjectId) {
 }
 
 async function getEventObjectId() {
-    const results = await new Parse.Query('Event').limit(1).find({ useMasterKey: true });
+    const results = await new Parse.Query('HT_EVENT').limit(1).find({ useMasterKey: true });
     if (!results.length) throw new Error('No event found');
     return results[0].id;
 }

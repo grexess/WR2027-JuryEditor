@@ -839,6 +839,30 @@
         </div>
     </div>
 
+    <!-- Finale starten – Bestätigungs-Popup -->
+    <div id="final-confirm-overlay" style="
+        display:none;position:fixed;inset:0;z-index:210;
+        background:rgba(0,0,0,0.72);
+        align-items:center;justify-content:center;padding:1.5rem">
+        <div style="
+            background:var(--card);border:1px solid var(--border);border-radius:14px;
+            max-width:340px;width:100%;padding:1.5rem;text-align:center">
+            <div style="font-size:1.8rem;margin-bottom:0.5rem">🏁</div>
+            <div style="font-size:1rem;font-weight:800;color:var(--text);margin-bottom:0.4rem" id="final-confirm-title"></div>
+            <div style="font-size:0.85rem;color:var(--muted);margin-bottom:1.4rem" id="final-confirm-msg"></div>
+            <div style="display:flex;gap:0.75rem">
+                <button id="final-confirm-cancel" style="
+                    flex:1;padding:0.85rem;border-radius:10px;border:1px solid var(--border);
+                    background:transparent;color:var(--text);font-size:0.95rem;font-weight:700;cursor:pointer">
+                    ← Abbrechen
+                </button>
+                <button id="final-confirm-ok" class="submit-btn" style="flex:1">
+                    Finale erstellen
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Verwaltung drawer -->
     <div class="drawer-overlay" id="drawer-overlay"></div>
     <div class="drawer" id="drawer">
@@ -947,6 +971,7 @@
         let filterRuns = null;   // run count number or null = all
         let filterDone = false;  // show only finished starters when true
         let closedGroups = new Set(); // objectIds of groups with qualiClosed=true
+        let _pendingFinalGroup = null; // set when confirmation popup is shown
         let _chipTicker = null;
         const STALE_MS = CONFIG.presenceStalMs;
 
@@ -1443,21 +1468,14 @@
                         const groupName = completedStarterObj.startGroup?.name ?? 'Gruppe';
                         const group = drawerGroups.find(g => g.objectId === gid);
                         if (group) {
-                            showToast(`🏁 ${groupName}: Finale wird erstellt …`, 5000);
-                            ParseAPI.updateStartGroupQualiClosed(gid, true).then(() => {
-                                group.qualiClosed = true;
-                                closedGroups.add(gid);
-                                return ParseAPI.createFinal(gid);
-                            }).then(async result => {
-                                await refreshFinalEntries();
-                                renderDrawer(); renderFilterChips(); renderList(filterInput.value);
-                                document.getElementById('toast').style.display = 'none';
-                                document.getElementById('final-ready-title').textContent = `${groupName} – Finale bereit`;
-                                document.getElementById('final-ready-msg').textContent =
-                                    `${result.created} Finalisten wurden ermittelt.`;
-                                const overlay = document.getElementById('final-ready-overlay');
-                                overlay.style.display = 'flex';
-                            }).catch(() => showToast(`✕ Fehler beim Erstellen des Finals`));
+                            // show confirmation popup instead of firing immediately
+                            document.getElementById('final-confirm-title').textContent =
+                                `${groupName} – Quali abgeschlossen`;
+                            document.getElementById('final-confirm-msg').textContent =
+                                `Alle Starter haben die erforderlichen Qualifikationsläufe absolviert. Finale jetzt erstellen?`;
+                            const overlay = document.getElementById('final-confirm-overlay');
+                            overlay.style.display = 'flex';
+                            _pendingFinalGroup = { gid, groupName, group };
                         }
                     }
                 }
@@ -1538,6 +1556,34 @@
             setMode('finale');
         });
 
+        document.getElementById('final-confirm-cancel').addEventListener('click', () => {
+            document.getElementById('final-confirm-overlay').style.display = 'none';
+            _pendingFinalGroup = null;
+        });
+
+        document.getElementById('final-confirm-ok').addEventListener('click', async () => {
+            document.getElementById('final-confirm-overlay').style.display = 'none';
+            if (!_pendingFinalGroup) return;
+            const { gid, groupName, group } = _pendingFinalGroup;
+            _pendingFinalGroup = null;
+            showToast(`🏁 ${groupName}: Finale wird erstellt …`, 5000);
+            try {
+                await ParseAPI.updateStartGroupQualiClosed(gid, true);
+                group.qualiClosed = true;
+                closedGroups.add(gid);
+                const result = await ParseAPI.createFinal(gid);
+                await refreshFinalEntries();
+                renderDrawer(); renderFilterChips(); renderList(filterInput.value);
+                document.getElementById('toast').style.display = 'none';
+                document.getElementById('final-ready-title').textContent = `${groupName} – Finale bereit`;
+                document.getElementById('final-ready-msg').textContent =
+                    `${result.created} Finalisten wurden ermittelt.`;
+                document.getElementById('final-ready-overlay').style.display = 'flex';
+            } catch (_) {
+                showToast(`✕ Fehler beim Erstellen des Finals`);
+            }
+        });
+
         async function drawerSetStatus(starter, status) {
             const newStatus = starter.status === status ? 'active' : status;
             try {
@@ -1576,7 +1622,18 @@
         }
 
         // ── Event settings panel inside the Verwaltung drawer ──
-        let _settingsDraft = null; // { qualiRuns, finalRuns, bestOf, qualiScoreMode } — null = not editing
+        let _settingsDraft = null; // { qualiRuns, finalRuns, bestOf, qualiScoreMode, finalScoreMode, criteria } — null = not editing
+
+        function _freshDraft() {
+            return {
+                qualiRuns: CONFIG.qualiRuns,
+                finalRuns: CONFIG.finalRuns,
+                bestOf: CONFIG.bestOf ?? 8,
+                qualiScoreMode: CONFIG.qualiScoreMode ?? 'sum',
+                finalScoreMode: CONFIG.finalScoreMode ?? 'sum',
+                criteria: CONFIG.criteria.map(c => ({ ...c })),
+            };
+        }
 
         function buildEventSettingsPanel(wasOpen) {
             const panel = document.createElement('div');
@@ -1595,13 +1652,7 @@
             hdr.addEventListener('click', () => {
                 panel.classList.toggle('open');
                 if (panel.classList.contains('open') && !_settingsDraft) {
-                    _settingsDraft = {
-                        qualiRuns: CONFIG.qualiRuns,
-                        finalRuns: CONFIG.finalRuns,
-                        bestOf: CONFIG.bestOf ?? 8,
-                        qualiScoreMode: CONFIG.qualiScoreMode ?? 'sum',
-                        finalScoreMode: CONFIG.finalScoreMode ?? 'sum',
-                    };
+                    _settingsDraft = _freshDraft();
                     rebuildSettingsBody();
                 }
             });
@@ -1613,13 +1664,7 @@
             panel.appendChild(panelBody);
 
             if (wasOpen && !_settingsDraft) {
-                _settingsDraft = {
-                    qualiRuns: CONFIG.qualiRuns,
-                    finalRuns: CONFIG.finalRuns,
-                    bestOf: CONFIG.bestOf ?? 8,
-                    qualiScoreMode: CONFIG.qualiScoreMode ?? 'sum',
-                    finalScoreMode: CONFIG.finalScoreMode ?? 'sum',
-                };
+                _settingsDraft = _freshDraft();
             }
             if (wasOpen) return panel; // rebuildSettingsBody() called by renderDrawer after append
 
@@ -1732,6 +1777,43 @@
             makeModeRow('Quali-Wertung', 'Wie wird die Qualiplatzierung berechnet?', 'qualiScoreMode', d.qualiRuns);
             makeModeRow('Final-Wertung', 'Wie wird die Finalplatzierung berechnet?', 'finalScoreMode', d.finalRuns);
 
+            // Criteria labels
+            const critSec = document.createElement('div');
+            critSec.className = 'settings-section';
+            const critTitle = document.createElement('div');
+            critTitle.className = 'settings-row-label';
+            critTitle.style.cssText = 'font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;padding:0.5rem 0 0.25rem';
+            critTitle.textContent = 'Bewertungskriterien';
+            critSec.appendChild(critTitle);
+            d.criteria.forEach((c, idx) => {
+                const row = document.createElement('div');
+                row.style.cssText = 'display:grid;grid-template-columns:1fr auto;gap:0.4rem;align-items:center;margin-bottom:0.4rem';
+                const inputs = document.createElement('div');
+                inputs.style.cssText = 'display:flex;gap:0.4rem';
+                const labelIn = document.createElement('input');
+                labelIn.type = 'text';
+                labelIn.value = c.label;
+                labelIn.placeholder = 'Bezeichnung';
+                labelIn.style.cssText = 'flex:2;padding:0.35rem 0.5rem;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:0.85rem;outline:none';
+                labelIn.addEventListener('input', () => { d.criteria[idx].label = labelIn.value.trim(); });
+                const shortIn = document.createElement('input');
+                shortIn.type = 'text';
+                shortIn.value = c.shortLabel;
+                shortIn.placeholder = 'Kürzel';
+                shortIn.maxLength = 8;
+                shortIn.style.cssText = 'flex:1;padding:0.35rem 0.5rem;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:0.85rem;outline:none';
+                shortIn.addEventListener('input', () => { d.criteria[idx].shortLabel = shortIn.value.trim(); });
+                inputs.appendChild(labelIn);
+                inputs.appendChild(shortIn);
+                const keyBadge = document.createElement('span');
+                keyBadge.textContent = c.key;
+                keyBadge.style.cssText = 'font-size:0.65rem;color:var(--muted);white-space:nowrap';
+                row.appendChild(inputs);
+                row.appendChild(keyBadge);
+                critSec.appendChild(row);
+            });
+            body.appendChild(critSec);
+
             // Save button
             const saveBtn = document.createElement('button');
             saveBtn.className = 'settings-save-btn';
@@ -1746,6 +1828,7 @@
                         bestOf: d.bestOf,
                         qualiScoreMode: d.qualiScoreMode,
                         finalScoreMode: d.finalScoreMode,
+                        criteria: d.criteria,
                     });
                     // Apply locally
                     CONFIG.qualiRuns = d.qualiRuns;
@@ -1753,6 +1836,7 @@
                     CONFIG.bestOf = d.bestOf;
                     CONFIG.qualiScoreMode = d.qualiScoreMode;
                     CONFIG.finalScoreMode = d.finalScoreMode;
+                    CONFIG.criteria = d.criteria;
                     _settingsDraft = null;
                     saveBtn.textContent = '✓ Gespeichert';
                     // Update header display
@@ -2147,9 +2231,7 @@
             const tableRows = rows.map((r, i) => {
                 if (r.dq) return `<tr class="excluded"><td class="rank">—</td><td class="num">${r.starter.startNumber}</td><td>${_esc(r.starter.firstName ?? '')} ${_esc(r.starter.lastName ?? '')}</td><td colspan="3" class="dq-cell">DSQ</td></tr>`;
                 if (r.noRuns) return `<tr class="excluded"><td class="rank">—</td><td class="num">${r.starter.startNumber}</td><td>${_esc(r.starter.firstName ?? '')} ${_esc(r.starter.lastName ?? '')}</td><td colspan="3" class="muted">kein Lauf</td></tr>`;
-                const runScores = r.qualiRuns.map((run, ri) =>
-                    `<span class="run-pill">${ri + 1}: ${run.total}</span>`
-                ).join('');
+                const runScores = r.qualiRuns.map((run, ri) => _runPill(run, ri, criteria)).join('');
                 return `<tr>
                     <td class="rank">${i + 1}${r.isFinal ? '<span class="fin-badge">F</span>' : ''}</td>
                     <td class="num">${r.starter.startNumber}</td>
@@ -2203,9 +2285,7 @@
             const tableRows = rows.map((r, i) => {
                 if (r.dq) return `<tr class="excluded"><td class="rank">—</td><td class="num">${r.finalStartNum}</td><td class="num muted">${r.starter.startNumber}</td><td>${_esc(r.starter.firstName ?? '')} ${_esc(r.starter.lastName ?? '')}</td><td colspan="2" class="dq-cell">DSQ</td></tr>`;
                 if (r.noRuns) return `<tr class="excluded"><td class="rank">—</td><td class="num">${r.finalStartNum}</td><td class="num muted">${r.starter.startNumber}</td><td>${_esc(r.starter.firstName ?? '')} ${_esc(r.starter.lastName ?? '')}</td><td colspan="2" class="muted">kein Lauf</td></tr>`;
-                const runScores = r.finalRuns.map((run, ri) =>
-                    `<span class="run-pill">${ri + 1}: ${run.total}</span>`
-                ).join('');
+                const runScores = r.finalRuns.map((run, ri) => _runPill(run, ri, criteria)).join('');
                 const medal = i === 0 ? ' 🥇' : i === 1 ? ' 🥈' : i === 2 ? ' 🥉' : '';
                 return `<tr${i < 3 ? ` class="podium podium-${i + 1}"` : ''}>
                     <td class="rank">${i + 1}${medal}</td>
@@ -2228,6 +2308,14 @@
                 </table>
                 <div class="doc-footer">${rows.filter(r => !r.dq && !r.noRuns).length} Gewertet · ${_nowStr()}</div>
             </section>`;
+        }
+
+        function _runPill(run, ri, criteria) {
+            const detail = criteria.map(c => {
+                const sum = run.scores.reduce((a, s) => a + (s[c.key] ?? 0), 0);
+                return `${_esc(c.shortLabel)}&nbsp;${Number.isInteger(sum) ? sum : sum.toFixed(1)}`;
+            }).join(' / ');
+            return `<span class="run-pill"><strong>${ri + 1}:&nbsp;${run.total}</strong><span class="run-detail">${detail}</span></span>`;
         }
 
         function _esc(str) {
@@ -2265,7 +2353,8 @@ tr:last-child td{border-bottom:none}
 .score{font-weight:800;font-size:11pt;text-align:right;width:3.5em}
 .blank{width:4cm}
 .runs-cell{font-size:8.5pt;color:#444}
-.run-pill{display:inline-block;background:#f0f0f0;border-radius:3px;padding:0.1em 0.4em;margin:0.1em 0.15em;white-space:nowrap}
+.run-pill{display:inline-block;background:#f0f0f0;border-radius:3px;padding:0.15em 0.4em;margin:0.1em 0.15em;white-space:nowrap;vertical-align:top}
+.run-detail{display:block;font-size:7pt;color:#777;font-weight:400;margin-top:0.1em}
 .dq-cell{color:#c0392b;font-weight:700;font-size:8.5pt}
 .excluded td{opacity:0.55}
 .fin-badge{display:inline-block;font-size:6.5pt;font-weight:800;color:#fff;background:#2c5282;border-radius:2px;padding:0.1em 0.3em;margin-left:0.3em;vertical-align:middle}

@@ -363,7 +363,7 @@
             // Verify the key with a cheap read before proceeding
             masterKey = key;
             try {
-                await pGet(`/classes/Event?limit=0`);
+                await pGet(`/classes/HT_EVENT?limit=0`);
                 document.getElementById('login-section').style.display = 'none';
                 document.getElementById('seed-section').style.display = '';
                 refreshScoreButtons();
@@ -443,13 +443,13 @@
                 setProgress(step, totalSteps, 'Event anlegen …');
                 log('Event "Heldentag"', 'head');
                 const evWhere = encodeURIComponent(JSON.stringify({ name: 'Heldentag' }));
-                const evRes = await pGet(`/classes/Event?where=${evWhere}&limit=1`);
+                const evRes = await pGet(`/classes/HT_EVENT?where=${evWhere}&limit=1`);
                 let eventId;
                 if (evRes.results?.length) {
                     eventId = evRes.results[0].objectId;
                     log(`  ↳ vorhanden  ${eventId}`, 'skip');
                 } else {
-                    const ev = await pPost('/classes/Event', {
+                    const ev = await pPost('/classes/HT_EVENT', {
                         name: 'Heldentag',
                         date: { __type: 'Date', iso: '2026-08-15T08:00:00.000Z' },
                         criteria: CONFIG.criteria,
@@ -463,19 +463,19 @@
                 }
                 step++;
 
-                const eventPtr = { __type: 'Pointer', className: 'Event', objectId: eventId };
+                const eventPtr = { __type: 'Pointer', className: 'HT_EVENT', objectId: eventId };
                 localStorage.setItem('seedEventOverride', eventId);
                 log('Startgruppen', 'head');
                 const groupIds = {};
                 for (const g of GROUPS) {
                     setProgress(step, totalSteps, `Startgruppe ${g.name} …`);
                     const where = encodeURIComponent(JSON.stringify({ name: g.name, event: eventPtr }));
-                    const existing = await pGet(`/classes/StartGroup?where=${where}&limit=1`);
+                    const existing = await pGet(`/classes/HT_STARTGROUP?where=${where}&limit=1`);
                     if (existing.results?.length) {
                         groupIds[g.code] = existing.results[0].objectId;
                         log(`  ↳ ${g.name.padEnd(8)} vorhanden`, 'skip');
                     } else {
-                        const sg = await pPost('/classes/StartGroup', {
+                        const sg = await pPost('/classes/HT_STARTGROUP', {
                             name: g.name, sortOrder: g.sortOrder, event: eventPtr,
                         });
                         groupIds[g.code] = sg.objectId;
@@ -489,11 +489,11 @@
                 for (const { token, name } of SEED_JUDGES) {
                     setProgress(step, totalSteps, `Kampfrichter ${name} …`);
                     const where = encodeURIComponent(JSON.stringify({ token, event: eventPtr }));
-                    const existing = await pGet(`/classes/Judge?where=${where}&limit=1`);
+                    const existing = await pGet(`/classes/HT_JUDGE?where=${where}&limit=1`);
                     if (existing.results?.length) {
                         log(`  ↳ ${name.padEnd(10)} vorhanden`, 'skip');
                     } else {
-                        await pPost('/classes/Judge', { name, token, event: eventPtr });
+                        await pPost('/classes/HT_JUDGE', { name, token, event: eventPtr });
                         log(`  ↳ ${name.padEnd(10)} erstellt`, 'ok');
                     }
                     step++;
@@ -505,19 +505,19 @@
                 let idx = 0;
                 for (const g of GROUPS) {
                     log(`  ${g.name}`, 'head');
-                    const groupPtr = { __type: 'Pointer', className: 'StartGroup', objectId: groupIds[g.code] };
+                    const groupPtr = { __type: 'Pointer', className: 'HT_STARTGROUP', objectId: groupIds[g.code] };
                     for (let j = 0; j < STARTERS_PER_GROUP; j++) {
                         const startNumber = startNums[idx++];
                         setProgress(step, totalSteps, `Starter #${startNumber} (${g.name}) …`);
                         const where = encodeURIComponent(JSON.stringify({ startNumber, event: eventPtr }));
-                        const existing = await pGet(`/classes/Starter?where=${where}&limit=1`);
+                        const existing = await pGet(`/classes/HT_STARTER?where=${where}&limit=1`);
                         if (existing.results?.length) {
                             log(`    ↳ #${String(startNumber).padStart(3)} vorhanden`, 'skip');
                         } else {
                             const firstName = g.female ? pick(FEMALE) : pick([...MALE, ...MALE, ...FEMALE]);
                             const lastName = pick(LAST);
                             const gender = g.female ? 'f' : (firstName in Object.fromEntries(FEMALE.map(n => [n, 1])) ? 'f' : 'm');
-                            await pPost('/classes/Starter', {
+                            await pPost('/classes/HT_STARTER', {
                                 startNumber, firstName, lastName, gender,
                                 birthday: { __type: 'Date', iso: rndDate(g.birthFrom, g.birthTo) },
                                 event: eventPtr,
@@ -545,7 +545,7 @@
 
         async function scoreCount(eventPtr) {
             try {
-                const res = await pGet(`/classes/JuryScore?where=${encodeURIComponent(JSON.stringify({ event: eventPtr }))}&limit=0&count=1`);
+                const res = await pGet(`/classes/HT_JURYSCORE?where=${encodeURIComponent(JSON.stringify({ event: eventPtr }))}&limit=0&count=1`);
                 return res.count ?? 0;
             } catch (_) {
                 return 0;
@@ -558,14 +558,14 @@
             const confirmBar = document.getElementById('scores-confirm-bar');
             try {
                 const evWhere = encodeURIComponent(JSON.stringify({ name: 'Heldentag' }));
-                const evRes = await pGet(`/classes/Event?where=${evWhere}&limit=1`);
+                const evRes = await pGet(`/classes/HT_EVENT?where=${evWhere}&limit=1`);
                 if (!evRes.results?.length) {
                     createBtn.style.display = '';
                     clearBtn.style.display = 'none';
                     confirmBar.style.display = 'none';
                     return;
                 }
-                const eventPtr = { __type: 'Pointer', className: 'Event', objectId: evRes.results[0].objectId };
+                const eventPtr = { __type: 'Pointer', className: 'HT_EVENT', objectId: evRes.results[0].objectId };
                 const count = await scoreCount(eventPtr);
                 createBtn.style.display = count === 0 ? '' : 'none';
                 clearBtn.style.display = count > 0 ? '' : 'none';
@@ -585,7 +585,7 @@
             try {
                 setProgress(0, 1, 'Event suchen …');
                 const evWhere = encodeURIComponent(JSON.stringify({ name: 'Heldentag' }));
-                const evRes = await pGet(`/classes/Event?where=${evWhere}&limit=1`);
+                const evRes = await pGet(`/classes/HT_EVENT?where=${evWhere}&limit=1`);
                 if (!evRes.results?.length) {
                     log('✕ Event "Heldentag" nicht gefunden – zuerst Testevent erstellen.', 'err');
                     document.getElementById('progress-wrap').style.display = 'none';
@@ -593,16 +593,16 @@
                     return;
                 }
                 const eventId = evRes.results[0].objectId;
-                const eventPtr = { __type: 'Pointer', className: 'Event', objectId: eventId };
+                const eventPtr = { __type: 'Pointer', className: 'HT_EVENT', objectId: eventId };
                 log(`Event gefunden  ${eventId}`, 'ok');
 
                 // Read qualiRuns from the Event
-                const evDetail = await pGet(`/classes/Event/${eventId}`);
+                const evDetail = await pGet(`/classes/HT_EVENT/${eventId}`);
                 const qualiRuns = evDetail.qualiRuns ?? 2;
                 log(`qualiRuns = ${qualiRuns}`, 'ok');
 
                 // Load judges
-                const judgeRes = await pGet(`/classes/Judge?where=${encodeURIComponent(JSON.stringify({ event: eventPtr }))}&limit=100&keys=name`);
+                const judgeRes = await pGet(`/classes/HT_JUDGE?where=${encodeURIComponent(JSON.stringify({ event: eventPtr }))}&limit=100&keys=name`);
                 const judgeNames = (judgeRes.results ?? []).map(j => j.name);
                 if (!judgeNames.length) {
                     log('✕ Keine Kampfrichter gefunden – zuerst Testevent erstellen.', 'err');
@@ -613,7 +613,7 @@
                 log(`${judgeNames.length} Kampfrichter: ${judgeNames.join(', ')}`, 'ok');
 
                 // Load all starters with their startGroup
-                const starterRes = await pGet(`/classes/Starter?where=${encodeURIComponent(JSON.stringify({ event: eventPtr }))}&limit=500&keys=startNumber,startGroup&include=startGroup`);
+                const starterRes = await pGet(`/classes/HT_STARTER?where=${encodeURIComponent(JSON.stringify({ event: eventPtr }))}&limit=500&keys=startNumber,startGroup&include=startGroup`);
                 const allStarters = starterRes.results ?? [];
                 if (!allStarters.length) {
                     log('✕ Keine Starter gefunden – zuerst Testevent erstellen.', 'err');
@@ -647,7 +647,7 @@
                                 total += val;
                             }
                             total = Math.round(total * 10) / 10;
-                            await pPost('/classes/JuryScore', {
+                            await pPost('/classes/HT_JURYSCORE', {
                                 startnumber: Number(startNumber),
                                 judgeName,
                                 total,
@@ -686,7 +686,7 @@
             try {
                 setProgress(0, 1, 'Event suchen …');
                 const evWhere = encodeURIComponent(JSON.stringify({ name: 'Heldentag' }));
-                const evRes = await pGet(`/classes/Event?where=${evWhere}&limit=1`);
+                const evRes = await pGet(`/classes/HT_EVENT?where=${evWhere}&limit=1`);
                 if (!evRes.results?.length) {
                     log('Event "Heldentag" nicht gefunden – nichts zu tun.', 'skip');
                     setProgressDone();
@@ -694,14 +694,14 @@
                     await refreshScoreButtons();
                     return;
                 }
-                const eventPtr = { __type: 'Pointer', className: 'Event', objectId: evRes.results[0].objectId };
+                const eventPtr = { __type: 'Pointer', className: 'HT_EVENT', objectId: evRes.results[0].objectId };
 
                 const total = await scoreCount(eventPtr);
                 log(`JuryScores löschen (${total} Einträge)`, 'head');
 
                 let deleted = 0;
                 while (true) {
-                    const batch = await pGet(`/classes/JuryScore?where=${encodeURIComponent(JSON.stringify({ event: eventPtr }))}&limit=100&keys=objectId`);
+                    const batch = await pGet(`/classes/HT_JURYSCORE?where=${encodeURIComponent(JSON.stringify({ event: eventPtr }))}&limit=100&keys=objectId`);
                     if (!batch.results?.length) break;
                     for (const obj of batch.results) {
                         await pDelete('JuryScore', obj.objectId);
@@ -738,23 +738,23 @@
             try {
                 setProgress(0, 1, 'Event suchen …');
                 const evWhere = encodeURIComponent(JSON.stringify({ name: 'Heldentag' }));
-                const evRes = await pGet(`/classes/Event?where=${evWhere}&limit=1`);
+                const evRes = await pGet(`/classes/HT_EVENT?where=${evWhere}&limit=1`);
                 if (!evRes.results?.length) {
                     log('Event "Heldentag" nicht gefunden – nichts zu tun.', 'skip');
                     setProgressDone();
                     btn.disabled = false; btn.textContent = 'Final-Scores löschen';
                     return;
                 }
-                const eventPtr = { __type: 'Pointer', className: 'Event', objectId: evRes.results[0].objectId };
+                const eventPtr = { __type: 'Pointer', className: 'HT_EVENT', objectId: evRes.results[0].objectId };
 
                 const finalWhere = encodeURIComponent(JSON.stringify({ event: eventPtr, phase: 'final' }));
-                const countRes = await pGet(`/classes/JuryScore?where=${finalWhere}&limit=0&count=1`);
+                const countRes = await pGet(`/classes/HT_JURYSCORE?where=${finalWhere}&limit=0&count=1`);
                 const total = countRes.count ?? 0;
                 log(`Final-JuryScores löschen (${total} Einträge)`, 'head');
 
                 let deleted = 0;
                 while (true) {
-                    const batch = await pGet(`/classes/JuryScore?where=${finalWhere}&limit=100&keys=objectId`);
+                    const batch = await pGet(`/classes/HT_JURYSCORE?where=${finalWhere}&limit=100&keys=objectId`);
                     if (!batch.results?.length) break;
                     for (const obj of batch.results) {
                         await pDelete('JuryScore', obj.objectId);
@@ -785,14 +785,14 @@
 
         // Classes deleted in dependency order — all now carry an event pointer
         const CLEAR_STEPS = [
-            { className: 'JuryScore', label: 'JuryScores' },
-            { className: 'JudgeScore', label: 'JudgeScores' },
-            { className: 'ActiveStarter', label: 'ActiveStarters' },
-            { className: 'FinalEntry', label: 'FinalEntries' },
-            { className: 'JuryPresence', label: 'JuryPresence' },
-            { className: 'Starter', label: 'Starter' },
-            { className: 'Judge', label: 'Kampfrichter' },
-            { className: 'StartGroup', label: 'Startgruppen' },
+            { className: 'HT_JURYSCORE', label: 'JuryScores' },
+            { className: 'HT_JUDGESCORE', label: 'JudgeScores' },
+            { className: 'HT_ACTIVESTARTER', label: 'ActiveStarters' },
+            { className: 'HT_FINALENTRY', label: 'FinalEntries' },
+            { className: 'HT_JURYPRESENCE', label: 'JuryPresence' },
+            { className: 'HT_STARTER', label: 'Starter' },
+            { className: 'HT_JUDGE', label: 'Kampfrichter' },
+            { className: 'HT_STARTGROUP', label: 'Startgruppen' },
         ];
 
         async function safeDeleteAll(className, where) {
@@ -838,7 +838,7 @@
                 setProgress(step, totalSteps, 'Event suchen …');
                 log('Event "Heldentag" suchen', 'head');
                 const evWhere = encodeURIComponent(JSON.stringify({ name: 'Heldentag' }));
-                const evRes = await pGet(`/classes/Event?where=${evWhere}&limit=1`);
+                const evRes = await pGet(`/classes/HT_EVENT?where=${evWhere}&limit=1`);
                 if (!evRes.results?.length) {
                     log('  ↳ nicht gefunden – nichts zu tun.', 'skip');
                     setProgressDone();
@@ -846,7 +846,7 @@
                     return;
                 }
                 const eventId = evRes.results[0].objectId;
-                const eventPtr = { __type: 'Pointer', className: 'Event', objectId: eventId };
+                const eventPtr = { __type: 'Pointer', className: 'HT_EVENT', objectId: eventId };
                 log(`  ↳ gefunden  ${eventId}`, 'ok');
                 step++;
 

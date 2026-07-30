@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WeRace – Klassen-Migration</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: system-ui, sans-serif; background: #0d1117; color: #e6edf3; padding: 2rem; }
+        h1 { font-size: 1.2rem; color: #f78166; margin-bottom: 0.25rem; }
+        .subtitle { font-size: 0.85rem; color: #8b949e; margin-bottom: 2rem; }
+        .card { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 1.25rem; margin-bottom: 1rem; max-width: 700px; }
+        label { font-size: 0.7rem; color: #8b949e; text-transform: uppercase; letter-spacing: 0.08em; display: block; margin-bottom: 0.3rem; }
+        input { width: 100%; padding: 0.6rem 0.85rem; background: #0d1117; border: 1px solid #30363d; border-radius: 8px; color: #e6edf3; font-size: 0.95rem; outline: none; margin-bottom: 0.75rem; }
+        input:focus { border-color: #f78166; }
+        .btn { padding: 0.7rem 1.4rem; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 700; cursor: pointer; }
+        .btn-primary { background: #3fb950; color: #000; }
+        .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn-danger  { background: transparent; border: 1px solid #e74c3c; color: #e74c3c; margin-left: 0.5rem; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-top: 0.75rem; }
+        th { text-align: left; font-size: 0.65rem; color: #8b949e; text-transform: uppercase; letter-spacing: 0.08em; padding: 0.3rem 0.5rem; border-bottom: 1px solid #30363d; }
+        td { padding: 0.5rem; border-bottom: 1px solid #21262d; vertical-align: middle; }
+        tr:last-child td { border-bottom: none; }
+        .status { font-size: 0.75rem; font-weight: 700; padding: 0.2em 0.55em; border-radius: 4px; white-space: nowrap; }
+        .status.pending  { background: #21262d; color: #8b949e; }
+        .status.running  { background: #1f3044; color: #58a6ff; }
+        .status.done     { background: #1a3a20; color: #3fb950; }
+        .status.skip     { background: #21262d; color: #8b949e; }
+        .status.error    { background: #3d1a1a; color: #f85149; }
+        .log { background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 0.75rem; font-size: 0.78rem; font-family: monospace; color: #8b949e; max-height: 260px; overflow-y: auto; margin-top: 1rem; white-space: pre-wrap; }
+        .log .ok   { color: #3fb950; }
+        .log .err  { color: #f85149; }
+        .log .info { color: #58a6ff; }
+        .warn-box { background: #2d1e00; border: 1px solid #bb8009; border-radius: 8px; padding: 0.85rem 1rem; font-size: 0.85rem; color: #d29922; margin-bottom: 1rem; max-width: 700px; }
+    </style>
+</head>
+<body>
+    <h1>WeRace – Parse Klassen-Migration</h1>
+    <p class="subtitle">Benennt alle Parse-Klassen von z.B. <code>Event</code> in <code>HT_EVENT</code> um, indem alle Datensätze kopiert und die alten Klassen gelöscht werden.</p>
+
+    <div class="warn-box">
+        ⚠️ <strong>Achtung:</strong> Diese Migration kopiert alle Daten in neue Klassen und löscht danach die alten. Bitte vorher ein Backup erstellen. Nur ausführen, wenn keine aktive Veranstaltung läuft.
+    </div>
+
+    <div class="card">
+        <label>Parse Server URL</label>
+        <input id="serverUrl" type="text" value="https://parseapi.back4app.com" placeholder="https://parseapi.back4app.com">
+        <label>Application ID</label>
+        <input id="appId" type="text" placeholder="oyJqZgtk69JqKt5JoTDFuHeEpwYR4gnmdRqKGBUQ">
+        <label>Master Key <span style="color:#f85149">(erforderlich – niemals öffentlich teilen)</span></label>
+        <input id="masterKey" type="password" placeholder="Master Key aus Back4App Dashboard">
+        <div>
+            <button class="btn btn-primary" id="startBtn" onclick="startMigration()">Migration starten</button>
+            <button class="btn btn-danger" id="deleteBtn" onclick="deleteOldClasses()" disabled>Alte Klassen löschen</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <label>Fortschritt</label>
+        <table>
+            <thead><tr><th>Alte Klasse</th><th>Neue Klasse</th><th>Datensätze</th><th>Status</th></tr></thead>
+            <tbody id="progress-body"></tbody>
+        </table>
+        <div class="log" id="log"></div>
+    </div>
+
+    <script>
+        const CLASSES = [
+            { from: 'Event',         to: 'HT_EVENT'       },
+            { from: 'Starter',       to: 'HT_STARTER'     },
+            { from: 'StartGroup',    to: 'HT_STARTGROUP'  },
+            { from: 'Judge',         to: 'HT_JUDGE'       },
+            { from: 'JuryScore',     to: 'HT_JURYSCORE'   },
+            { from: 'JudgeScore',    to: 'HT_JUDGESCORE'  },
+            { from: 'FinalEntry',    to: 'HT_FINALENTRY'  },
+            { from: 'ActiveStarter', to: 'HT_ACTIVESTARTER' },
+            { from: 'JuryPresence',  to: 'HT_JURYPRESENCE'  },
+        ];
+
+        // Fields that contain Parse Pointers referencing old class names — must be rewritten
+        const POINTER_FIELDS = {
+            'Starter':       [{ field: 'event',      cls: 'Event'      }, { field: 'startGroup', cls: 'StartGroup' }],
+            'StartGroup':    [{ field: 'event',      cls: 'Event'      }],
+            'Judge':         [{ field: 'event',      cls: 'Event'      }],
+            'JuryScore':     [{ field: 'event',      cls: 'Event'      }],
+            'JudgeScore':    [{ field: 'event',      cls: 'Event'      }],
+            'FinalEntry':    [{ field: 'event',      cls: 'Event'      }, { field: 'startGroup', cls: 'StartGroup' }, { field: 'starter', cls: 'Starter' }],
+            'ActiveStarter': [{ field: 'event',      cls: 'Event'      }],
+            'JuryPresence':  [{ field: 'event',      cls: 'Event'      }],
+        };
+
+        const CLASS_MAP = Object.fromEntries(CLASSES.map(c => [c.from, c.to]));
+
+        let rows = {};
+
+        function cfg() {
+            return {
+                url: document.getElementById('serverUrl').value.trim().replace(/\/$/, ''),
+                appId: document.getElementById('appId').value.trim(),
+                masterKey: document.getElementById('masterKey').value.trim(),
+            };
+        }
+
+        function headers(c) {
+            return {
+                'X-Parse-Application-Id': c.appId,
+                'X-Parse-Master-Key': c.masterKey,
+                'Content-Type': 'application/json',
+            };
+        }
+
+        function log(msg, cls = '') {
+            const el = document.getElementById('log');
+            el.innerHTML += `<span class="${cls}">${msg}</span>\n`;
+            el.scrollTop = el.scrollHeight;
+        }
+
+        function setStatus(from, status, count = '') {
+            const td = rows[from];
+            if (!td) return;
+            td.status.className = `status ${status}`;
+            td.status.textContent = { pending: 'Ausstehend', running: 'Läuft…', done: 'Fertig', skip: 'Übersprungen', error: 'Fehler' }[status] ?? status;
+            if (count !== '') td.count.textContent = count;
+        }
+
+        function buildTable() {
+            const tbody = document.getElementById('progress-body');
+            tbody.innerHTML = '';
+            for (const c of CLASSES) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${c.from}</td><td>${c.to}</td><td id="cnt-${c.from}">—</td><td id="st-${c.from}"><span class="status pending">Ausstehend</span></td>`;
+                tbody.appendChild(tr);
+                rows[c.from] = {
+                    count: document.getElementById(`cnt-${c.from}`),
+                    status: document.getElementById(`st-${c.from}`).querySelector('.status'),
+                };
+            }
+        }
+
+        async function fetchAll(c, className) {
+            const all = [];
+            let skip = 0;
+            while (true) {
+                const res = await fetch(`${c.url}/classes/${className}?limit=1000&skip=${skip}&order=createdAt`, { headers: headers(c) });
+                if (!res.ok) throw new Error(`HTTP ${res.status} fetching ${className}`);
+                const data = await res.json();
+                const results = data.results ?? [];
+                all.push(...results);
+                if (results.length < 1000) break;
+                skip += 1000;
+            }
+            return all;
+        }
+
+        async function checkExists(c, className) {
+            const res = await fetch(`${c.url}/classes/${className}?limit=0&count=1`, { headers: headers(c) });
+            if (res.status === 404) return false;
+            if (!res.ok) return false;
+            return true;
+        }
+
+        function rewritePointers(obj, pointerFields) {
+            if (!pointerFields) return obj;
+            const out = { ...obj };
+            for (const { field, cls } of pointerFields) {
+                if (out[field]?.__type === 'Pointer' && out[field].className === cls) {
+                    out[field] = { ...out[field], className: CLASS_MAP[cls] ?? out[field].className };
+                }
+            }
+            return out;
+        }
+
+        async function deleteAllInClass(c, className) {
+            while (true) {
+                const recs = await fetchAll(c, className);
+                if (!recs.length) break;
+                for (const r of recs) {
+                    await fetch(`${c.url}/classes/${className}/${r.objectId}`, {
+                        method: 'DELETE', headers: headers(c),
+                    });
+                }
+            }
+        }
+
+        async function migrateClass(c, from, to) {
+            setStatus(from, 'running');
+            log(`\n[${from} → ${to}]`, 'info');
+
+            const records = await fetchAll(c, from);
+            log(`  Gefunden: ${records.length} Datensätze in ${from}`);
+            setStatus(from, 'running', records.length);
+
+            if (records.length === 0) {
+                setStatus(from, 'done', 0);
+                return;
+            }
+
+            // Check target: skip if fully done, wipe if partial
+            const targetExists = await checkExists(c, to);
+            if (targetExists) {
+                const chk = await fetch(`${c.url}/classes/${to}?limit=0&count=1`, { headers: headers(c) });
+                const chkData = await chk.json();
+                const targetCount = chkData.count ?? 0;
+                if (targetCount >= records.length) {
+                    log(`  ⚠ ${to} hat bereits ${targetCount} Datensätze (vollständig) — übersprungen.`);
+                    setStatus(from, 'skip', targetCount);
+                    return;
+                }
+                if (targetCount > 0) {
+                    log(`  Teildaten in ${to} (${targetCount}) — werden gelöscht und neu kopiert.`);
+                    await deleteAllInClass(c, to);
+                }
+            }
+
+            const pointerFields = POINTER_FIELDS[from];
+            let created = 0;
+
+            // POST the first record individually to create the class on Parse,
+            // then batch the rest (batch API cannot create a class that doesn't exist yet)
+            const firstRec = records[0];
+            {
+                const { objectId, createdAt, updatedAt, __type, className, ...fields } = firstRec;
+                const body = rewritePointers(fields, pointerFields);
+                const res = await fetch(`${c.url}/classes/${to}`, {
+                    method: 'POST', headers: headers(c), body: JSON.stringify(body),
+                });
+                if (!res.ok) throw new Error(`POST ${to} (class create) failed: HTTP ${res.status} — ${await res.text()}`);
+                created++;
+                log(`  Klasse ${to} erstellt, erster Datensatz kopiert.`);
+            }
+
+            for (let i = 1; i < records.length; i++) {
+                const { objectId, createdAt, updatedAt, __type, className, ...fields } = records[i];
+                const body = rewritePointers(fields, pointerFields);
+                const res = await fetch(`${c.url}/classes/${to}`, {
+                    method: 'POST', headers: headers(c), body: JSON.stringify(body),
+                });
+                if (!res.ok) throw new Error(`POST ${to} failed: HTTP ${res.status} — ${await res.text()}`);
+                created++;
+                if (created % 10 === 0 || created === records.length)
+                    log(`  Kopiert: ${created}/${records.length}`);
+            }
+
+            setStatus(from, 'done', created);
+            log(`  ✓ ${created} Datensätze in ${to} erstellt.`, 'ok');
+        }
+
+        async function startMigration() {
+            const c = cfg();
+            if (!c.appId || !c.masterKey) { alert('Application ID und Master Key sind erforderlich.'); return; }
+
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('log').innerHTML = '';
+            buildTable();
+            log('Migration gestartet…', 'info');
+
+            let allOk = true;
+            for (const cls of CLASSES) {
+                try {
+                    await migrateClass(c, cls.from, cls.to);
+                } catch (e) {
+                    setStatus(cls.from, 'error');
+                    log(`  ✕ Fehler bei ${cls.from}: ${e.message}`, 'err');
+                    allOk = false;
+                }
+            }
+
+            if (allOk) {
+                log('\n✓ Alle Klassen erfolgreich migriert.', 'ok');
+                log('Bitte prüfe die neuen Klassen in Back4App, bevor du die alten löschst.', 'info');
+                document.getElementById('deleteBtn').disabled = false;
+            } else {
+                log('\n⚠ Migration mit Fehlern abgeschlossen. Alte Klassen wurden NICHT gelöscht.', 'err');
+            }
+            document.getElementById('startBtn').disabled = false;
+        }
+
+        async function deleteOldClasses() {
+            if (!confirm('Wirklich alle alten Klassen löschen? Dies kann nicht rückgängig gemacht werden!')) return;
+            const c = cfg();
+            document.getElementById('deleteBtn').disabled = true;
+            log('\nLösche alte Klassen…', 'info');
+
+            for (const cls of CLASSES) {
+                try {
+                    await deleteAllInClass(c, cls.from);
+                    log(`  ✓ ${cls.from} geleert.`, 'ok');
+                } catch (e) {
+                    log(`  ✕ Fehler beim Löschen von ${cls.from}: ${e.message}`, 'err');
+                }
+            }
+            log('\nFertig. Die alten Klassen sind leer — sie verschwinden automatisch aus Back4App.', 'ok');
+        }
+
+        buildTable();
+    </script>
+</body>
+</html>

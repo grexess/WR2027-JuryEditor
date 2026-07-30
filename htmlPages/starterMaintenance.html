@@ -184,6 +184,11 @@
             border-color: var(--accent);
         }
 
+        .form-input:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
         select.form-input option {
             background: var(--card);
         }
@@ -203,7 +208,36 @@
             color: var(--green);
         }
 
-        /* login overlay */
+        th.sortable {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        th.sortable:hover {
+            color: var(--text);
+        }
+
+        th.sort-asc::after  { content: ' ▲'; color: var(--accent); }
+        th.sort-desc::after { content: ' ▼'; color: var(--accent); }
+
+        td.results-badge {
+            font-size: 0.75rem;
+            white-space: nowrap;
+        }
+
+        .badge-dot {
+            display: inline-block;
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            margin-right: 4px;
+            background: var(--green);
+        }
+
+        .badge-dot.warn {
+            background: var(--accent);
+        }
+
         #login-overlay {
             position: fixed;
             inset: 0;
@@ -243,11 +277,11 @@
             min-height: 1.2rem;
             margin-bottom: 0.5rem;
         }
+
     </style>
 </head>
 
 <body>
-    <!-- Login overlay -->
     <div id="login-overlay">
         <div class="login-box">
             <div class="login-title">Starter Verwaltung – Anmeldung</div>
@@ -289,11 +323,13 @@
         <table>
             <thead>
                 <tr>
-                    <th>#</th>
-                    <th>Nachname</th>
-                    <th>Vorname</th>
-                    <th>Geschlecht</th>
-                    <th>Geburtstag</th>
+                    <th class="sortable" data-col="startNumber">#</th>
+                    <th class="sortable" data-col="lastName">Nachname</th>
+                    <th class="sortable" data-col="firstName">Vorname</th>
+                    <th class="sortable" data-col="gender">Geschlecht</th>
+                    <th class="sortable" data-col="birthday">Geburtstag</th>
+                    <th class="sortable" data-col="startGroup">Startgruppe</th>
+                    <th class="sortable" data-col="results">Ergebnisse</th>
                     <th></th>
                 </tr>
             </thead>
@@ -314,8 +350,8 @@
                     <label class="form-label">Geschlecht</label>
                     <select class="form-input" id="f-gender">
                         <option value="">— wählen —</option>
-                        <option value="male">Männlich</option>
-                        <option value="female">Weiblich</option>
+                        <option value="m">Männlich</option>
+                        <option value="f">Weiblich</option>
                         <option value="diverse">Divers</option>
                     </select>
                 </div>
@@ -331,15 +367,22 @@
                     <label class="form-label">Geburtstag</label>
                     <input class="form-input" id="f-birthday" type="date">
                 </div>
+                <div class="form-group full">
+                    <label class="form-label">Startgruppe</label>
+                    <select class="form-input" id="f-startGroup">
+                        <option value="">— keine —</option>
+                    </select>
+                </div>
             </div>
             <div class="modal-actions">
                 <button class="modal-cancel" id="form-cancel">← Abbrechen</button>
                 <button class="modal-confirm" id="form-save">✓ Speichern</button>
             </div>
+            <div id="form-err" style="font-size:0.82rem;color:#e74c3c;text-align:center;min-height:1.1rem;margin-top:0.5rem"></div>
         </div>
     </div>
 
-    <!-- Delete confirm modal -->
+    <!-- Delete confirm modal (no results) -->
     <div class="modal-backdrop" id="del-backdrop">
         <div class="modal">
             <div class="modal-title" style="color:#e74c3c">Starter löschen?</div>
@@ -347,6 +390,22 @@
             <div class="modal-actions">
                 <button class="modal-cancel" id="del-cancel">← Abbrechen</button>
                 <button class="btn btn-danger" style="padding:0.85rem" id="del-confirm">Löschen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete confirm modal (has results) -->
+    <div class="modal-backdrop" id="del-results-backdrop">
+        <div class="modal">
+            <div class="modal-title" style="color:#e74c3c">Starter mit Ergebnissen löschen?</div>
+            <div id="del-results-name" style="text-align:center;margin:0.75rem 0;font-size:1.1rem;font-weight:700"></div>
+            <div id="del-results-info" style="text-align:center;color:var(--muted);font-size:0.85rem;margin-bottom:1rem"></div>
+            <div style="text-align:center;font-size:0.85rem;color:#e74c3c;margin-bottom:1rem">
+                Alle zugehörigen Wertungen und Finaleinträge werden unwiderruflich gelöscht.
+            </div>
+            <div class="modal-actions">
+                <button class="modal-cancel" id="del-results-cancel">← Abbrechen</button>
+                <button class="btn btn-danger" style="padding:0.85rem" id="del-results-confirm">Alles löschen</button>
             </div>
         </div>
     </div>
@@ -363,8 +422,278 @@
     <script src="../parse-api.js"></script>
     <script>
         let allStarters = [];
+        let allGroups = [];
+        let scoreMap = {};    // startnumber → { quali: n, final: n }
         let editId = null;
         let deleteId = null;
+        let deleteName = '';
+        let sortCol = 'startNumber';
+        let sortDir = 1; // 1 = asc, -1 = desc
+
+        const GENDER_LABEL = { m: 'Männlich', f: 'Weiblich', diverse: 'Divers' };
+
+        // ── data ──
+        const statusBar = document.getElementById('status-bar');
+        const tableBody = document.getElementById('table-body');
+        const searchInput = document.getElementById('search-input');
+
+        function setStatus(msg, type = '') {
+            statusBar.textContent = msg;
+            statusBar.className = 'status-bar' + (type ? ` ${type}` : '');
+        }
+
+        function formatDate(iso) {
+            if (!iso) return '—';
+            return new Date(iso).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        }
+
+        function sortValue(s, col) {
+            switch (col) {
+                case 'startNumber': return s.startNumber ?? 0;
+                case 'lastName':    return (s.lastName ?? '').toLowerCase();
+                case 'firstName':   return (s.firstName ?? '').toLowerCase();
+                case 'gender':      return (GENDER_LABEL[s.gender] ?? '').toLowerCase();
+                case 'birthday':    return s.birthday?.iso ?? s.birthday ?? '';
+                case 'startGroup':  return (s.startGroup?.name ?? '').toLowerCase();
+                case 'results': { const sc = scoreMap[s.startNumber] ?? { quali: 0, final: 0 }; return sc.quali + sc.final; }
+                default: return '';
+            }
+        }
+
+        function updateSortHeaders() {
+            document.querySelectorAll('th.sortable').forEach(th => {
+                th.classList.remove('sort-asc', 'sort-desc');
+                if (th.dataset.col === sortCol)
+                    th.classList.add(sortDir === 1 ? 'sort-asc' : 'sort-desc');
+            });
+        }
+
+        function populateGroupSelect(currentId = '') {
+            const sel = document.getElementById('f-startGroup');
+            sel.innerHTML = '<option value="">— keine —</option>';
+            for (const g of allGroups) {
+                const opt = document.createElement('option');
+                opt.value = g.objectId;
+                opt.textContent = g.name;
+                if (g.objectId === currentId) opt.selected = true;
+                sel.appendChild(opt);
+            }
+        }
+
+        function renderTable(filter = '') {
+            const term = filter.toLowerCase().trim();
+            let rows = term
+                ? allStarters.filter(s =>
+                    String(s.startNumber).includes(term) ||
+                    (s.firstName || '').toLowerCase().includes(term) ||
+                    (s.lastName || '').toLowerCase().includes(term))
+                : [...allStarters];
+
+            rows.sort((a, b) => {
+                const av = sortValue(a, sortCol), bv = sortValue(b, sortCol);
+                return av < bv ? -sortDir : av > bv ? sortDir : 0;
+            });
+
+            document.getElementById('count-display').textContent = allStarters.length;
+            tableBody.innerHTML = '';
+
+            if (!rows.length) {
+                tableBody.innerHTML = '<tr class="empty-row"><td colspan="8">Keine Starter gefunden</td></tr>';
+                return;
+            }
+
+            for (const s of rows) {
+                const groupName = s.startGroup?.name ?? '—';
+                const sc = scoreMap[s.startNumber] ?? { quali: 0, final: 0 };
+                let resultCell;
+                if (sc.quali || sc.final) {
+                    const parts = [];
+                    if (sc.quali) parts.push(`${sc.quali} Quali`);
+                    if (sc.final) parts.push(`${sc.final} Final`);
+                    resultCell = `<span class="badge-dot warn"></span>${parts.join(', ')}`;
+                } else {
+                    resultCell = `<span class="badge-dot"></span>keine`;
+                }
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="num">${s.startNumber ?? '—'}</td>
+                    <td>${s.lastName ?? '—'}</td>
+                    <td>${s.firstName ?? '—'}</td>
+                    <td>${GENDER_LABEL[s.gender] ?? '—'}</td>
+                    <td>${formatDate(s.birthday?.iso ?? s.birthday)}</td>
+                    <td>${groupName}</td>
+                    <td class="results-badge">${resultCell}</td>
+                    <td class="actions">
+                        <button class="icon-btn edit" data-id="${s.objectId}" title="Bearbeiten">✎</button>
+                        <button class="icon-btn del" data-id="${s.objectId}" data-num="${s.startNumber}" data-name="${s.firstName} ${s.lastName}" title="Löschen">✕</button>
+                    </td>`;
+                tableBody.appendChild(tr);
+            }
+        }
+
+        async function loadStarters() {
+            await ParseAPI.fetchEvent().catch(() => {});
+            document.title = `${CONFIG.eventName} – Starter Verwaltung`;
+            setStatus('Lade Starter …');
+            try {
+                const [starters, groups, qualiMap, finalMap] = await Promise.all([
+                    ParseAPI.fetchStarters(),
+                    ParseAPI.fetchStartGroups(),
+                    ParseAPI.fetchScoreCountByStarter(),
+                    ParseAPI.fetchFinalScoreCountByStarter(),
+                ]);
+                allStarters = starters;
+                allGroups = groups;
+                scoreMap = {};
+                for (const num of new Set([...Object.keys(qualiMap), ...Object.keys(finalMap)])) {
+                    scoreMap[num] = { quali: qualiMap[num] ?? 0, final: finalMap[num] ?? 0 };
+                }
+                renderTable(searchInput.value);
+                setStatus('');
+            } catch (e) {
+                setStatus(e.message, 'err');
+            }
+        }
+
+        searchInput.addEventListener('input', () => renderTable(searchInput.value));
+
+        document.querySelectorAll('th.sortable').forEach(th => {
+            th.addEventListener('click', () => {
+                if (sortCol === th.dataset.col) {
+                    sortDir *= -1;
+                } else {
+                    sortCol = th.dataset.col;
+                    sortDir = 1;
+                }
+                updateSortHeaders();
+                renderTable(searchInput.value);
+            });
+        });
+        updateSortHeaders();
+
+        // ── form modal ──
+        function openForm(starter = null) {
+            editId = starter?.objectId ?? null;
+            document.getElementById('form-title').textContent = starter ? 'Starter bearbeiten' : 'Starter hinzufügen';
+            document.getElementById('f-startNumber').value = starter?.startNumber ?? '';
+            document.getElementById('f-firstName').value = starter?.firstName ?? '';
+            document.getElementById('f-lastName').value = starter?.lastName ?? '';
+            document.getElementById('f-gender').value = starter?.gender ?? '';
+            const bd = starter?.birthday?.iso ?? starter?.birthday ?? '';
+            document.getElementById('f-birthday').value = bd ? bd.slice(0, 10) : '';
+            populateGroupSelect(starter?.startGroup?.objectId ?? '');
+            document.getElementById('form-err').textContent = '';
+            const sc = starter ? (scoreMap[starter.startNumber] ?? { quali: 0, final: 0 }) : { quali: 0, final: 0 };
+            const hasScores = sc.quali > 0 || sc.final > 0;
+            const numInput = document.getElementById('f-startNumber');
+            numInput.disabled = hasScores;
+            numInput.title = hasScores ? 'Startnummer kann nicht geändert werden – es existieren bereits Wertungen.' : '';
+            document.getElementById('form-backdrop').classList.add('open');
+            (hasScores ? document.getElementById('f-firstName') : numInput).focus();
+        }
+
+        document.getElementById('add-btn').addEventListener('click', () => openForm());
+        document.getElementById('form-cancel').addEventListener('click', () =>
+            document.getElementById('form-backdrop').classList.remove('open'));
+
+        document.getElementById('form-save').addEventListener('click', async () => {
+            const startNumber = Number(document.getElementById('f-startNumber').value);
+            const firstName = document.getElementById('f-firstName').value.trim();
+            const lastName = document.getElementById('f-lastName').value.trim();
+            const gender = document.getElementById('f-gender').value;
+            const bdVal = document.getElementById('f-birthday').value;
+            const groupId = document.getElementById('f-startGroup').value;
+
+            if (!startNumber || !firstName || !lastName) {
+                document.getElementById('form-err').textContent = 'Startnummer, Vor- und Nachname sind Pflichtfelder.';
+                return;
+            }
+
+            if (allStarters.some(s => s.startNumber === startNumber && s.objectId !== editId)) {
+                document.getElementById('form-err').textContent = `Startnummer ${startNumber} ist bereits vergeben.`;
+                return;
+            }
+
+            const fields = {
+                startNumber,
+                firstName,
+                lastName,
+                gender: gender || undefined,
+                birthday: bdVal ? { __type: 'Date', iso: new Date(bdVal).toISOString() } : undefined,
+                startGroup: groupId
+                    ? { __type: 'Pointer', className: 'HT_STARTGROUP', objectId: groupId }
+                    : null,
+            };
+
+            document.getElementById('form-backdrop').classList.remove('open');
+            setStatus('Speichere …');
+            try {
+                await ParseAPI.saveStarter(fields, editId);
+                setStatus(editId ? 'Gespeichert.' : 'Hinzugefügt.', 'ok');
+                await loadStarters();
+            } catch (e) {
+                setStatus(e.message, 'err');
+            }
+        });
+
+        // ── delete ──
+        tableBody.addEventListener('click', e => {
+            const editBtn = e.target.closest('.icon-btn.edit');
+            const delBtn  = e.target.closest('.icon-btn.del');
+            if (editBtn) {
+                const s = allStarters.find(x => x.objectId === editBtn.dataset.id);
+                if (s) openForm(s);
+            }
+            if (delBtn) {
+                deleteId   = delBtn.dataset.id;
+                deleteName = delBtn.dataset.name;
+                const sc = scoreMap[delBtn.dataset.num] ?? { quali: 0, final: 0 };
+                if (sc.quali || sc.final) {
+                    const parts = [];
+                    if (sc.quali) parts.push(`${sc.quali} Quali-Wertung${sc.quali !== 1 ? 'en' : ''}`);
+                    if (sc.final) parts.push(`${sc.final} Final-Wertung${sc.final !== 1 ? 'en' : ''}`);
+                    document.getElementById('del-results-name').textContent = deleteName;
+                    document.getElementById('del-results-info').textContent =
+                        `Vorhandene Ergebnisse: ${parts.join(', ')}`;
+                    document.getElementById('del-results-backdrop').classList.add('open');
+                } else {
+                    document.getElementById('del-name').textContent = deleteName;
+                    document.getElementById('del-backdrop').classList.add('open');
+                }
+            }
+        });
+
+        document.getElementById('del-cancel').addEventListener('click', () =>
+            document.getElementById('del-backdrop').classList.remove('open'));
+
+        document.getElementById('del-confirm').addEventListener('click', async () => {
+            document.getElementById('del-backdrop').classList.remove('open');
+            setStatus('Lösche …');
+            try {
+                await ParseAPI.deleteStarter(deleteId);
+                setStatus('Gelöscht.', 'ok');
+                await loadStarters();
+            } catch (e) {
+                setStatus(e.message, 'err');
+            }
+        });
+
+        document.getElementById('del-results-cancel').addEventListener('click', () =>
+            document.getElementById('del-results-backdrop').classList.remove('open'));
+
+        document.getElementById('del-results-confirm').addEventListener('click', async () => {
+            document.getElementById('del-results-backdrop').classList.remove('open');
+            setStatus('Lösche Ergebnisse und Starter …');
+            const starter = allStarters.find(s => s.objectId === deleteId);
+            try {
+                await ParseAPI.deleteResultsForStarter(starter.startNumber, deleteId);
+                await ParseAPI.deleteStarter(deleteId);
+                setStatus('Starter und Ergebnisse gelöscht.', 'ok');
+                await loadStarters();
+            } catch (e) {
+                setStatus(e.message, 'err');
+            }
+        });
 
         // ── login ──
         async function doLogin() {
@@ -395,154 +724,24 @@
         document.getElementById('logout-btn').addEventListener('click', async () => {
             await ParseAPI.logout();
             allStarters = [];
-            document.getElementById('table-body').innerHTML = '';
+            allGroups = [];
+            scoreMap = {};
+            tableBody.innerHTML = '';
             document.getElementById('count-display').textContent = '—';
             document.getElementById('login-display').textContent = '—';
             document.getElementById('login-overlay').classList.remove('hidden');
             document.getElementById('login-user').focus();
         });
 
-        // ── data ──
-        const statusBar = document.getElementById('status-bar');
-        const tableBody = document.getElementById('table-body');
-        const searchInput = document.getElementById('search-input');
-
-        function setStatus(msg, type = '') {
-            statusBar.textContent = msg;
-            statusBar.className = 'status-bar' + (type ? ` ${type}` : '');
+        // restore session or show login
+        const _restoredUser = ParseAPI.getSessionUser();
+        if (_restoredUser) {
+            document.getElementById('login-overlay').classList.add('hidden');
+            document.getElementById('login-display').textContent = _restoredUser;
+            loadStarters();
+        } else {
+            document.getElementById('login-user').focus();
         }
-
-        function formatDate(iso) {
-            if (!iso) return '—';
-            return new Date(iso).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
-        }
-
-        function renderTable(filter = '') {
-            const term = filter.toLowerCase().trim();
-            const rows = term
-                ? allStarters.filter(s =>
-                    String(s.startNumber).includes(term) ||
-                    (s.firstName || '').toLowerCase().includes(term) ||
-                    (s.lastName || '').toLowerCase().includes(term))
-                : allStarters;
-
-            document.getElementById('count-display').textContent = allStarters.length;
-            tableBody.innerHTML = '';
-
-            if (!rows.length) {
-                tableBody.innerHTML = '<tr class="empty-row"><td colspan="6">Keine Starter gefunden</td></tr>';
-                return;
-            }
-
-            for (const s of rows) {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td class="num">${s.startNumber ?? '—'}</td>
-                    <td>${s.lastName ?? '—'}</td>
-                    <td>${s.firstName ?? '—'}</td>
-                    <td>${s.gender ?? '—'}</td>
-                    <td>${formatDate(s.birthday?.iso ?? s.birthday)}</td>
-                    <td class="actions">
-                        <button class="icon-btn edit" data-id="${s.objectId}" title="Bearbeiten">✎</button>
-                        <button class="icon-btn del"  data-id="${s.objectId}" data-name="${s.firstName} ${s.lastName}" title="Löschen">✕</button>
-                    </td>`;
-                tableBody.appendChild(tr);
-            }
-        }
-
-        async function loadStarters() {
-            await ParseAPI.fetchEvent().catch(() => {});
-            document.title = `${CONFIG.eventName} – Starter Verwaltung`;
-            setStatus('Lade Starter …');
-            try {
-                allStarters = await ParseAPI.fetchStarters();
-                renderTable(searchInput.value);
-                setStatus('');
-            } catch (e) {
-                setStatus(e.message, 'err');
-            }
-        }
-
-        searchInput.addEventListener('input', () => renderTable(searchInput.value));
-
-        // ── form modal ──
-        function openForm(starter = null) {
-            editId = starter?.objectId ?? null;
-            document.getElementById('form-title').textContent = starter ? 'Starter bearbeiten' : 'Starter hinzufügen';
-            document.getElementById('f-startNumber').value = starter?.startNumber ?? '';
-            document.getElementById('f-firstName').value = starter?.firstName ?? '';
-            document.getElementById('f-lastName').value = starter?.lastName ?? '';
-            document.getElementById('f-gender').value = starter?.gender ?? '';
-            const bd = starter?.birthday?.iso ?? starter?.birthday ?? '';
-            document.getElementById('f-birthday').value = bd ? bd.slice(0, 10) : '';
-            document.getElementById('form-backdrop').classList.add('open');
-            document.getElementById('f-startNumber').focus();
-        }
-
-        document.getElementById('add-btn').addEventListener('click', () => openForm());
-        document.getElementById('form-cancel').addEventListener('click', () =>
-            document.getElementById('form-backdrop').classList.remove('open'));
-
-        document.getElementById('form-save').addEventListener('click', async () => {
-            const startNumber = Number(document.getElementById('f-startNumber').value);
-            const firstName = document.getElementById('f-firstName').value.trim();
-            const lastName = document.getElementById('f-lastName').value.trim();
-            const gender = document.getElementById('f-gender').value;
-            const bdVal = document.getElementById('f-birthday').value;
-
-            if (!startNumber || !firstName || !lastName) {
-                setStatus('Startnummer, Vor- und Nachname sind Pflichtfelder.', 'err');
-                return;
-            }
-
-            const fields = {
-                startNumber,
-                firstName,
-                lastName,
-                gender: gender || undefined,
-                birthday: bdVal ? { __type: 'Date', iso: new Date(bdVal).toISOString() } : undefined,
-            };
-
-            document.getElementById('form-backdrop').classList.remove('open');
-            setStatus('Speichere …');
-            try {
-                await ParseAPI.saveStarter(fields, editId);
-                setStatus(editId ? 'Gespeichert.' : 'Hinzugefügt.', 'ok');
-                await loadStarters();
-            } catch (e) {
-                setStatus(e.message, 'err');
-            }
-        });
-
-        // ── delete modal ──
-        tableBody.addEventListener('click', e => {
-            const editBtn = e.target.closest('.icon-btn.edit');
-            const delBtn = e.target.closest('.icon-btn.del');
-            if (editBtn) {
-                const s = allStarters.find(x => x.objectId === editBtn.dataset.id);
-                if (s) openForm(s);
-            }
-            if (delBtn) {
-                deleteId = delBtn.dataset.id;
-                document.getElementById('del-name').textContent = delBtn.dataset.name;
-                document.getElementById('del-backdrop').classList.add('open');
-            }
-        });
-
-        document.getElementById('del-cancel').addEventListener('click', () =>
-            document.getElementById('del-backdrop').classList.remove('open'));
-
-        document.getElementById('del-confirm').addEventListener('click', async () => {
-            document.getElementById('del-backdrop').classList.remove('open');
-            setStatus('Lösche …');
-            try {
-                await ParseAPI.deleteStarter(deleteId);
-                setStatus('Gelöscht.', 'ok');
-                await loadStarters();
-            } catch (e) {
-                setStatus(e.message, 'err');
-            }
-        });
     </script>
 </body>
 
