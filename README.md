@@ -2,7 +2,7 @@
 
 https://werace.de/heldentag/
 
-## Static Content
+## Static Content on nginx
 
 `/var/www/werace.de/heldentag`
 
