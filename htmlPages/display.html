@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WeRace – Anzeigetafel</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏆</text></svg>">
+<script src="../config.js"></script>
+<script src="../parse-api.js"></script>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+        --bg:      #0d1117;
+        --card:    #161b22;
+        --border:  #30363d;
+        --text:    #e6edf3;
+        --muted:   #8b949e;
+        --accent:  #e05b3a;
+        --green:   #3fb950;
+        --gold:    #ffd700;
+        --silver:  #c0c0c0;
+        --bronze:  #cd7f32;
+    }
+
+    html, body {
+        width: 100%; height: 100%;
+        background: var(--bg);
+        color: var(--text);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        overflow: hidden;
+    }
+
+    /* ── Layout ── */
+    #app { display: flex; flex-direction: column; height: 100vh; }
+
+    #top-bar {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 0.6rem 1.5rem;
+        background: var(--card);
+        border-bottom: 2px solid var(--accent);
+        flex-shrink: 0;
+    }
+
+    #top-logo { height: 32px; }
+
+    #top-center {
+        display: flex; flex-direction: column; align-items: center; gap: 0.1rem;
+    }
+
+    #top-event { font-size: 1rem; font-weight: 800; color: var(--text); letter-spacing: 0.04em; }
+    #top-group { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
+
+    #top-right { display: flex; align-items: center; gap: 0.75rem; }
+
+    .phase-badge {
+        font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;
+        padding: 0.2rem 0.6rem; border-radius: 999px;
+    }
+    .phase-badge.quali { background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent); border: 1px solid var(--accent); }
+    .phase-badge.final { background: color-mix(in srgb, var(--gold) 18%, transparent); color: var(--gold); border: 1px solid var(--gold); }
+
+    #progress-bar-wrap {
+        height: 3px; background: var(--border); flex-shrink: 0;
+        position: relative; overflow: hidden;
+    }
+    #progress-bar {
+        height: 100%; background: var(--accent);
+        width: 0%; transition: none;
+    }
+
+    #content { flex: 1; overflow: hidden; padding: 1.2rem 1.5rem; display: flex; flex-direction: column; gap: 0.5rem; }
+
+    /* ── Podium header (top 3 big) ── */
+    #podium {
+        display: grid; grid-template-columns: 1fr 1.15fr 1fr;
+        gap: 0.75rem; flex-shrink: 0;
+    }
+
+    .podium-card {
+        background: var(--card); border: 1px solid var(--border);
+        border-radius: 12px; padding: 0.85rem 1rem;
+        display: flex; align-items: center; gap: 0.75rem;
+        position: relative; overflow: hidden;
+        transition: transform 0.3s;
+    }
+    .podium-card.rank-1 { border-color: var(--gold); order: 2; }
+    .podium-card.rank-2 { border-color: var(--silver); order: 1; }
+    .podium-card.rank-3 { border-color: var(--bronze); order: 3; }
+
+    .podium-rank {
+        font-size: 2rem; font-weight: 900; line-height: 1;
+        min-width: 2rem; text-align: center;
+    }
+    .rank-1 .podium-rank { color: var(--gold); font-size: 2.4rem; }
+    .rank-2 .podium-rank { color: var(--silver); }
+    .rank-3 .podium-rank { color: var(--bronze); }
+
+    .podium-info { flex: 1; min-width: 0; }
+    .podium-num { font-size: 0.7rem; color: var(--muted); font-weight: 700; }
+    .podium-name { font-size: 1.1rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .rank-1 .podium-name { font-size: 1.25rem; }
+    .podium-group { font-size: 0.65rem; color: var(--muted); margin-top: 0.1rem; }
+    .podium-score { font-size: 1.5rem; font-weight: 900; color: var(--green); text-align: right; }
+    .rank-1 .podium-score { font-size: 1.8rem; color: var(--gold); }
+    .rank-2 .podium-score { color: var(--silver); }
+    .rank-3 .podium-score { color: var(--bronze); }
+    .podium-runs { font-size: 0.65rem; color: var(--muted); text-align: right; margin-top: 0.1rem; }
+
+    /* ── Table ── */
+    #table-wrap { flex: 1; overflow: hidden; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; table-layout: fixed; }
+
+    th {
+        text-align: left; font-size: 0.6rem; color: var(--muted);
+        text-transform: uppercase; letter-spacing: 0.1em;
+        padding: 0.3rem 0.5rem; border-bottom: 1px solid var(--border);
+    }
+
+    td { padding: 0.45rem 0.5rem; border-bottom: 1px solid var(--border); color: var(--text); }
+    tr:last-child td { border-bottom: none; }
+
+    .col-rank  { width: 3rem; }
+    .col-num   { width: 3.5rem; }
+    .col-name  { }
+    .col-group { width: 10rem; }
+    .col-runs  { width: 6rem; text-align: right; }
+    .col-score { width: 6rem; text-align: right; }
+
+    td.rank  { font-weight: 800; color: var(--muted); font-size: 0.85rem; }
+    td.rank.r1 { color: var(--gold); }
+    td.rank.r2 { color: var(--silver); }
+    td.rank.r3 { color: var(--bronze); }
+    td.num   { font-weight: 800; color: var(--accent); }
+    td.score { font-weight: 800; color: var(--green); font-size: 1rem; }
+    td.score.incomplete { color: var(--muted); }
+    td.runs  { color: var(--muted); font-size: 0.8rem; text-align: right; }
+    td.group-cell { color: var(--muted); font-size: 0.8rem; }
+
+    /* ── Flash animation for new scores ── */
+    @keyframes flash { 0%,100%{background:transparent} 30%{background:color-mix(in srgb,var(--green) 15%,transparent)} }
+    tr.flash { animation: flash 1.2s ease; }
+
+    /* ── Slide transition ── */
+    @keyframes slideIn { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+    .slide-in { animation: slideIn 0.4s ease; }
+
+    /* ── No data ── */
+    #empty { display:none; flex:1; align-items:center; justify-content:center; flex-direction:column; gap:0.75rem; }
+    #empty .icon { font-size: 3rem; }
+    #empty .msg { font-size: 1rem; color: var(--muted); }
+
+    /* ── Group nav dots ── */
+    #group-dots { display:flex; gap:0.4rem; align-items:center; }
+    .g-dot { width:0.45rem; height:0.45rem; border-radius:50%; background:var(--border); transition:background 0.3s, transform 0.3s; }
+    .g-dot.active { background:var(--accent); transform:scale(1.4); }
+
+    /* ── Live badge ── */
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+    .live-dot { width:0.5rem; height:0.5rem; border-radius:50%; background:var(--green); animation:pulse 1.5s infinite; }
+</style>
+</head>
+<body>
+<div id="app">
+    <div id="top-bar">
+        <img id="top-logo" src="../assets/weraceLogo.png" alt="WeRace">
+        <div id="top-center">
+            <div id="top-event">WeRace</div>
+            <div id="top-group">—</div>
+        </div>
+        <div id="top-right">
+            <div class="live-dot"></div>
+            <span class="phase-badge quali" id="phase-badge">Qualifikation</span>
+            <div id="group-dots"></div>
+        </div>
+    </div>
+
+    <div id="progress-bar-wrap"><div id="progress-bar"></div></div>
+
+    <div id="content">
+        <div id="podium"></div>
+        <div id="table-wrap">
+            <table id="results-table">
+                <thead>
+                    <tr>
+                        <th class="col-rank">#</th>
+                        <th class="col-num">Nr.</th>
+                        <th class="col-name">Name</th>
+                        <th class="col-group">Gruppe</th>
+                        <th class="col-runs">Läufe</th>
+                        <th class="col-score">Score</th>
+                    </tr>
+                </thead>
+                <tbody id="results-body"></tbody>
+            </table>
+        </div>
+        <div id="empty"><div class="icon">⏳</div><div class="msg">Noch keine Wertungen</div></div>
+    </div>
+</div>
+
+<script>
+const _seedOverride = localStorage.getItem('seedEventOverride');
+if (_seedOverride) CONFIG.eventObjectId = _seedOverride;
+</script>
+<script>
+(async () => {
+    // ── State ──
+    let starters = [], allScores = [], allFinalEntries = [], startGroups = [];
+    let currentGroupIdx = 0;
+    let rotationTimer = null;
+    let progressInterval = null;
+    const ROTATION_MS = 8000;
+
+    // ── Scoring helpers (same logic as results.html) ──
+    function groupByRunNumber(scores) {
+        if (!scores.length) return [];
+        const hasRN = scores.some(s => s.runNumber != null);
+        if (hasRN) {
+            const byRun = {};
+            for (const s of scores) { const r = s.runNumber ?? 1; if (!byRun[r]) byRun[r] = []; byRun[r].push(s); }
+            return Object.keys(byRun).map(Number).sort((a,b)=>a-b)
+                .map(r => ({ scores: byRun[r], total: byRun[r].reduce((a,s)=>a+(s.total??0),0) }));
+        }
+        const runs = []; let chunk = []; const seen = new Set();
+        for (const s of scores) {
+            if (seen.has(s.judgeName)) {
+                if (chunk.length) runs.push({ scores: chunk, total: chunk.reduce((a,s)=>a+(s.total??0),0) });
+                chunk = [s]; seen.clear(); seen.add(s.judgeName);
+            } else { chunk.push(s); seen.add(s.judgeName); }
+        }
+        if (chunk.length) runs.push({ scores: chunk, total: chunk.reduce((a,s)=>a+(s.total??0),0) });
+        return runs;
+    }
+
+    function scoreToPhaseRuns(scores) {
+        const hasPhase = scores.some(s => s.phase != null);
+        if (hasPhase) {
+            return {
+                qualiRuns: groupByRunNumber(scores.filter(s => (s.phase??'quali')==='quali')),
+                finalRuns: groupByRunNumber(scores.filter(s => s.phase==='final')),
+            };
+        }
+        const allRuns = groupByRunNumber(scores);
+        const qc = CONFIG.qualiRuns ?? allRuns.length;
+        return { qualiRuns: allRuns.slice(0, qc), finalRuns: allRuns.slice(qc) };
+    }
+
+    function buildResultsForGroup(gid) {
+        const finalistNums = new Set(allFinalEntries
+            .filter(fe => fe.startGroup?.objectId === gid)
+            .map(fe => fe.startNumber ?? fe.starter?.startNumber));
+        const groupStarters = starters.filter(s =>
+            s.startGroup?.objectId === gid &&
+            s.status !== 'disqualified' && s.status !== 'removed');
+
+        const byStarter = {};
+        for (const s of allScores) { const n = s.startnumber; if (!byStarter[n]) byStarter[n] = []; byStarter[n].push(s); }
+
+        const results = [];
+        for (const starter of groupStarters) {
+            const scores = byStarter[starter.startNumber] ?? [];
+            if (!scores.length) continue;
+            const { qualiRuns, finalRuns } = scoreToPhaseRuns(scores);
+            if (!qualiRuns.length && !finalRuns.length) continue;
+
+            const qualiCount = CONFIG.qualiRuns ?? qualiRuns.length;
+            const finalCount = CONFIG.finalRuns ?? 0;
+            const isFinal = finalistNums.has(starter.startNumber);
+            const qualiTotal = qualiRuns.reduce((a,r)=>a+r.total,0);
+            const qualiBest  = qualiRuns.length ? Math.max(...qualiRuns.map(r=>r.total)) : 0;
+            const qualiScore = (CONFIG.qualiScoreMode??'sum')==='best' ? qualiBest : qualiTotal;
+            const finalTotal = finalRuns.reduce((a,r)=>a+r.total,0);
+            const finalBest  = finalRuns.length ? Math.max(...finalRuns.map(r=>r.total)) : 0;
+            const finalScore = (CONFIG.finalScoreMode??'sum')==='best' ? finalBest : finalTotal;
+            const best = isFinal ? (finalRuns.length ? finalScore : qualiScore) : qualiScore;
+            const complete = isFinal
+                ? (!finalCount || finalRuns.length >= finalCount)
+                : (!qualiCount || qualiRuns.length >= qualiCount);
+            results.push({ num: starter.startNumber, starter, qualiRuns, finalRuns, qualiCount, finalCount, isFinal, qualiScore, finalScore, best, complete });
+        }
+
+        results.sort((a,b) => {
+            const aHF = a.isFinal && a.finalRuns.length > 0;
+            const bHF = b.isFinal && b.finalRuns.length > 0;
+            if (aHF !== bHF) return aHF ? -1 : 1;
+            return b.best - a.best;
+        });
+
+        let rank = 1;
+        results.forEach((r, i) => {
+            if (i > 0 && r.best === results[i-1].best) r.rank = results[i-1].rank;
+            else r.rank = rank;
+            rank = i + 1 + 1;
+        });
+        return results;
+    }
+
+    function isGroupFinal(gid) {
+        return startGroups.find(sg => sg.objectId === gid)?.qualiClosed ?? false;
+    }
+
+    // ── Render ──
+    function render() {
+        if (!startGroups.length) return;
+        const sg = startGroups[currentGroupIdx];
+        if (!sg) return;
+
+        const results = buildResultsForGroup(sg.objectId);
+        const isFinal = isGroupFinal(sg.objectId);
+
+        // Top bar
+        document.getElementById('top-event').textContent = CONFIG.eventName ?? 'WeRace';
+        document.getElementById('top-group').textContent = sg.name;
+        const pb = document.getElementById('phase-badge');
+        pb.textContent = isFinal ? 'Finale' : 'Qualifikation';
+        pb.className = 'phase-badge ' + (isFinal ? 'final' : 'quali');
+
+        // Group dots
+        const dotsEl = document.getElementById('group-dots');
+        dotsEl.innerHTML = '';
+        startGroups.forEach((_, i) => {
+            const d = document.createElement('div');
+            d.className = 'g-dot' + (i === currentGroupIdx ? ' active' : '');
+            dotsEl.appendChild(d);
+        });
+
+        // Empty state
+        const empty = document.getElementById('empty');
+        if (!results.length) {
+            document.getElementById('podium').style.display = 'none';
+            document.getElementById('table-wrap').style.display = 'none';
+            empty.style.display = 'flex';
+            return;
+        }
+        empty.style.display = 'none';
+        document.getElementById('table-wrap').style.display = '';
+
+        // Podium (top 3)
+        const podiumEl = document.getElementById('podium');
+        const top3 = results.slice(0, 3);
+        if (top3.length >= 2) {
+            podiumEl.style.display = 'grid';
+            podiumEl.innerHTML = '';
+            top3.forEach(r => {
+                const rankClass = `rank-${r.rank}`;
+                const runsLabel = r.isFinal
+                    ? `${r.finalRuns.length}${r.finalCount ? '/'+r.finalCount : ''} Final-Läufe`
+                    : `${r.qualiRuns.length}${r.qualiCount ? '/'+r.qualiCount : ''} Quali-Läufe`;
+                const card = document.createElement('div');
+                card.className = `podium-card ${rankClass} slide-in`;
+                card.innerHTML = `
+                    <div class="podium-rank">${r.rank}</div>
+                    <div class="podium-info">
+                        <div class="podium-num">#${r.num}</div>
+                        <div class="podium-name">${r.starter?.lastName ?? ''} ${r.starter?.firstName ?? ''}</div>
+                        <div class="podium-group">${r.starter?.startGroup?.name ?? ''}</div>
+                    </div>
+                    <div>
+                        <div class="podium-score">${r.best.toFixed(1)}</div>
+                        <div class="podium-runs">${runsLabel}</div>
+                    </div>`;
+                podiumEl.appendChild(card);
+            });
+        } else {
+            podiumEl.style.display = 'none';
+        }
+
+        // Table (rank 4+, or all if < 3)
+        const tableResults = top3.length >= 2 ? results.slice(3) : results;
+        const tbody = document.getElementById('results-body');
+        tbody.innerHTML = '';
+        tableResults.forEach(r => {
+            const runsLabel = r.isFinal
+                ? `${r.finalRuns.length}${r.finalCount?'/'+r.finalCount:''} F`
+                : `${r.qualiRuns.length}${r.qualiCount?'/'+r.qualiCount:''} Q`;
+            const rankCls = r.rank <= 3 ? ` r${r.rank}` : '';
+            const tr = document.createElement('tr');
+            tr.innerHTML =
+                `<td class="rank${rankCls}">${r.rank}</td>` +
+                `<td class="num">${r.num}</td>` +
+                `<td>${r.starter?.lastName ?? ''} ${r.starter?.firstName ?? ''}</td>` +
+                `<td class="group-cell">${r.starter?.startGroup?.name ?? ''}</td>` +
+                `<td class="runs">${runsLabel}</td>` +
+                `<td class="score${r.complete?'':' incomplete'}">${r.best.toFixed(1)}</td>`;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // ── Auto-rotation ──
+    function startRotation() {
+        stopRotation();
+        if (startGroups.length <= 1) return;
+
+        let elapsed = 0;
+        const bar = document.getElementById('progress-bar');
+        bar.style.transition = 'none';
+        bar.style.width = '0%';
+
+        progressInterval = setInterval(() => {
+            elapsed += 100;
+            const pct = Math.min((elapsed / ROTATION_MS) * 100, 100);
+            bar.style.transition = 'width 0.1s linear';
+            bar.style.width = pct + '%';
+        }, 100);
+
+        rotationTimer = setTimeout(() => {
+            currentGroupIdx = (currentGroupIdx + 1) % startGroups.length;
+            render();
+            startRotation();
+        }, ROTATION_MS);
+    }
+
+    function stopRotation() {
+        clearTimeout(rotationTimer);
+        clearInterval(progressInterval);
+    }
+
+    // ── Data refresh ──
+    async function refresh() {
+        [starters, allScores, allFinalEntries] = await Promise.all([
+            ParseAPI.fetchStarters(),
+            ParseAPI.fetchAllJuryScores(),
+            ParseAPI.fetchAllFinalEntries(),
+        ]);
+        render();
+    }
+
+    // ── Init ──
+    await Promise.all([ParseAPI.fetchEvent(), ParseAPI.fetchJudges()]).catch(()=>{});
+    document.getElementById('top-event').textContent = CONFIG.eventName ?? 'WeRace';
+    document.title = `${CONFIG.eventName ?? 'WeRace'} – Anzeigetafel`;
+
+    startGroups = await ParseAPI.fetchStartGroups();
+    await refresh();
+    startRotation();
+
+    // ── LiveQuery ──
+    ParseAPI.subscribeAllJuryScores(async () => {
+        await refresh();
+    });
+
+    ParseAPI.subscribeStartGroups(async msg => {
+        const sg = startGroups.find(g => g.objectId === msg.object?.objectId);
+        if (sg && msg.object != null) sg.qualiClosed = msg.object.qualiClosed;
+        render();
+    });
+
+    ParseAPI.subscribeFinalEntries(async () => {
+        allFinalEntries = await ParseAPI.fetchAllFinalEntries();
+        render();
+    });
+
+    ParseAPI.subscribeStarters(async () => {
+        starters = await ParseAPI.fetchStarters();
+        render();
+    });
+})();
+</script>
+</body>
+</html>
