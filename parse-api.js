@@ -394,7 +394,7 @@ const ParseAPI = (() => {
         return data.results ?? [];
     }
 
-    function subscribeAllJuryScores(onChange) {
+    function subscribeAllJuryScores(onChange, onScore) {
         const ws = new WebSocket(CONFIG.parseLiveQueryUrl);
         ws.addEventListener('open', () => {
             ws.send(JSON.stringify({
@@ -416,8 +416,9 @@ const ParseAPI = (() => {
                 }));
             }
             if (msg.op === 'create' || msg.op === 'delete') onChange();
+            if (msg.op === 'create' && msg.object && onScore) onScore(msg.object);
         });
-        ws.addEventListener('close', () => setTimeout(() => subscribeAllJuryScores(onChange), 3000));
+        ws.addEventListener('close', () => setTimeout(() => subscribeAllJuryScores(onChange, onScore), 3000));
         return ws;
     }
 

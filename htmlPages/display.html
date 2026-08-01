@@ -159,6 +159,40 @@
     /* ── Live badge ── */
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
     .live-dot { width:0.5rem; height:0.5rem; border-radius:50%; background:var(--green); animation:pulse 1.5s infinite; }
+
+    /* ── Score popup ── */
+    #score-popup {
+        display:none; position:fixed; inset:0; z-index:200;
+        background:rgba(0,0,0,0.75); align-items:center; justify-content:center;
+    }
+    #score-popup.open { display:flex; }
+    .sp-card {
+        background:var(--card); border:2px solid var(--green);
+        border-radius:20px; padding:2rem 2.5rem;
+        min-width:480px; max-width:640px; width:90%;
+        display:flex; flex-direction:column; gap:1.2rem;
+        animation:slideIn 0.35s ease;
+    }
+    .sp-header { display:flex; align-items:center; justify-content:space-between; }
+    .sp-label { font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:var(--muted); }
+    .sp-startnum { font-size:3.5rem; font-weight:900; color:var(--accent); line-height:1; }
+    .sp-name { font-size:1.4rem; font-weight:800; color:var(--text); }
+    .sp-run { font-size:0.75rem; color:var(--muted); margin-top:0.1rem; }
+    .sp-judges { display:flex; flex-direction:column; gap:0.5rem; }
+    .sp-judge-row {
+        display:flex; align-items:center; justify-content:space-between;
+        background:var(--bg); border-radius:10px; padding:0.6rem 0.9rem;
+    }
+    .sp-judge-name { font-size:0.85rem; font-weight:600; color:var(--muted); }
+    .sp-judge-score { font-size:1.3rem; font-weight:900; color:var(--text); }
+    .sp-total-row {
+        display:flex; align-items:center; justify-content:space-between;
+        border-top:1px solid var(--border); padding-top:0.75rem;
+    }
+    .sp-total-label { font-size:0.8rem; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.08em; }
+    .sp-total-val { font-size:2.5rem; font-weight:900; color:var(--green); }
+    .sp-progress { height:4px; background:var(--border); border-radius:999px; overflow:hidden; margin-top:0.5rem; }
+    .sp-progress-bar { height:100%; background:var(--green); width:100%; transition:width 0.1s linear; }
 </style>
 </head>
 <body>
@@ -196,6 +230,27 @@
             </table>
         </div>
         <div id="empty"><div class="icon">⏳</div><div class="msg">Noch keine Wertungen</div></div>
+    </div>
+</div>
+
+<div id="score-popup">
+    <div class="sp-card">
+        <div class="sp-header">
+            <div>
+                <div class="sp-label">Startnummer</div>
+                <div class="sp-startnum" id="sp-startnum">—</div>
+            </div>
+            <div style="text-align:right">
+                <div class="sp-name" id="sp-name">—</div>
+                <div class="sp-run" id="sp-run">—</div>
+            </div>
+        </div>
+        <div class="sp-judges" id="sp-judges"></div>
+        <div class="sp-total-row">
+            <div class="sp-total-label">Gesamt</div>
+            <div class="sp-total-val" id="sp-total">—</div>
+        </div>
+        <div class="sp-progress"><div class="sp-progress-bar" id="sp-progress-bar"></div></div>
     </div>
 </div>
 
@@ -435,10 +490,77 @@ if (_seedOverride) CONFIG.eventObjectId = _seedOverride;
     await refresh();
     startRotation();
 
+    // ── Score popup ──
+    const POPUP_MS = 5000;
+    let popupTimer = null;
+    // pendingRuns: key = `${startnumber}_${runNumber}_${phase}` → { scores: {judgeName→score}, runNumber, phase }
+    const pendingRuns = {};
+
+    function judgeCount() { return Object.keys(CONFIG.judgeTokens ?? {}).length || 1; }
+
+    function showPopup(startnumber, runKey, runScores, runNumber, phase) {
+        stopRotation();
+        clearTimeout(popupTimer);
+
+        const starter = starters.find(s => s.startNumber === startnumber);
+        const name = starter ? `${starter.lastName ?? ''} ${starter.firstName ?? ''}`.trim() : `#${startnumber}`;
+        const phaseLabel = phase === 'final' ? 'Finale' : 'Qualifikation';
+        const total = Object.values(runScores).reduce((a, s) => a + (s.total ?? 0), 0);
+
+        document.getElementById('sp-startnum').textContent = `#${startnumber}`;
+        document.getElementById('sp-name').textContent = name;
+        document.getElementById('sp-run').textContent = `${phaseLabel} · Lauf ${runNumber}`;
+        document.getElementById('sp-total').textContent = total.toFixed(1);
+
+        const judgesEl = document.getElementById('sp-judges');
+        judgesEl.innerHTML = '';
+        for (const [judge, s] of Object.entries(runScores)) {
+            const row = document.createElement('div');
+            row.className = 'sp-judge-row';
+            row.innerHTML = `<span class="sp-judge-name">${judge}</span><span class="sp-judge-score">${(s.total ?? 0).toFixed(1)}</span>`;
+            judgesEl.appendChild(row);
+        }
+
+        document.getElementById('score-popup').classList.add('open');
+
+        // Progress bar countdown
+        const bar = document.getElementById('sp-progress-bar');
+        bar.style.transition = 'none'; bar.style.width = '100%';
+        let elapsed = 0;
+        const tick = setInterval(() => {
+            elapsed += 100;
+            bar.style.transition = 'width 0.1s linear';
+            bar.style.width = Math.max(0, 100 - (elapsed / POPUP_MS) * 100) + '%';
+        }, 100);
+
+        popupTimer = setTimeout(async () => {
+            clearInterval(tick);
+            document.getElementById('score-popup').classList.remove('open');
+            delete pendingRuns[runKey];
+            // Switch to the group this starter belongs to
+            const sg = starters.find(s => s.startNumber === startnumber)?.startGroup?.objectId;
+            if (sg) {
+                const idx = startGroups.findIndex(g => g.objectId === sg);
+                if (idx !== -1) currentGroupIdx = idx;
+            }
+            await refresh();
+            startRotation();
+        }, POPUP_MS);
+    }
+
+    function onNewScore(score) {
+        const key = `${score.startnumber}_${score.runNumber ?? 1}_${score.phase ?? 'quali'}`;
+        if (!pendingRuns[key]) pendingRuns[key] = { scores: {}, runNumber: score.runNumber ?? 1, phase: score.phase ?? 'quali' };
+        pendingRuns[key].scores[score.judgeName] = score;
+        if (Object.keys(pendingRuns[key].scores).length >= judgeCount()) {
+            showPopup(score.startnumber, key, pendingRuns[key].scores, pendingRuns[key].runNumber, pendingRuns[key].phase);
+        }
+    }
+
     // ── LiveQuery ──
     ParseAPI.subscribeAllJuryScores(async () => {
         await refresh();
-    });
+    }, onNewScore);
 
     ParseAPI.subscribeStartGroups(async msg => {
         const sg = startGroups.find(g => g.objectId === msg.object?.objectId);
