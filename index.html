@@ -150,26 +150,96 @@
             margin-top: 0.1rem;
         }
 
-        a.tile.c1, a.tile.accent { border-color: #f78166; color: #f78166; }
-        a.tile.c1 .tile-sub, a.tile.accent .tile-sub { color: color-mix(in srgb, #f78166 60%, #8b949e); }
-        a.tile.c2 { border-color: #58a6ff; color: #58a6ff; }
-        a.tile.c2 .tile-sub { color: color-mix(in srgb, #58a6ff 60%, #8b949e); }
-        a.tile.c3 { border-color: #3fb950; color: #3fb950; }
-        a.tile.c3 .tile-sub { color: color-mix(in srgb, #3fb950 60%, #8b949e); }
+        a.tile.c1,
+        a.tile.accent {
+            border-color: #f78166;
+            color: #f78166;
+        }
+
+        a.tile.c1 .tile-sub,
+        a.tile.accent .tile-sub {
+            color: color-mix(in srgb, #f78166 60%, #8b949e);
+        }
+
+        a.tile.c2 {
+            border-color: #58a6ff;
+            color: #58a6ff;
+        }
+
+        a.tile.c2 .tile-sub {
+            color: color-mix(in srgb, #58a6ff 60%, #8b949e);
+        }
+
+        a.tile.c3 {
+            border-color: #3fb950;
+            color: #3fb950;
+        }
+
+        a.tile.c3 .tile-sub {
+            color: color-mix(in srgb, #3fb950 60%, #8b949e);
+        }
+
         /* Kampfrichter – muted steel family, distinct hues */
-        a.tile.j1 { border-color: #6b8caa; color: #6b8caa; }
-        a.tile.j1 .tile-sub { color: color-mix(in srgb, #6b8caa 60%, #8b949e); }
-        a.tile.j2 { border-color: #7a9e8c; color: #7a9e8c; }
-        a.tile.j2 .tile-sub { color: color-mix(in srgb, #7a9e8c 60%, #8b949e); }
-        a.tile.j3 { border-color: #9a8caa; color: #9a8caa; }
-        a.tile.j3 .tile-sub { color: color-mix(in srgb, #9a8caa 60%, #8b949e); }
-        a.tile.j4 { border-color: #aa9e6b; color: #aa9e6b; }
-        a.tile.j4 .tile-sub { color: color-mix(in srgb, #aa9e6b 60%, #8b949e); }
-        a.tile.j5 { border-color: #6b9e9e; color: #6b9e9e; }
-        a.tile.j5 .tile-sub { color: color-mix(in srgb, #6b9e9e 60%, #8b949e); }
-        a.tile.j6 { border-color: #9e7a8c; color: #9e7a8c; }
-        a.tile.j6 .tile-sub { color: color-mix(in srgb, #9e7a8c 60%, #8b949e); }
-        @media print { a.tile { border-color: #30363d !important; color: #e6edf3 !important; } }
+        a.tile.j1 {
+            border-color: #6b8caa;
+            color: #6b8caa;
+        }
+
+        a.tile.j1 .tile-sub {
+            color: color-mix(in srgb, #6b8caa 60%, #8b949e);
+        }
+
+        a.tile.j2 {
+            border-color: #7a9e8c;
+            color: #7a9e8c;
+        }
+
+        a.tile.j2 .tile-sub {
+            color: color-mix(in srgb, #7a9e8c 60%, #8b949e);
+        }
+
+        a.tile.j3 {
+            border-color: #9a8caa;
+            color: #9a8caa;
+        }
+
+        a.tile.j3 .tile-sub {
+            color: color-mix(in srgb, #9a8caa 60%, #8b949e);
+        }
+
+        a.tile.j4 {
+            border-color: #aa9e6b;
+            color: #aa9e6b;
+        }
+
+        a.tile.j4 .tile-sub {
+            color: color-mix(in srgb, #aa9e6b 60%, #8b949e);
+        }
+
+        a.tile.j5 {
+            border-color: #6b9e9e;
+            color: #6b9e9e;
+        }
+
+        a.tile.j5 .tile-sub {
+            color: color-mix(in srgb, #6b9e9e 60%, #8b949e);
+        }
+
+        a.tile.j6 {
+            border-color: #9e7a8c;
+            color: #9e7a8c;
+        }
+
+        a.tile.j6 .tile-sub {
+            color: color-mix(in srgb, #9e7a8c 60%, #8b949e);
+        }
+
+        @media print {
+            a.tile {
+                border-color: #30363d !important;
+                color: #e6edf3 !important;
+            }
+        }
 
         .tile-label {
             display: flex;
@@ -246,30 +316,186 @@
             background: #30363d;
         }
 
-        #login-overlay { position:fixed;inset:0;z-index:500;background:#0d1117;display:flex;align-items:center;justify-content:center;padding:1.5rem; }
-        #login-overlay.hidden { display:none; }
-        .login-box { background:#161b22;border:1px solid #30363d;border-radius:14px;max-width:320px;width:100%;padding:1.5rem;display:flex;flex-direction:column;gap:0.75rem; }
-        .login-title { font-size:1rem;font-weight:800;color:#e6edf3;text-align:center; }
-        .login-err { font-size:0.85rem;color:#f78166;min-height:1.2em;text-align:center; }
-        .login-field { display:flex;flex-direction:column;gap:0.3rem; }
-        .login-label { font-size:0.7rem;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:0.08em; }
-        .login-input { background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:0.5rem 0.75rem;color:#e6edf3;font-size:0.95rem;outline:none;width:100%;box-sizing:border-box; }
-        .login-input:focus { border-color:#f78166; }
-        .login-btn { padding:0.65rem;border-radius:10px;border:none;background:#f78166;color:#fff;font-size:0.95rem;font-weight:700;cursor:pointer;width:100%;margin-top:0.25rem; }
-        .login-btn:active { opacity:0.85; }
-        .login-user-row { display:flex;align-items:center;justify-content:space-between;font-size:0.75rem;color:#8b949e; }
-        .login-logout-btn { background:none;border:none;color:#8b949e;font-size:0.75rem;cursor:pointer;text-decoration:underline;padding:0; }
+        #login-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 500;
+            background: #0d1117;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
+
+        #login-overlay.hidden {
+            display: none;
+        }
+
+        .login-box {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 14px;
+            max-width: 320px;
+            width: 100%;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .login-title {
+            font-size: 1rem;
+            font-weight: 800;
+            color: #e6edf3;
+            text-align: center;
+        }
+
+        .login-err {
+            font-size: 0.85rem;
+            color: #f78166;
+            min-height: 1.2em;
+            text-align: center;
+        }
+
+        .login-field {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+        }
+
+        .login-label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: #8b949e;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .login-input {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 0.5rem 0.75rem;
+            color: #e6edf3;
+            font-size: 0.95rem;
+            outline: none;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .login-input:focus {
+            border-color: #f78166;
+        }
+
+        .login-btn {
+            padding: 0.65rem;
+            border-radius: 10px;
+            border: none;
+            background: #f78166;
+            color: #fff;
+            font-size: 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 0.25rem;
+        }
+
+        .login-btn:active {
+            opacity: 0.85;
+        }
+
+        .login-user-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: #8b949e;
+        }
+
+        .login-logout-btn {
+            background: none;
+            border: none;
+            color: #8b949e;
+            font-size: 0.75rem;
+            cursor: pointer;
+            text-decoration: underline;
+            padding: 0;
+        }
 
         /* ── Avatar menu ── */
-        .avatar-wrap { position:relative; }
-        .avatar { width:2rem;height:2rem;border-radius:50%;background:#e05b3a;color:#fff;font-size:0.8rem;font-weight:800;display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none;flex-shrink:0;border:2px solid transparent;transition:border-color 0.15s; }
-        .avatar:hover { border-color:#e05b3a44; }
-        .avatar-menu { position:absolute;top:calc(100% + 0.5rem);right:0;background:#161b22;border:1px solid #30363d;border-radius:10px;min-width:160px;box-shadow:0 8px 24px rgba(0,0,0,0.5);z-index:400;display:none;overflow:hidden; }
-        .avatar-menu.open { display:block; }
-        .avatar-menu-user { padding:0.6rem 0.85rem;font-size:0.75rem;color:#8b949e;border-bottom:1px solid #30363d;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
-        .avatar-menu-item { display:flex;align-items:center;gap:0.5rem;padding:0.6rem 0.85rem;font-size:0.85rem;font-weight:600;color:#e6edf3;cursor:pointer;transition:background 0.1s; }
-        .avatar-menu-item:hover { background:#30363d; }
-        .avatar-menu-item.danger { color:#f78166; }
+        .avatar-wrap {
+            position: relative;
+        }
+
+        .avatar {
+            width: 2rem;
+            height: 2rem;
+            border-radius: 50%;
+            background: #e05b3a;
+            color: #fff;
+            font-size: 0.8rem;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            flex-shrink: 0;
+            border: 2px solid transparent;
+            transition: border-color 0.15s;
+        }
+
+        .avatar:hover {
+            border-color: #e05b3a44;
+        }
+
+        .avatar-menu {
+            position: absolute;
+            top: calc(100% + 0.5rem);
+            right: 0;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 10px;
+            min-width: 160px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+            z-index: 400;
+            display: none;
+            overflow: hidden;
+        }
+
+        .avatar-menu.open {
+            display: block;
+        }
+
+        .avatar-menu-user {
+            padding: 0.6rem 0.85rem;
+            font-size: 0.75rem;
+            color: #8b949e;
+            border-bottom: 1px solid #30363d;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .avatar-menu-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.6rem 0.85rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #e6edf3;
+            cursor: pointer;
+            transition: background 0.1s;
+        }
+
+        .avatar-menu-item:hover {
+            background: #30363d;
+        }
+
+        .avatar-menu-item.danger {
+            color: #f78166;
+        }
     </style>
     <script src="config.js"></script>
     <script>
@@ -286,7 +512,8 @@
             <div class="login-err" id="login-err"></div>
             <div class="login-field">
                 <div class="login-label">Benutzername</div>
-                <input class="login-input" id="login-user" type="text" autocomplete="username" placeholder="Benutzername">
+                <input class="login-input" id="login-user" type="text" autocomplete="username"
+                    placeholder="Benutzername">
             </div>
             <div class="login-field">
                 <div class="login-label">Passwort</div>
@@ -296,7 +523,8 @@
         </div>
     </div>
 
-    <div id="main-content" style="display:none;width:100%;max-width:380px;flex-direction:column;align-items:center;gap:2rem">
+    <div id="main-content"
+        style="display:none;width:100%;max-width:380px;flex-direction:column;align-items:center;gap:2rem">
         <div style="width:100%;display:flex;align-items:center;justify-content:space-between">
             <img class="logo" src="assets/weraceLogo.png" alt="WeRace">
             <div class="avatar-wrap">
@@ -308,63 +536,66 @@
             </div>
         </div>
 
-    <!-- Event picker -->
-    <div class="card" id="picker-card">
-        <div class="card-header">Event auswählen</div>
-        <div id="event-list">
-            <div class="spinner"></div>
-        </div>
-    </div>
-
-    <!-- App links — shown after event is selected -->
-    <div class="section" id="app-section" style="display:none">
-        <div class="card">
-            <div class="card-header">
-                <span id="selected-event-name">—</span>
-                <button class="change-btn" id="change-btn">ändern</button>
+        <!-- Event picker -->
+        <div class="card" id="picker-card">
+            <div class="card-header">Event auswählen</div>
+            <div id="event-list">
+                <div class="spinner"></div>
             </div>
         </div>
 
-        <div class="link-label">Organisation</div>
-        <a class="tile c1" href="htmlPages/starter.html" target="werace-starter" rel="noopener">
-            <div class="tile-label">Tablet 1: Startbereich<div class="tile-sub">Starten, Drucken, Eventeinstellungen,
-                    StarterManagment </div>
-            </div>
-            <span class="badge">↗</span>
-        </a>
-        <a class="tile c2" href="htmlPages/starterMaintenance.html" target="werace-starter-admin" rel="noopener">
-            <div class="tile-label">Tablet 2: Starter-Registrierung<div class="tile-sub">Starter verwalten, neue Starter
-                    hinzufügen, bestehende bearbeiten oder löschen
+        <!-- App links — shown after event is selected -->
+        <div class="section" id="app-section" style="display:none">
+            <div class="card">
+                <div class="card-header">
+                    <span id="selected-event-name">—</span>
+                    <button class="change-btn" id="change-btn">ändern</button>
                 </div>
             </div>
-            <span class="badge">↗</span>
-        </a>
 
-        <div class="link-label" style="margin-top:0.25rem">Public</div>
-        <a class="tile c3" href="htmlPages/results.html" target="werace-results" rel="noopener">
-            <div class="tile-label">Ergebnisse<div class="tile-sub">Interaktiv – Großbildschirm / Zuschauer</div>
+            <div class="link-label">Organisation</div>
+            <a class="tile c1" href="htmlPages/starter.html" target="werace-starter" rel="noopener">
+                <div class="tile-label">Tablet 1: Startbereich<div class="tile-sub">Starten, Drucken,
+                        Eventeinstellungen,
+                        StarterManagment </div>
+                </div>
+                <span class="badge">↗</span>
+            </a>
+            <a class="tile c2" href="htmlPages/starterMaintenance.html" target="werace-starter-admin" rel="noopener">
+                <div class="tile-label">Tablet 2: Starter-Registrierung<div class="tile-sub">Starter verwalten, neue
+                        Starter
+                        hinzufügen, bestehende bearbeiten oder löschen
+                    </div>
+                </div>
+                <span class="badge">↗</span>
+            </a>
+
+            <div class="link-label" style="margin-top:0.25rem">Public</div>
+            <a class="tile c3" href="htmlPages/results.html" target="werace-results" rel="noopener">
+                <div class="tile-label">Ergebnisse<div class="tile-sub">Für Einzelgeräte per Zuschauer</div>
+                </div>
+                <span class="badge">↗</span>
+            </a>
+            <a class="tile c3" href="htmlPages/display.html" target="werace-display" rel="noopener" id="display-link">
+                <div class="tile-label">Anzeigetafel<div class="tile-sub">TV-Modus – rotiert automatisch zwischen
+                        Gruppen</div>
+                </div>
+                <span class="badge">↗</span>
+            </a>
+
+            <div class="link-label" style="margin-top:0.25rem">Kampfrichter</div>
+            <div id="jury-links" style="display:flex;flex-direction:column;gap:0.75rem"></div>
+
+            <div class="link-label" style="margin-top:0.5rem">Kurzanleitung drucken</div>
+            <div class="guide-row">
+                <select class="guide-select" id="guide-select">
+                    <option value="starter">Startbereich</option>
+                    <option value="starterMaintenance">Starter verwalten</option>
+                    <option value="results">Ergebnisse</option>
+                </select>
+                <button class="guide-print-btn" onclick="printGuide()">Drucken ↗</button>
             </div>
-            <span class="badge">↗</span>
-        </a>
-        <a class="tile c3" href="htmlPages/display.html" target="werace-display" rel="noopener">
-            <div class="tile-label">Anzeigetafel<div class="tile-sub">TV-Modus – rotiert automatisch zwischen Gruppen</div>
-            </div>
-            <span class="badge">↗</span>
-        </a>
-
-        <div class="link-label" style="margin-top:0.25rem">Kampfrichter</div>
-        <div id="jury-links" style="display:flex;flex-direction:column;gap:0.75rem"></div>
-
-        <div class="link-label" style="margin-top:0.5rem">Kurzanleitung drucken</div>
-        <div class="guide-row">
-            <select class="guide-select" id="guide-select">
-                <option value="starter">Startbereich</option>
-                <option value="starterMaintenance">Starter verwalten</option>
-                <option value="results">Ergebnisse</option>
-            </select>
-            <button class="guide-print-btn" onclick="printGuide()">Drucken ↗</button>
         </div>
-    </div>
     </div> <!-- /main-content -->
 
     <script>
@@ -400,6 +631,10 @@
 
             // Enable all static tiles now that an event is set
             document.querySelectorAll('a.tile').forEach(t => t.classList.remove('disabled'));
+
+            // Set display link with event ID so TV can open it without localStorage
+            const displayLink = document.getElementById('display-link');
+            if (displayLink) displayLink.href = `htmlPages/display.html?event=${encodeURIComponent(ev.objectId)}`;
 
             document.getElementById('picker-card').style.display = 'none';
             document.getElementById('app-section').style.display = '';

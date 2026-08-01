@@ -257,6 +257,9 @@
 <script>
 const _seedOverride = localStorage.getItem('seedEventOverride');
 if (_seedOverride) CONFIG.eventObjectId = _seedOverride;
+// Allow event to be passed via URL: display.html?event=<objectId>
+const _urlEvent = new URLSearchParams(location.search).get('event');
+if (_urlEvent) CONFIG.eventObjectId = _urlEvent;
 </script>
 <script>
 (async () => {
