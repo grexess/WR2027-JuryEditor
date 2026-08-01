@@ -456,6 +456,25 @@ const ParseAPI = (() => {
         return refereeUpdate({ action: 'setQualiClosed', objectId, qualiClosed });
     }
 
+    function subscribeStarters(onChange) {
+        const ws = new WebSocket(CONFIG.parseLiveQueryUrl);
+        ws.addEventListener('open', () => {
+            ws.send(JSON.stringify({ op: 'connect', applicationId: CONFIG.parseAppId, javascriptKey: CONFIG.parseJsKey }));
+        });
+        ws.addEventListener('message', e => {
+            const msg = JSON.parse(e.data);
+            if (msg.op === 'connected') {
+                ws.send(JSON.stringify({
+                    op: 'subscribe', requestId: 40,
+                    query: { className: 'HT_STARTER', where: {} },
+                }));
+            }
+            if (['create', 'update', 'delete'].includes(msg.op)) onChange(msg);
+        });
+        ws.addEventListener('close', () => setTimeout(() => subscribeStarters(onChange), 3000));
+        return ws;
+    }
+
     function subscribeStartGroups(onChange) {
         const ws = new WebSocket(CONFIG.parseLiveQueryUrl);
         ws.addEventListener('open', () => {
@@ -610,5 +629,5 @@ const ParseAPI = (() => {
         return (data.results ?? []).length > 0;
     }
 
-    return { login, logout, getSessionUser, checkEventAccess, fetchActiveStarter, fetchAllEvents, fetchEvent, fetchJudges, fetchStartGroups, updateStartGroupQualiClosed, subscribeStartGroups, updateStarterStatus, updateEventSettings, createFinal, fetchFinalEntries, fetchAllFinalEntries, subscribeFinalEntries, fetchStarters, saveStarter, deleteStarter, fetchResultsForStarter, deleteResultsForStarter, saveJuryScore, deleteQualiRun, fetchJuryScores, fetchScoreCountByStarter, fetchFinalScoreCountByStarter, fetchAllJuryScores, subscribeAllJuryScores, subscribeJuryScores, publishActiveStarter, subscribeActiveStarter, heartbeat, removePresence, fetchPresence, subscribePresence };
+    return { login, logout, getSessionUser, checkEventAccess, fetchActiveStarter, subscribeStarters, fetchAllEvents, fetchEvent, fetchJudges, fetchStartGroups, updateStartGroupQualiClosed, subscribeStartGroups, updateStarterStatus, updateEventSettings, createFinal, fetchFinalEntries, fetchAllFinalEntries, subscribeFinalEntries, fetchStarters, saveStarter, deleteStarter, fetchResultsForStarter, deleteResultsForStarter, saveJuryScore, deleteQualiRun, fetchJuryScores, fetchScoreCountByStarter, fetchFinalScoreCountByStarter, fetchAllJuryScores, subscribeAllJuryScores, subscribeJuryScores, publishActiveStarter, subscribeActiveStarter, heartbeat, removePresence, fetchPresence, subscribePresence };
 })();

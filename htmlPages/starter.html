@@ -2682,6 +2682,31 @@ tr:last-child td{border-bottom:none}
             refreshFinalEntries();
             ParseAPI.subscribeFinalEntries(refreshFinalEntries);
 
+            // Subscribe to starter changes (add/edit/delete from starterMaintenance)
+            ParseAPI.subscribeStarters(async msg => {
+                const updated = msg.object;
+                if (msg.op === 'create') {
+                    if (!STARTERS.find(s => s.objectId === updated.objectId)) {
+                        STARTERS.push(updated);
+                        START_NUMBERS = STARTERS.map(s => s.startNumber);
+                        drawerStarters = STARTERS;
+                    }
+                } else if (msg.op === 'update') {
+                    const idx = STARTERS.findIndex(s => s.objectId === updated.objectId);
+                    if (idx !== -1) {
+                        STARTERS[idx] = { ...STARTERS[idx], ...updated };
+                        drawerStarters = STARTERS;
+                    }
+                } else if (msg.op === 'delete') {
+                    STARTERS = STARTERS.filter(s => s.objectId !== updated.objectId);
+                    START_NUMBERS = STARTERS.map(s => s.startNumber);
+                    drawerStarters = STARTERS;
+                }
+                renderFilterChips();
+                renderList(filterInput.value);
+                if (document.getElementById('drawer').classList.contains('open')) renderDrawer();
+            });
+
             renderFilterChips();
             renderList('');
         }
