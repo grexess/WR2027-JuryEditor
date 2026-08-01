@@ -48,8 +48,8 @@
         display: flex; flex-direction: column; align-items: center; gap: 0.1rem;
     }
 
-    #top-event { font-size: 1rem; font-weight: 800; color: var(--text); letter-spacing: 0.04em; }
-    #top-group { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
+    #top-event { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.12em; }
+    #top-group { font-size: 1.3rem; font-weight: 900; color: var(--text); letter-spacing: 0.02em; }
 
     #top-right { display: flex; align-items: center; gap: 0.75rem; }
 
@@ -394,38 +394,34 @@ if (_urlEvent) CONFIG.eventObjectId = _urlEvent;
         empty.style.display = 'none';
         document.getElementById('table-wrap').style.display = '';
 
-        // Podium (top 3)
+        // Podium (top 1–3, always shown when results exist)
         const podiumEl = document.getElementById('podium');
         const top3 = results.slice(0, 3);
-        if (top3.length >= 2) {
-            podiumEl.style.display = 'grid';
-            podiumEl.innerHTML = '';
-            top3.forEach(r => {
-                const rankClass = `rank-${r.rank}`;
-                const runsLabel = r.isFinal
-                    ? `${r.finalRuns.length}${r.finalCount ? '/'+r.finalCount : ''} Final-Läufe`
-                    : `${r.qualiRuns.length}${r.qualiCount ? '/'+r.qualiCount : ''} Quali-Läufe`;
-                const card = document.createElement('div');
-                card.className = `podium-card ${rankClass} slide-in`;
-                card.innerHTML = `
-                    <div class="podium-rank">${r.rank}</div>
-                    <div class="podium-info">
-                        <div class="podium-num">#${r.num}</div>
-                        <div class="podium-name">${r.starter?.lastName ?? ''} ${r.starter?.firstName ?? ''}</div>
-                        <div class="podium-group">${r.starter?.startGroup?.name ?? ''}</div>
-                    </div>
-                    <div>
-                        <div class="podium-score">${r.best.toFixed(1)}</div>
-                        <div class="podium-runs">${runsLabel}</div>
-                    </div>`;
-                podiumEl.appendChild(card);
-            });
-        } else {
-            podiumEl.style.display = 'none';
-        }
+        podiumEl.style.display = 'grid';
+        podiumEl.innerHTML = '';
+        top3.forEach(r => {
+            const rankClass = `rank-${Math.min(r.rank, 3)}`;
+            const runsLabel = r.isFinal
+                ? `${r.finalRuns.length}${r.finalCount ? '/'+r.finalCount : ''} Final-Läufe`
+                : `${r.qualiRuns.length}${r.qualiCount ? '/'+r.qualiCount : ''} Quali-Läufe`;
+            const card = document.createElement('div');
+            card.className = `podium-card ${rankClass} slide-in`;
+            card.innerHTML = `
+                <div class="podium-rank">${r.rank}</div>
+                <div class="podium-info">
+                    <div class="podium-num">#${r.num}</div>
+                    <div class="podium-name">${r.starter?.lastName ?? ''} ${r.starter?.firstName ?? ''}</div>
+                    <div class="podium-group">${r.starter?.startGroup?.name ?? ''}</div>
+                </div>
+                <div>
+                    <div class="podium-score">${r.best.toFixed(1)}</div>
+                    <div class="podium-runs">${runsLabel}</div>
+                </div>`;
+            podiumEl.appendChild(card);
+        });
 
-        // Table (rank 4+, or all if < 3)
-        const tableResults = top3.length >= 2 ? results.slice(3) : results;
+        // Table (rank 4+)
+        const tableResults = results.slice(3);
         const tbody = document.getElementById('results-body');
         tbody.innerHTML = '';
         tableResults.forEach(r => {
@@ -446,9 +442,16 @@ if (_urlEvent) CONFIG.eventObjectId = _urlEvent;
     }
 
     // ── Auto-rotation ──
+    const ROTATION_MS = 8000;
+    const ROTATION_EMPTY_MS = 3000;
+
     function startRotation() {
         stopRotation();
         if (startGroups.length <= 1) return;
+
+        const sg = startGroups[currentGroupIdx];
+        const results = sg ? buildResultsForGroup(sg.objectId) : [];
+        const delay = results.length ? ROTATION_MS : ROTATION_EMPTY_MS;
 
         let elapsed = 0;
         const bar = document.getElementById('progress-bar');
@@ -457,7 +460,7 @@ if (_urlEvent) CONFIG.eventObjectId = _urlEvent;
 
         progressInterval = setInterval(() => {
             elapsed += 100;
-            const pct = Math.min((elapsed / ROTATION_MS) * 100, 100);
+            const pct = Math.min((elapsed / delay) * 100, 100);
             bar.style.transition = 'width 0.1s linear';
             bar.style.width = pct + '%';
         }, 100);
@@ -466,7 +469,7 @@ if (_urlEvent) CONFIG.eventObjectId = _urlEvent;
             currentGroupIdx = (currentGroupIdx + 1) % startGroups.length;
             render();
             startRotation();
-        }, ROTATION_MS);
+        }, delay);
     }
 
     function stopRotation() {
