@@ -143,18 +143,30 @@
             margin-top: 0.1rem;
         }
 
-        a.tile.accent .tile-sub {
-            color: color-mix(in srgb, #f78166 60%, #8b949e);
-        }
+        a.tile.c1, a.tile.accent { border-color: #f78166; color: #f78166; }
+        a.tile.c1 .tile-sub, a.tile.accent .tile-sub { color: color-mix(in srgb, #f78166 60%, #8b949e); }
+        a.tile.c2 { border-color: #58a6ff; color: #58a6ff; }
+        a.tile.c2 .tile-sub { color: color-mix(in srgb, #58a6ff 60%, #8b949e); }
+        a.tile.c3 { border-color: #3fb950; color: #3fb950; }
+        a.tile.c3 .tile-sub { color: color-mix(in srgb, #3fb950 60%, #8b949e); }
+        /* Kampfrichter – muted steel family, distinct hues */
+        a.tile.j1 { border-color: #6b8caa; color: #6b8caa; }
+        a.tile.j1 .tile-sub { color: color-mix(in srgb, #6b8caa 60%, #8b949e); }
+        a.tile.j2 { border-color: #7a9e8c; color: #7a9e8c; }
+        a.tile.j2 .tile-sub { color: color-mix(in srgb, #7a9e8c 60%, #8b949e); }
+        a.tile.j3 { border-color: #9a8caa; color: #9a8caa; }
+        a.tile.j3 .tile-sub { color: color-mix(in srgb, #9a8caa 60%, #8b949e); }
+        a.tile.j4 { border-color: #aa9e6b; color: #aa9e6b; }
+        a.tile.j4 .tile-sub { color: color-mix(in srgb, #aa9e6b 60%, #8b949e); }
+        a.tile.j5 { border-color: #6b9e9e; color: #6b9e9e; }
+        a.tile.j5 .tile-sub { color: color-mix(in srgb, #6b9e9e 60%, #8b949e); }
+        a.tile.j6 { border-color: #9e7a8c; color: #9e7a8c; }
+        a.tile.j6 .tile-sub { color: color-mix(in srgb, #9e7a8c 60%, #8b949e); }
+        @media print { a.tile { border-color: #30363d !important; color: #e6edf3 !important; } }
 
         .tile-label {
             display: flex;
             flex-direction: column;
-        }
-
-        a.tile.accent {
-            border-color: #f78166;
-            color: #f78166;
         }
 
         .change-btn {
@@ -256,13 +268,13 @@
         </div>
 
         <div class="link-label">Organisation</div>
-        <a class="tile accent" href="htmlPages/starter.html" target="werace-starter" rel="noopener">
+        <a class="tile c1" href="htmlPages/starter.html" target="werace-starter" rel="noopener">
             <div class="tile-label">Tablet 1: Startbereich<div class="tile-sub">Starten, Drucken, Eventeinstellungen,
                     StarterManagment </div>
             </div>
             <span class="badge">↗</span>
         </a>
-        <a class="tile" href="htmlPages/starterMaintenance.html" target="werace-starter-admin" rel="noopener">
+        <a class="tile c2" href="htmlPages/starterMaintenance.html" target="werace-starter-admin" rel="noopener">
             <div class="tile-label">Tablet 2: Starter-Registrierung<div class="tile-sub">Starter verwalten, neue Starter
                     hinzufügen, bestehende bearbeiten oder löschen
                 </div>
@@ -271,7 +283,7 @@
         </a>
 
         <div class="link-label" style="margin-top:0.25rem">Public</div>
-        <a class="tile" href="htmlPages/results.html" target="werace-results" rel="noopener">
+        <a class="tile c3" href="htmlPages/results.html" target="werace-results" rel="noopener">
             <div class="tile-label">Ergebnisse<div class="tile-sub">Großbildschirm / Zuschauer</div>
             </div>
             <span class="badge">↗</span>
@@ -338,9 +350,10 @@
                 await Promise.all([ParseAPI.fetchEvent(), ParseAPI.fetchJudges()]);
                 juryLinks.innerHTML = '';
 
-                for (const [token, name] of Object.entries(CONFIG.judgeTokens)) {
+                for (const [idx, [token, name]] of Object.entries(CONFIG.judgeTokens).entries()) {
                     const a = document.createElement('a');
-                    a.className = 'tile';
+                    const colorClass = `j${(idx % 6) + 1}`;
+                    a.className = `tile ${colorClass}`;
                     a.href = `htmlPages/jury.html?token=${encodeURIComponent(token)}`;
                     a.target = `werace-jury-${token}`;
                     a.rel = 'noopener';
