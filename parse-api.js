@@ -251,6 +251,10 @@ const ParseAPI = (() => {
         return refereeUpdate({ action: 'publishActiveStarter', startNumber, runNumber, phase });
     }
 
+    async function clearActiveStarter() {
+        return refereeUpdate({ action: 'clearActiveStarter' });
+    }
+
     function subscribeActiveStarter(onStartNumber, onReconnect) {
         const ws = new WebSocket(CONFIG.parseLiveQueryUrl);
         let requestId = 1;
@@ -630,5 +634,5 @@ const ParseAPI = (() => {
         return (data.results ?? []).length > 0;
     }
 
-    return { login, logout, getSessionUser, checkEventAccess, fetchActiveStarter, subscribeStarters, fetchAllEvents, fetchEvent, fetchJudges, fetchStartGroups, updateStartGroupQualiClosed, subscribeStartGroups, updateStarterStatus, updateEventSettings, createFinal, fetchFinalEntries, fetchAllFinalEntries, subscribeFinalEntries, fetchStarters, saveStarter, deleteStarter, fetchResultsForStarter, deleteResultsForStarter, saveJuryScore, deleteQualiRun, fetchJuryScores, fetchScoreCountByStarter, fetchFinalScoreCountByStarter, fetchAllJuryScores, subscribeAllJuryScores, subscribeJuryScores, publishActiveStarter, subscribeActiveStarter, heartbeat, removePresence, fetchPresence, subscribePresence };
+    return { login, logout, getSessionUser, checkEventAccess, fetchActiveStarter, clearActiveStarter, subscribeStarters, fetchAllEvents, fetchEvent, fetchJudges, fetchStartGroups, updateStartGroupQualiClosed, subscribeStartGroups, updateStarterStatus, updateEventSettings, createFinal, fetchFinalEntries, fetchAllFinalEntries, subscribeFinalEntries, fetchStarters, saveStarter, deleteStarter, fetchResultsForStarter, deleteResultsForStarter, saveJuryScore, deleteQualiRun, fetchJuryScores, fetchScoreCountByStarter, fetchFinalScoreCountByStarter, fetchAllJuryScores, subscribeAllJuryScores, subscribeJuryScores, publishActiveStarter, subscribeActiveStarter, heartbeat, removePresence, fetchPresence, subscribePresence };
 })();

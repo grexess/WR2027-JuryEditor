@@ -1578,6 +1578,7 @@
                     drawerRunCounts[completedStarter] = runCounts[completedStarter];
                 }
             }
+            ParseAPI.clearActiveStarter().catch(() => {});
             activeStarter = null;
             juryScores = {};
             filterDone = false;
