@@ -257,12 +257,15 @@
 
         <div class="link-label">Organisation</div>
         <a class="tile accent" href="htmlPages/starter.html" target="werace-starter" rel="noopener">
-            <div class="tile-label">Startbereich<div class="tile-sub">Tablet am Startbereich</div>
+            <div class="tile-label">Tablet 1: Startbereich<div class="tile-sub">Starten, Drucken, Eventeinstellungen,
+                    StarterManagment </div>
             </div>
             <span class="badge">↗</span>
         </a>
         <a class="tile" href="htmlPages/starterMaintenance.html" target="werace-starter-admin" rel="noopener">
-            <div class="tile-label">Starter verwalten<div class="tile-sub">Starternummern &amp; Daten</div>
+            <div class="tile-label">Tablet 2: Starter-Registrierung<div class="tile-sub">Starter verwalten, neue Starter
+                    hinzufügen, bestehende bearbeiten oder löschen
+                </div>
             </div>
             <span class="badge">↗</span>
         </a>
@@ -322,7 +325,7 @@
             document.getElementById('picker-card').style.display = 'none';
             document.getElementById('app-section').style.display = '';
             document.getElementById('selected-event-name').textContent = ev.name;
-            document.title = `${ev.name} – Start`;
+            document.title = `${ev.name} – Übersicht`;
 
             // remove previously added jury options from guide select
             const sel = document.getElementById('guide-select');
@@ -386,13 +389,14 @@
                 starter: {
                     icon: '🎤',
                     steps: [
-                        'Öffne diese Seite auf dem Tablet am Startbereich.',
-                        'Wähle oben das aktuelle Event aus.',
-                        'Tippe auf <b>Startbereich</b> – die App öffnet sich.',
-                        'Sobald ein Starter bereit ist, tippe auf seinen Namen in der Liste.',
-                        'Bestätige mit <b>Starten</b> – die Zeit läuft automatisch.',
-                        'Bei einem Fehlstart: tippe auf <b>Abbrechen</b> und wiederhole den Vorgang.',
-                        'Das Tablet immer aufgeladen und mit WLAN verbunden halten.',
+                        'Öffne die Seite und wähle das aktuelle Event aus – dann auf <b>Startbereich</b> tippen.',
+                        '<b>Starter starten:</b> Starter in der Liste antippen → <b>Jetzt starten</b>. Warte, bis alle Kampfrichter gewertet haben, dann <b>Nächster Starter</b>.',
+                        '<b>Filtern:</b> Oben nach Gruppe, Startnummer oder Laufanzahl filtern. Mit <b>✓ Fertig</b> bereits abgeschlossene Starter einblenden.',
+                        '<b>Qualifikation → Finale:</b> Sobald alle Starter einer Gruppe fertig sind, wird automatisch ein Finale erstellt. Oben dann auf <b>Finale</b> wechseln.',
+                        '<b>Verwaltung (⚙):</b> Drawer oben rechts öffnen für Starter-Status (DQ, entfernen), Gruppen manuell schließen / Finale erstellen und Druckfunktionen.',
+                        '<b>Event-Einstellungen:</b> Im Drawer unter «Event-Einstellungen» Anzahl Quali- und Finalläufe, Finalisten-Anzahl und Bewertungskriterien anpassen.',
+                        'Kampfrichter-Status wird oben live angezeigt – grüner Punkt = online. Erst wenn alle online sind, kann ein Starter ausgewählt werden.',
+                        'Tablet immer aufgeladen und mit WLAN verbunden halten.',
                     ]
                 },
                 starterMaintenance: {
@@ -409,13 +413,12 @@
                 },
                 results: {
                     icon: '🏆',
+                    poster: true,
                     steps: [
-                        'Öffne diese Seite auf dem Großbildschirm-Gerät oder Zuschauer-Tablet.',
-                        'Wähle das aktuelle Event aus.',
-                        'Tippe auf <b>Ergebnisse</b> – die Rangliste öffnet sich.',
-                        'Die Liste aktualisiert sich automatisch nach jeder Wertung.',
-                        'Oben kann zwischen Qualifikation und Finale gewechselt werden.',
-                        'Das Gerät mit dem Bildschirm verbunden und Seite offen lassen.',
+                        'Scanne den QR-Code mit deinem Smartphone.',
+                        'Die Ergebnisliste öffnet sich direkt im Browser – keine App nötig.',
+                        'Die Rangliste aktualisiert sich automatisch nach jeder Wertung.',
+                        'Oben kannst du zwischen Qualifikation und Finale wechseln.',
                     ]
                 },
                 jury: {
@@ -437,12 +440,67 @@
 
             const roleKey = role.startsWith('jury:') ? 'jury' : role;
             const guide = guides[roleKey] || guides.jury;
-            const steps = guide.steps
-                .map((s, i) => `<li><span class="num">${i + 1}</span><span>${s}</span></li>`)
-                .join('');
             const url = role.startsWith('jury:')
                 ? `${location.origin}${location.pathname.replace('index.html', '')}htmlPages/jury.html?token=${encodeURIComponent(role.slice(5))}`
                 : `${location.origin}${location.pathname.replace('index.html', '')}htmlPages/${role}.html`;
+            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(url)}`;
+
+            if (guide.poster) {
+                const steps = guide.steps
+                    .map(s => `<li>${s}</li>`)
+                    .join('');
+                return `<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Ergebnisse – ${eventName}</title>
+<style>
+  @page { size: A4; margin: 14mm 14mm 14mm 14mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #1a1a2e; height: 100%; }
+  .sheet { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 0.8rem; }
+  .header { border-bottom: 3px solid #e05b3a; padding-bottom: 0.6rem; width: 100%; }
+  .icon { font-size: 2.2rem; line-height: 1; }
+  .title { font-size: 1.6rem; font-weight: 800; color: #e05b3a; margin-top: 0.3rem; }
+  .subtitle { font-size: 0.85rem; color: #666; }
+  .event-badge { display: inline-block; background: #f3f3f3; border: 1px solid #ddd; border-radius: 6px; padding: 0.2rem 0.7rem; font-size: 0.75rem; color: #555; }
+  .qr-wrap { background: #fff; border: 2px solid #e05b3a; border-radius: 12px; padding: 10px; display: inline-block; }
+  .qr-img { width: 200px; height: 200px; display: block; }
+  .cta { font-size: 1.05rem; font-weight: 700; color: #1a1a2e; }
+  ol { list-style: none; display: flex; flex-direction: column; gap: 0.4rem; text-align: left; width: 100%; }
+  li { font-size: 0.9rem; color: #444; padding-left: 1.2rem; position: relative; line-height: 1.4; }
+  li::before { content: '→'; position: absolute; left: 0; color: #e05b3a; font-weight: 700; }
+  .url { font-size: 0.7rem; color: #999; word-break: break-all; margin-top: 0.2rem; }
+  .footer { font-size: 0.6rem; color: #bbb; margin-top: 0.4rem; }
+<\/style>
+</head>
+<body>
+<div class="sheet">
+  <div class="header">
+    <div class="icon">${guide.icon}</div>
+    <div class="title">Live-Ergebnisse</div>
+    <div class="subtitle">Jetzt die Rangliste auf deinem Smartphone verfolgen</div>
+  </div>
+  <div class="event-badge">Event: ${eventName}</div>
+  <div class="cta">QR-Code scannen &amp; Ergebnisse live verfolgen</div>
+  <div class="qr-wrap">
+    <img class="qr-img" src="${qrUrl}" alt="QR-Code" id="qr">
+  </div>
+  <ol>${steps}</ol>
+  <div class="url">${url}</div>
+  <div class="footer">WeRace · gedruckt ${new Date().toLocaleDateString('de-DE')}</div>
+</div>
+<script>
+  document.getElementById('qr').addEventListener('load', () => window.print());
+  document.getElementById('qr').addEventListener('error', () => window.print());
+<\/script>
+</body>
+</html>`;
+            }
+
+            const steps = guide.steps
+                .map((s, i) => `<li><span class="num">${i + 1}</span><span>${s}</span></li>`)
+                .join('');
 
             return `<!DOCTYPE html>
 <html lang="de">
@@ -464,7 +522,10 @@
   .num { background: #e05b3a; color: #fff; font-weight: 800; font-size: 0.75rem; border-radius: 50%; min-width: 1.4rem; height: 1.4rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 0.05rem; }
   .url-box { margin-top: 1.4rem; border: 1px dashed #ccc; border-radius: 8px; padding: 0.6rem 0.8rem; }
   .url-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.08em; color: #999; margin-bottom: 0.25rem; }
+  .url-row { display: flex; align-items: center; gap: 1rem; }
+  .url-text { flex: 1; min-width: 0; }
   .url { font-size: 0.8rem; color: #333; word-break: break-all; }
+  .qr-img { width: 110px; height: 110px; flex-shrink: 0; display: block; border-radius: 4px; }
   .footer { margin-top: 1.6rem; font-size: 0.65rem; color: #aaa; text-align: right; }
 </style>
 </head>
@@ -481,10 +542,17 @@
   <ol>${steps}</ol>
   <div class="url-box">
     <div class="url-label">URL für dieses Gerät</div>
-    <div class="url">${url}</div>
+    <div class="url-row">
+      <div class="url-text"><div class="url">${url}</div></div>
+      <img class="qr-img" src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(url)}" alt="QR-Code" id="qr">
+    </div>
   </div>
   <div class="footer">WeRace · gedruckt ${new Date().toLocaleDateString('de-DE')}</div>
 </div>
+<script>
+  document.getElementById('qr').addEventListener('load', () => window.print());
+  document.getElementById('qr').addEventListener('error', () => window.print());
+<\/script>
 </body>
 </html>`;
         }

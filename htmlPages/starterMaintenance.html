@@ -217,8 +217,15 @@
             color: var(--text);
         }
 
-        th.sort-asc::after  { content: ' ▲'; color: var(--accent); }
-        th.sort-desc::after { content: ' ▼'; color: var(--accent); }
+        th.sort-asc::after {
+            content: ' ▲';
+            color: var(--accent);
+        }
+
+        th.sort-desc::after {
+            content: ' ▼';
+            color: var(--accent);
+        }
 
         td.results-badge {
             font-size: 0.75rem;
@@ -277,7 +284,6 @@
             min-height: 1.2rem;
             margin-bottom: 0.5rem;
         }
-
     </style>
 </head>
 
@@ -378,7 +384,8 @@
                 <button class="modal-cancel" id="form-cancel">← Abbrechen</button>
                 <button class="modal-confirm" id="form-save">✓ Speichern</button>
             </div>
-            <div id="form-err" style="font-size:0.82rem;color:#e74c3c;text-align:center;min-height:1.1rem;margin-top:0.5rem"></div>
+            <div id="form-err"
+                style="font-size:0.82rem;color:#e74c3c;text-align:center;min-height:1.1rem;margin-top:0.5rem"></div>
         </div>
     </div>
 
@@ -398,8 +405,10 @@
     <div class="modal-backdrop" id="del-results-backdrop">
         <div class="modal">
             <div class="modal-title" style="color:#e74c3c">Starter mit Ergebnissen löschen?</div>
-            <div id="del-results-name" style="text-align:center;margin:0.75rem 0;font-size:1.1rem;font-weight:700"></div>
-            <div id="del-results-info" style="text-align:center;color:var(--muted);font-size:0.85rem;margin-bottom:1rem"></div>
+            <div id="del-results-name" style="text-align:center;margin:0.75rem 0;font-size:1.1rem;font-weight:700">
+            </div>
+            <div id="del-results-info"
+                style="text-align:center;color:var(--muted);font-size:0.85rem;margin-bottom:1rem"></div>
             <div style="text-align:center;font-size:0.85rem;color:#e74c3c;margin-bottom:1rem">
                 Alle zugehörigen Wertungen und Finaleinträge werden unwiderruflich gelöscht.
             </div>
@@ -450,11 +459,11 @@
         function sortValue(s, col) {
             switch (col) {
                 case 'startNumber': return s.startNumber ?? 0;
-                case 'lastName':    return (s.lastName ?? '').toLowerCase();
-                case 'firstName':   return (s.firstName ?? '').toLowerCase();
-                case 'gender':      return (GENDER_LABEL[s.gender] ?? '').toLowerCase();
-                case 'birthday':    return s.birthday?.iso ?? s.birthday ?? '';
-                case 'startGroup':  return (s.startGroup?.name ?? '').toLowerCase();
+                case 'lastName': return (s.lastName ?? '').toLowerCase();
+                case 'firstName': return (s.firstName ?? '').toLowerCase();
+                case 'gender': return (GENDER_LABEL[s.gender] ?? '').toLowerCase();
+                case 'birthday': return s.birthday?.iso ?? s.birthday ?? '';
+                case 'startGroup': return (s.startGroup?.name ?? '').toLowerCase();
                 case 'results': { const sc = scoreMap[s.startNumber] ?? { quali: 0, final: 0 }; return sc.quali + sc.final; }
                 default: return '';
             }
@@ -532,8 +541,8 @@
         }
 
         async function loadStarters() {
-            await ParseAPI.fetchEvent().catch(() => {});
-            document.title = `${CONFIG.eventName} – Starter Verwaltung`;
+            await ParseAPI.fetchEvent().catch(() => { });
+            document.title = `${CONFIG.eventName} – Registrierung`;
             setStatus('Lade Starter …');
             try {
                 const [starters, groups, qualiMap, finalMap] = await Promise.all([
@@ -639,13 +648,13 @@
         // ── delete ──
         tableBody.addEventListener('click', e => {
             const editBtn = e.target.closest('.icon-btn.edit');
-            const delBtn  = e.target.closest('.icon-btn.del');
+            const delBtn = e.target.closest('.icon-btn.del');
             if (editBtn) {
                 const s = allStarters.find(x => x.objectId === editBtn.dataset.id);
                 if (s) openForm(s);
             }
             if (delBtn) {
-                deleteId   = delBtn.dataset.id;
+                deleteId = delBtn.dataset.id;
                 deleteName = delBtn.dataset.name;
                 const sc = scoreMap[delBtn.dataset.num] ?? { quali: 0, final: 0 };
                 if (sc.quali || sc.final) {
