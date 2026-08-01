@@ -25,6 +25,25 @@
             <div class="header-value" id="judgeid">—</div>
         </div>
     </header>
+    <div id="session-warning" style="
+        display:none; position:fixed; inset:0; z-index:600;
+        background:rgba(0,0,0,0.82); align-items:center; justify-content:center; padding:1.5rem;">
+        <div style="
+            background:var(--card); border:2px solid #e3a007; border-radius:14px;
+            max-width:320px; width:100%; padding:1.5rem; text-align:center;">
+            <div style="font-size:2rem;margin-bottom:0.5rem">⚠️</div>
+            <div style="font-size:1rem;font-weight:800;color:#e3a007;margin-bottom:0.5rem">Doppelte Anmeldung</div>
+            <div style="font-size:0.85rem;color:var(--muted);margin-bottom:1.25rem;line-height:1.5">
+                Dieser Kampfrichter-Zugang ist auf einem anderen Gerät oder Tab geöffnet.<br>
+                Wertungen sollten nur von <b>einem</b> Gerät abgegeben werden.
+            </div>
+            <button id="session-warning-dismiss" style="
+                width:100%; padding:0.75rem; border-radius:10px; border:none;
+                background:#e3a007; color:#000; font-size:0.95rem; font-weight:700; cursor:pointer;">
+                Trotzdem fortfahren
+            </button>
+        </div>
+    </div>
     <div class="waiting" id="waiting">
         <div class="waiting-dots">
             <div class="waiting-dot"></div>
@@ -100,12 +119,29 @@
             document.getElementById('judgeid').textContent = judgeName;
             document.title = `${CONFIG.eventName} – Wertung ${judgeName}`;
 
-        // Heartbeat — announces this judge is online, refreshes every 30 s
-        ParseAPI.heartbeat(judgeName);
-        const _heartbeatTimer = setInterval(() => ParseAPI.heartbeat(judgeName), 15000);
+        // Heartbeat — announces this judge is online, refreshes every 15 s
+        // sessionId detects concurrent tabs/devices using the same token
+        const _sessionId = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+        let _sessionWarned = false;
+
+        async function runHeartbeat() {
+            const prevSessionId = await ParseAPI.heartbeat(judgeName, _sessionId);
+            if (!_sessionWarned && prevSessionId && prevSessionId !== _sessionId) {
+                _sessionWarned = true;
+                document.getElementById('session-warning').style.display = 'flex';
+            }
+        }
+
+        runHeartbeat();
+        const _heartbeatTimer = setInterval(runHeartbeat, 15000);
         window.addEventListener('pagehide', () => {
             clearInterval(_heartbeatTimer);
             ParseAPI.removePresence(judgeName);
+        });
+
+        document.getElementById('session-warning-dismiss').addEventListener('click', () => {
+            _sessionWarned = false;
+            document.getElementById('session-warning').style.display = 'none';
         });
 
         if (!startNum) {

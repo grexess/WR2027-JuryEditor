@@ -297,7 +297,7 @@ const ParseAPI = (() => {
 
     const PRESENCE_STALE_MS = CONFIG.presenceStalMs;
 
-    async function heartbeat(judgeName) {
+    async function heartbeat(judgeName, sessionId) {
         const eventPtr = { __type: 'Pointer', className: 'HT_EVENT', objectId: CONFIG.eventObjectId };
         const where = JSON.stringify({ judgeName, event: eventPtr });
         const existing = await fetch(
@@ -305,14 +305,20 @@ const ParseAPI = (() => {
             { headers: readHeaders() }
         );
         const { results } = await existing.json();
-        const body = { lastSeen: { __type: 'Date', iso: new Date().toISOString() } };
+        const body = {
+            lastSeen: { __type: 'Date', iso: new Date().toISOString() },
+            ...(sessionId ? { sessionId } : {}),
+        };
 
         if (results?.length) {
             await fetch(`${CONFIG.parseServerUrl}/classes/HT_JURYPRESENCE/${results[0].objectId}`,
                 { method: 'PUT', headers: writeHeaders(), body: JSON.stringify(body) });
+            // Return the sessionId currently stored so callers can detect displacement
+            return results[0].sessionId ?? null;
         } else {
             await fetch(`${CONFIG.parseServerUrl}/classes/HT_JURYPRESENCE`,
                 { method: 'POST', headers: writeHeaders(), body: JSON.stringify({ ...body, judgeName, event: eventPtr }) });
+            return sessionId ?? null;
         }
     }
 
