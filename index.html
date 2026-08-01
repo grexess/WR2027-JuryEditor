@@ -182,6 +182,50 @@
                 transform: rotate(360deg);
             }
         }
+
+        .guide-row {
+            display: flex;
+            gap: 0.5rem;
+            align-items: stretch;
+        }
+
+        .guide-select {
+            flex: 1;
+            padding: 0.65rem 0.8rem;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 10px;
+            color: #e6edf3;
+            font-size: 0.9rem;
+            outline: none;
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238b949e' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.75rem center;
+            padding-right: 2rem;
+        }
+
+        .guide-select:focus {
+            border-color: #8b949e;
+        }
+
+        .guide-print-btn {
+            padding: 0.65rem 1rem;
+            background: #21262d;
+            border: 1px solid #30363d;
+            border-radius: 10px;
+            color: #e6edf3;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: background 0.1s;
+        }
+
+        .guide-print-btn:active {
+            background: #30363d;
+        }
     </style>
     <script src="config.js"></script>
     <script>
@@ -232,6 +276,16 @@
 
         <div class="link-label" style="margin-top:0.25rem">Kampfrichter</div>
         <div id="jury-links" style="display:flex;flex-direction:column;gap:0.75rem"></div>
+
+        <div class="link-label" style="margin-top:0.5rem">Kurzanleitung drucken</div>
+        <div class="guide-row">
+            <select class="guide-select" id="guide-select">
+                <option value="starter">Startbereich</option>
+                <option value="starterMaintenance">Starter verwalten</option>
+                <option value="results">Ergebnisse</option>
+            </select>
+            <button class="guide-print-btn" onclick="printGuide()">Drucken ↗</button>
+        </div>
     </div>
 
     <script>
@@ -270,6 +324,10 @@
             document.getElementById('selected-event-name').textContent = ev.name;
             document.title = `${ev.name} – Start`;
 
+            // remove previously added jury options from guide select
+            const sel = document.getElementById('guide-select');
+            Array.from(sel.options).filter(o => o.value.startsWith('jury:')).forEach(o => o.remove());
+
             // Load judges for this event
             const juryLinks = document.getElementById('jury-links');
             juryLinks.innerHTML = '<div class="spinner"></div>';
@@ -285,6 +343,13 @@
                     a.rel = 'noopener';
                     a.innerHTML = `<div class="tile-label">Wertung – ${name}<div class="tile-sub">Tablet Kampfrichter</div></div> <span class="badge">↗</span>`;
                     juryLinks.appendChild(a);
+
+                    // add option to guide select
+                    const sel = document.getElementById('guide-select');
+                    const opt = document.createElement('option');
+                    opt.value = `jury:${token}`;
+                    opt.textContent = `Kampfrichter – ${name}`;
+                    sel.appendChild(opt);
                 }
             } catch {
                 juryLinks.innerHTML = '<div style="color:#f78166;font-size:0.9rem">Fehler beim Laden der Kampfrichter</div>';
@@ -302,6 +367,127 @@
             selectEvent({ objectId: CONFIG.eventObjectId, name: CONFIG.eventName });
         }
         loadEvents();
+
+        function printGuide() {
+            const sel = document.getElementById('guide-select');
+            const value = sel.value;
+            const label = sel.options[sel.selectedIndex].text;
+            const eventName = CONFIG.eventName || 'WeRace';
+            const html = generateGuideHTML(value, label, eventName);
+            const w = window.open('', '_blank', 'width=800,height=1000');
+            w.document.write(html);
+            w.document.close();
+            w.focus();
+            w.print();
+        }
+
+        function generateGuideHTML(role, label, eventName) {
+            const guides = {
+                starter: {
+                    icon: '🎤',
+                    steps: [
+                        'Öffne diese Seite auf dem Tablet am Startbereich.',
+                        'Wähle oben das aktuelle Event aus.',
+                        'Tippe auf <b>Startbereich</b> – die App öffnet sich.',
+                        'Sobald ein Starter bereit ist, tippe auf seinen Namen in der Liste.',
+                        'Bestätige mit <b>Starten</b> – die Zeit läuft automatisch.',
+                        'Bei einem Fehlstart: tippe auf <b>Abbrechen</b> und wiederhole den Vorgang.',
+                        'Das Tablet immer aufgeladen und mit WLAN verbunden halten.',
+                    ]
+                },
+                starterMaintenance: {
+                    icon: '📋',
+                    steps: [
+                        'Öffne diese Seite auf dem Verwaltungs-Gerät.',
+                        'Wähle das aktuelle Event aus.',
+                        'Tippe auf <b>Starter verwalten</b>.',
+                        'Zum Hinzufügen: tippe auf <b>+ Neu</b>, trage Name und Startnummer ein, speichern.',
+                        'Zum Bearbeiten: tippe auf einen vorhandenen Starter, ändere die Daten, speichern.',
+                        'Zum Löschen: Starter antippen und <b>Löschen</b> wählen – Bestätigung beachten.',
+                        'Änderungen sind sofort für alle Geräte sichtbar.',
+                    ]
+                },
+                results: {
+                    icon: '🏆',
+                    steps: [
+                        'Öffne diese Seite auf dem Großbildschirm-Gerät oder Zuschauer-Tablet.',
+                        'Wähle das aktuelle Event aus.',
+                        'Tippe auf <b>Ergebnisse</b> – die Rangliste öffnet sich.',
+                        'Die Liste aktualisiert sich automatisch nach jeder Wertung.',
+                        'Oben kann zwischen Qualifikation und Finale gewechselt werden.',
+                        'Das Gerät mit dem Bildschirm verbunden und Seite offen lassen.',
+                    ]
+                },
+                jury: {
+                    icon: '🏅',
+                    steps: [
+                        'Öffne diese Seite auf dem Kampfrichter-Tablet.',
+                        'Wähle das aktuelle Event aus.',
+                        'Tippe auf deinen Namen unter <b>Kampfrichter</b>.',
+                        'Warte, bis eine Startnummer angezeigt wird – du kannst dann mit der Wertung beginnen.',
+                        'Vergebe Punkte für jede Kategorie per Tastatur oder Numpad.',
+                        'Tippe auf <b>Bestätigen</b> – ein Dialog zur Überprüfung erscheint.',
+                        'Prüfe die Summe und bestätige erneut. Die Wertung wird gespeichert.',
+                        'Danach erscheint automatisch die nächste Startnummer.',
+                        'Bei einem Fehler: tippe <b>Zurück</b> und korrigiere die Eingabe.',
+                        'Das Tablet immer aufgeladen und mit WLAN verbunden halten.',
+                    ]
+                }
+            };
+
+            const roleKey = role.startsWith('jury:') ? 'jury' : role;
+            const guide = guides[roleKey] || guides.jury;
+            const steps = guide.steps
+                .map((s, i) => `<li><span class="num">${i + 1}</span><span>${s}</span></li>`)
+                .join('');
+            const url = role.startsWith('jury:')
+                ? `${location.origin}${location.pathname.replace('index.html', '')}htmlPages/jury.html?token=${encodeURIComponent(role.slice(5))}`
+                : `${location.origin}${location.pathname.replace('index.html', '')}htmlPages/${role}.html`;
+
+            return `<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Kurzanleitung – ${label}</title>
+<style>
+  @page { size: A4; margin: 18mm 18mm 18mm 18mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #1a1a2e; }
+  .sheet { max-width: 175mm; }
+  .header { display: flex; align-items: center; gap: 0.75rem; border-bottom: 2px solid #e05b3a; padding-bottom: 0.6rem; margin-bottom: 1.2rem; }
+  .icon { font-size: 2rem; line-height: 1; }
+  .title { font-size: 1.4rem; font-weight: 800; color: #e05b3a; }
+  .subtitle { font-size: 0.75rem; color: #666; margin-top: 0.1rem; }
+  .event-badge { display: inline-block; background: #f3f3f3; border: 1px solid #ddd; border-radius: 6px; padding: 0.15rem 0.5rem; font-size: 0.7rem; color: #555; margin-bottom: 1rem; }
+  ol { list-style: none; display: flex; flex-direction: column; gap: 0.6rem; }
+  li { display: flex; gap: 0.75rem; align-items: flex-start; font-size: 0.95rem; line-height: 1.4; }
+  .num { background: #e05b3a; color: #fff; font-weight: 800; font-size: 0.75rem; border-radius: 50%; min-width: 1.4rem; height: 1.4rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 0.05rem; }
+  .url-box { margin-top: 1.4rem; border: 1px dashed #ccc; border-radius: 8px; padding: 0.6rem 0.8rem; }
+  .url-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.08em; color: #999; margin-bottom: 0.25rem; }
+  .url { font-size: 0.8rem; color: #333; word-break: break-all; }
+  .footer { margin-top: 1.6rem; font-size: 0.65rem; color: #aaa; text-align: right; }
+</style>
+</head>
+<body>
+<div class="sheet">
+  <div class="header">
+    <span class="icon">${guide.icon}</span>
+    <div>
+      <div class="title">${label}</div>
+      <div class="subtitle">Kurzanleitung</div>
+    </div>
+  </div>
+  <div class="event-badge">Event: ${eventName}</div>
+  <ol>${steps}</ol>
+  <div class="url-box">
+    <div class="url-label">URL für dieses Gerät</div>
+    <div class="url">${url}</div>
+  </div>
+  <div class="footer">WeRace · gedruckt ${new Date().toLocaleDateString('de-DE')}</div>
+</div>
+</body>
+</html>`;
+        }
     </script>
 </body>
 
