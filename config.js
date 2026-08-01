@@ -15,8 +15,8 @@ const CONFIG = (() => {
         judgeTokens: {},
 
         // Operational defaults — overridden by values from the Event object once loaded
-        presenceStalMs: 70000,
-        presencePollMs: 30000,
+        presenceStalMs: 45000,
+        presencePollMs: 15000,
         qualiRuns: null,
         finalRuns: null,
         bestOf: 8,

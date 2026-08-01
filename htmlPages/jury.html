@@ -147,7 +147,13 @@
         }
 
         // Live Query — receives starter from any device via Parse
-        ParseAPI.subscribeActiveStarter(onNewStarter);
+        ParseAPI.subscribeActiveStarter(onNewStarter, async () => {
+            // On reconnect: fetch current active starter in case we missed an update
+            const active = await ParseAPI.fetchActiveStarter();
+            if (active?.startNumber != null) {
+                onNewStarter(active.startNumber, active.runNumber ?? 1, active.phase ?? 'quali');
+            }
+        });
 
         // BroadcastChannel — fallback for same-device tabs
         const starterChannel = new BroadcastChannel('werace-starter');
@@ -244,8 +250,10 @@
         }
 
         function openModal() {
-            document.getElementById('modal-startnum').textContent = startNum;
+            const frozenStartNum = startNum; // freeze at modal-open time — startNum may change on reconnect
+            document.getElementById('modal-startnum').textContent = frozenStartNum;
             document.getElementById('modal-startnum').style.cssText = 'color:var(--accent);font-size:1.4em;font-weight:800;';
+            document.getElementById('modal-backdrop').dataset.startNum = frozenStartNum;
             const rows = document.getElementById('modal-rows');
             rows.innerHTML = '';
             for (const c of CRITERIA) {
@@ -267,9 +275,10 @@
         });
 
         document.getElementById('modal-confirm').addEventListener('click', async () => {
+            const confirmedStartNum = document.getElementById('modal-backdrop').dataset.startNum ?? startNum;
             document.getElementById('modal-backdrop').classList.remove('open');
             try {
-                await saveScore(startNum, judgeName, scores);
+                await saveScore(confirmedStartNum, judgeName, scores);
             } catch (e) {
                 document.getElementById('error-message').textContent = e.message;
                 document.getElementById('error-backdrop').classList.add('open');

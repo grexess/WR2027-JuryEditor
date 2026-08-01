@@ -720,7 +720,9 @@
             user-select: none;
         }
 
-        .print-panel-hdr:active { background: var(--border); }
+        .print-panel-hdr:active {
+            background: var(--border);
+        }
 
         .print-panel-title {
             font-size: 0.8rem;
@@ -734,14 +736,18 @@
             transition: transform 0.2s;
         }
 
-        .print-panel.open .print-panel-chevron { transform: rotate(180deg); }
+        .print-panel.open .print-panel-chevron {
+            transform: rotate(180deg);
+        }
 
         .print-panel-body {
             display: none;
             border-top: 1px solid var(--border);
         }
 
-        .print-panel.open .print-panel-body { display: block; }
+        .print-panel.open .print-panel-body {
+            display: block;
+        }
 
         .print-group-select {
             width: calc(100% - 1.5rem);
@@ -781,26 +787,111 @@
             transition: border-color 0.15s, background 0.15s;
         }
 
-        .print-btn:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); }
-        .print-btn:active { opacity: 0.75; }
+        .print-btn:hover {
+            border-color: var(--accent);
+            background: color-mix(in srgb, var(--accent) 8%, transparent);
+        }
+
+        .print-btn:active {
+            opacity: 0.75;
+        }
 
         .print-btn-icon {
             font-size: 1.1rem;
         }
+
         /* override jury.css header layout for true center */
-        header { display:grid; grid-template-columns:1fr auto 1fr; align-items:center; }
-        header > :first-child { text-align:left; }
-        header > :last-child { display:flex; align-items:center; gap:0.5rem; justify-content:flex-end; }
+        header {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            align-items: center;
+        }
+
+        header> :first-child {
+            text-align: left;
+        }
+
+        header> :last-child {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            justify-content: flex-end;
+        }
+
         /* ── Avatar menu ── */
-        .avatar-wrap { position:relative; }
-        .avatar { width:2rem;height:2rem;border-radius:50%;background:#e05b3a;color:#fff;font-size:0.8rem;font-weight:800;display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none;flex-shrink:0;border:2px solid transparent;transition:border-color 0.15s; }
-        .avatar:hover { border-color:#e05b3a44; }
-        .avatar-menu { position:absolute;top:calc(100% + 0.5rem);right:0;background:var(--card);border:1px solid var(--border);border-radius:10px;min-width:160px;box-shadow:0 8px 24px rgba(0,0,0,0.5);z-index:400;display:none;overflow:hidden; }
-        .avatar-menu.open { display:block; }
-        .avatar-menu-user { padding:0.6rem 0.85rem;font-size:0.75rem;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
-        .avatar-menu-item { display:flex;align-items:center;gap:0.5rem;padding:0.6rem 0.85rem;font-size:0.85rem;font-weight:600;color:var(--text);cursor:pointer;transition:background 0.1s; }
-        .avatar-menu-item:hover { background:var(--border); }
-        .avatar-menu-item.danger { color:var(--accent); }
+        .avatar-wrap {
+            position: relative;
+        }
+
+        .avatar {
+            width: 2rem;
+            height: 2rem;
+            border-radius: 50%;
+            background: #e05b3a;
+            color: #fff;
+            font-size: 0.8rem;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            flex-shrink: 0;
+            border: 2px solid transparent;
+            transition: border-color 0.15s;
+        }
+
+        .avatar:hover {
+            border-color: #e05b3a44;
+        }
+
+        .avatar-menu {
+            position: absolute;
+            top: calc(100% + 0.5rem);
+            right: 0;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            min-width: 160px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+            z-index: 400;
+            display: none;
+            overflow: hidden;
+        }
+
+        .avatar-menu.open {
+            display: block;
+        }
+
+        .avatar-menu-user {
+            padding: 0.6rem 0.85rem;
+            font-size: 0.75rem;
+            color: var(--muted);
+            border-bottom: 1px solid var(--border);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .avatar-menu-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.6rem 0.85rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text);
+            cursor: pointer;
+            transition: background 0.1s;
+        }
+
+        .avatar-menu-item:hover {
+            background: var(--border);
+        }
+
+        .avatar-menu-item.danger {
+            color: var(--accent);
+        }
     </style>
 </head>
 
@@ -871,7 +962,8 @@
             background:var(--card);border:1px solid var(--border);border-radius:14px;
             max-width:340px;width:100%;padding:1.5rem;text-align:center">
             <div style="font-size:1.8rem;margin-bottom:0.5rem">🏁</div>
-            <div style="font-size:1rem;font-weight:800;color:var(--text);margin-bottom:0.4rem" id="final-confirm-title"></div>
+            <div style="font-size:1rem;font-weight:800;color:var(--text);margin-bottom:0.4rem" id="final-confirm-title">
+            </div>
             <div style="font-size:0.85rem;color:var(--muted);margin-bottom:1.4rem" id="final-confirm-msg"></div>
             <div style="display:flex;gap:0.75rem">
                 <button id="final-confirm-cancel" style="
@@ -1207,11 +1299,12 @@
                         const finalRuns = finalRunCounts[entry.startNumber] ?? 0;
                         const finalTotal = CONFIG.finalRuns ?? '?';
                         const finalDone = CONFIG.finalRuns != null && finalRuns >= CONFIG.finalRuns;
+                        const excluded = starter?.status === 'removed' || starter?.status === 'disqualified';
                         const badgeColor = finalDone ? 'var(--green)' : finalRuns > 0 ? 'var(--accent)' : 'var(--muted)';
                         const item = document.createElement('div');
                         item.className = 'picker-item' +
                             (entry.startNumber === selected ? ' selected' : '') +
-                            (finalDone ? ' done' : '');
+                            (finalDone || excluded ? ' done' : '');
                         item.innerHTML =
                             `<span class="picker-item-num" style="min-width:1.5rem;color:var(--muted)">${entry.finalStartNumber}</span>` +
                             `<span class="picker-item-num">${entry.startNumber}</span>` +
@@ -1219,14 +1312,18 @@
                             `<span class="picker-item-first">${starter?.firstName ?? ''}</span>` +
                             `<span class="picker-item-last">${starter?.lastName ?? entry.startNumber}</span>` +
                             `</span>` +
-                            `<span class="picker-item-runs" style="color:${badgeColor}">${finalRuns}/${finalTotal}</span>`;
-                        item.addEventListener('click', () => {
-                            selected = entry.startNumber;
-                            selectedFinalNumber = entry.finalStartNumber;
-                            if (display) display.textContent = entry.startNumber;
-                            setStartBtn(entry.startNumber, entry.finalStartNumber);
-                            renderList('');
-                        });
+                            (excluded
+                                ? `<span class="picker-item-runs" style="color:var(--muted)">${starter.status === 'disqualified' ? 'DSQ' : 'Entfernt'}</span>`
+                                : `<span class="picker-item-runs" style="color:${badgeColor}">${finalRuns}/${finalTotal}</span>`);
+                        if (!finalDone && !excluded) {
+                            item.addEventListener('click', () => {
+                                selected = entry.startNumber;
+                                selectedFinalNumber = entry.finalStartNumber;
+                                if (display) display.textContent = entry.startNumber;
+                                setStartBtn(entry.startNumber, entry.finalStartNumber);
+                                renderList('');
+                            });
+                        }
                         body.appendChild(item);
                         total++;
                     }
@@ -1291,8 +1388,9 @@
                 const runs = runCounts[num] ?? 0;
                 const groupClosed = starter?.startGroup?.objectId && closedGroups.has(starter.startGroup.objectId);
                 const done = CONFIG.qualiRuns != null && runs >= CONFIG.qualiRuns;
+                const excluded = starter?.status === 'removed' || starter?.status === 'disqualified';
                 const item = document.createElement('div');
-                item.className = 'picker-item' + (num === selected ? ' selected' : '') + ((done || groupClosed) ? ' done' : '');
+                item.className = 'picker-item' + (num === selected ? ' selected' : '') + ((done || groupClosed || excluded) ? ' done' : '');
                 if (starter?.firstName || starter?.lastName) {
                     item.innerHTML =
                         `<span class="picker-item-num">${num}</span>` +
@@ -1305,11 +1403,13 @@
                             ? `<span class="picker-item-done-badge">✓ Fertig</span>`
                             : groupClosed
                                 ? `<span class="picker-item-done-badge">🔒 Quali zu</span>`
-                                : (runs > 0 ? `<span class="picker-item-runs">${runs}×</span>` : ''));
+                                : excluded
+                                    ? `<span class="picker-item-done-badge">${starter.status === 'disqualified' ? 'DSQ' : 'Entfernt'}</span>`
+                                    : (runs > 0 ? `<span class="picker-item-runs">${runs}×</span>` : ''));
                 } else {
                     item.textContent = num;
                 }
-                if (!done && !groupClosed) {
+                if (!done && !groupClosed && !excluded) {
                     item.addEventListener('click', () => {
                         selected = num;
                         if (display) display.textContent = num;
@@ -1409,7 +1509,7 @@
                 : (runCounts[startNumber] ?? 0) + 1;
             scoredBy = new Set();
             juryScores = {};
-            const runStartedAt = new Date();
+            const runStartedAt = new Date(Date.now() - 10000); // 10s tolerance for client/server clock drift
 
             const starter = STARTERS.find(s => s.startNumber === startNumber);
             const name = starter ? `${starter.firstName ?? ''} ${starter.lastName ?? ''}`.trim() : String(startNumber);
@@ -1419,13 +1519,32 @@
             renderJuryGrid();
 
             if (scoreWs) scoreWs.close();
-            scoreWs = ParseAPI.subscribeJuryScores(startNumber, score => {
-                if (score.judgeName) {
-                    scoredBy.add(score.judgeName);
-                    juryScores[score.judgeName] = score;
-                }
-                renderJuryGrid();
-            });
+            const _subscribeScores = () => {
+                scoreWs = ParseAPI.subscribeJuryScores(startNumber, score => {
+                    if (score.judgeName) {
+                        scoredBy.add(score.judgeName);
+                        juryScores[score.judgeName] = score;
+                    }
+                    renderJuryGrid();
+                });
+                scoreWs.addEventListener('close', () => {
+                    if (activeStarter === startNumber) {
+                        setTimeout(_subscribeScores, 3000);
+                        // Re-fetch on reconnect to catch scores received while disconnected
+                        ParseAPI.fetchJuryScores(startNumber).then(existing => {
+                            existing.forEach(s => {
+                                const createdAt = new Date(s.createdAt?.iso ?? s.createdAt);
+                                if (s.judgeName && createdAt >= runStartedAt) {
+                                    scoredBy.add(s.judgeName);
+                                    juryScores[s.judgeName] = s;
+                                }
+                            });
+                            renderJuryGrid();
+                        }).catch(() => {});
+                    }
+                });
+            };
+            _subscribeScores();
 
             ParseAPI.fetchJuryScores(startNumber).then(existing => {
                 existing.forEach(s => {
@@ -1585,6 +1704,9 @@
         });
 
         document.getElementById('final-confirm-ok').addEventListener('click', async () => {
+            const confirmBtn = document.getElementById('final-confirm-ok');
+            if (confirmBtn.disabled) return;
+            confirmBtn.disabled = true;
             document.getElementById('final-confirm-overlay').style.display = 'none';
             if (!_pendingFinalGroup) return;
             const { gid, groupName, group } = _pendingFinalGroup;
@@ -1838,6 +1960,13 @@
             body.appendChild(critSec);
 
             // Save button
+            const keysChanged = d.criteria.some((c, i) => c.key !== CONFIG.criteria[i]?.key);
+            if (keysChanged) {
+                const warn = document.createElement('div');
+                warn.style.cssText = 'font-size:0.75rem;color:#e3a007;background:color-mix(in srgb,#e3a007 12%,transparent);border-radius:6px;padding:0.4rem 0.6rem;margin-bottom:0.5rem;line-height:1.4';
+                warn.textContent = '⚠ Kriterien-Keys wurden geändert. Kampfrichter-Apps müssen nach dem Speichern neu geladen werden.';
+                body.appendChild(warn);
+            }
             const saveBtn = document.createElement('button');
             saveBtn.className = 'settings-save-btn';
             saveBtn.textContent = 'Einstellungen speichern';
@@ -1861,6 +1990,9 @@
                     CONFIG.finalScoreMode = d.finalScoreMode;
                     CONFIG.criteria = d.criteria;
                     _settingsDraft = null;
+                    // Reset stale filter state
+                    filterRuns = null;
+                    filterDone = false;
                     saveBtn.textContent = '✓ Gespeichert';
                     // Update header display
                     const qualiEl = document.getElementById('quali-display');
@@ -1931,10 +2063,10 @@
                 const gid = group?.objectId ?? '__none__';
                 const isClosed = group ? (closedGroups.has(gid)) : false;
                 const doneCount = starters.filter(s =>
-                    s.status !== 'removed' && CONFIG.qualiRuns != null &&
+                    s.status !== 'removed' && s.status !== 'disqualified' && CONFIG.qualiRuns != null &&
                     (drawerRunCounts[s.startNumber] ?? 0) >= CONFIG.qualiRuns
                 ).length;
-                const activeCount = starters.filter(s => s.status !== 'removed').length;
+                const activeCount = starters.filter(s => s.status !== 'removed' && s.status !== 'disqualified').length;
 
                 const panel = document.createElement('div');
                 panel.className = 'drawer-panel' + (openIds.has(gid) ? ' open' : '');
@@ -1996,7 +2128,7 @@
                     const badge = document.createElement('span');
                     badge.className = 'drawer-item-badge';
                     if (status === 'disqualified') { badge.textContent = 'DSQ'; badge.classList.add('dq'); }
-                    else if (status === 'removed') { badge.textContent = 'Weg'; badge.classList.add('removed'); }
+                    else if (status === 'removed') { badge.textContent = 'Entfernt'; badge.classList.add('removed'); }
                     else if (done) { badge.textContent = '✓'; badge.classList.add('done'); }
                     else if (runs > 0) { badge.textContent = `${runs}×`; badge.classList.add('runs'); }
 
@@ -2071,7 +2203,12 @@
                         : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg> Finale vorzeitig starten`;
                     const groupStatus = drawerGroupStatus(gid);
                     qualiBtn.style.display = (isClosed || groupStatus === 'quali-idle') ? 'none' : '';
-                    qualiBtn.addEventListener('click', () => drawerToggleQualiClosed(group));
+                    qualiBtn.disabled = activeStarter !== null;
+                    qualiBtn.title = activeStarter !== null ? 'Erst den laufenden Starter abschliessen' : '';
+                    qualiBtn.addEventListener('click', () => {
+                        qualiBtn.disabled = true;
+                        drawerToggleQualiClosed(group);
+                    });
                     footer.appendChild(qualiBtn);
 
                     panel.appendChild(footer);

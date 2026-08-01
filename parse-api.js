@@ -248,37 +248,10 @@ const ParseAPI = (() => {
     // ── Live Query ──
 
     async function publishActiveStarter(startNumber, runNumber, phase) {
-        const existing = await fetch(
-            `${CONFIG.parseServerUrl}/classes/HT_ACTIVESTARTER?where=${encodeURIComponent(JSON.stringify({ event: { __type: 'Pointer', className: 'HT_EVENT', objectId: CONFIG.eventObjectId } }))}`,
-            { headers: readHeaders() }
-        );
-        if (!existing.ok) throw new Error(`Parse error ${existing.status}`);
-        const { results } = await existing.json();
-
-        const payload = { startNumber, runNumber: Number(runNumber) ?? 1, phase: phase ?? 'quali' };
-        if (results?.length) {
-            const res = await fetch(
-                `${CONFIG.parseServerUrl}/classes/HT_ACTIVESTARTER/${results[0].objectId}`,
-                { method: 'PUT', headers: writeHeaders(), body: JSON.stringify(payload) }
-            );
-            if (!res.ok) throw new Error(`Parse error ${res.status}`);
-        } else {
-            const res = await fetch(
-                `${CONFIG.parseServerUrl}/classes/HT_ACTIVESTARTER`,
-                {
-                    method: 'POST',
-                    headers: writeHeaders(),
-                    body: JSON.stringify({
-                        ...payload,
-                        event: { __type: 'Pointer', className: 'HT_EVENT', objectId: CONFIG.eventObjectId },
-                    }),
-                }
-            );
-            if (!res.ok) throw new Error(`Parse error ${res.status}`);
-        }
+        return refereeUpdate({ action: 'publishActiveStarter', startNumber, runNumber, phase });
     }
 
-    function subscribeActiveStarter(onStartNumber) {
+    function subscribeActiveStarter(onStartNumber, onReconnect) {
         const ws = new WebSocket(CONFIG.parseLiveQueryUrl);
         let requestId = 1;
 
@@ -310,8 +283,11 @@ const ParseAPI = (() => {
         });
 
         ws.addEventListener('close', () => {
-            // Reconnect after 3 s if the socket drops
-            setTimeout(() => subscribeActiveStarter(onStartNumber), 3000);
+            setTimeout(() => {
+                const newWs = subscribeActiveStarter(onStartNumber, onReconnect);
+                if (onReconnect) onReconnect();
+                return newWs;
+            }, 3000);
         });
 
         return ws;
@@ -433,7 +409,7 @@ const ParseAPI = (() => {
                     },
                 }));
             }
-            if (msg.op === 'create') onChange();
+            if (msg.op === 'create' || msg.op === 'delete') onChange();
         });
         ws.addEventListener('close', () => setTimeout(() => subscribeAllJuryScores(onChange), 3000));
         return ws;
@@ -599,6 +575,19 @@ const ParseAPI = (() => {
 
     // Check whether the logged-in user has a HT_USERROLE record for the given
     // event. ACL on each record is set to Read: <user> only — no result means no access.
+    async function fetchActiveStarter() {
+        const where = encodeURIComponent(JSON.stringify({
+            event: { __type: 'Pointer', className: 'HT_EVENT', objectId: CONFIG.eventObjectId },
+        }));
+        const res = await fetch(
+            `${CONFIG.parseServerUrl}/classes/HT_ACTIVESTARTER?where=${where}&limit=1`,
+            { headers: readHeaders() }
+        );
+        if (!res.ok) return null;
+        const data = await res.json();
+        return data.results?.[0] ?? null;
+    }
+
     async function checkEventAccess(eventObjectId) {
         if (!_sessionToken) return false;
         const eid = eventObjectId ?? CONFIG.eventObjectId;
@@ -615,5 +604,5 @@ const ParseAPI = (() => {
         return (data.results ?? []).length > 0;
     }
 
-    return { login, logout, getSessionUser, checkEventAccess, fetchAllEvents, fetchEvent, fetchJudges, fetchStartGroups, updateStartGroupQualiClosed, subscribeStartGroups, updateStarterStatus, updateEventSettings, createFinal, fetchFinalEntries, fetchAllFinalEntries, subscribeFinalEntries, fetchStarters, saveStarter, deleteStarter, fetchResultsForStarter, deleteResultsForStarter, saveJuryScore, deleteQualiRun, fetchJuryScores, fetchScoreCountByStarter, fetchFinalScoreCountByStarter, fetchAllJuryScores, subscribeAllJuryScores, subscribeJuryScores, publishActiveStarter, subscribeActiveStarter, heartbeat, removePresence, fetchPresence, subscribePresence };
+    return { login, logout, getSessionUser, checkEventAccess, fetchActiveStarter, fetchAllEvents, fetchEvent, fetchJudges, fetchStartGroups, updateStartGroupQualiClosed, subscribeStartGroups, updateStarterStatus, updateEventSettings, createFinal, fetchFinalEntries, fetchAllFinalEntries, subscribeFinalEntries, fetchStarters, saveStarter, deleteStarter, fetchResultsForStarter, deleteResultsForStarter, saveJuryScore, deleteQualiRun, fetchJuryScores, fetchScoreCountByStarter, fetchFinalScoreCountByStarter, fetchAllJuryScores, subscribeAllJuryScores, subscribeJuryScores, publishActiveStarter, subscribeActiveStarter, heartbeat, removePresence, fetchPresence, subscribePresence };
 })();

@@ -644,7 +644,7 @@
         });
 
         // ── delete ──
-        tableBody.addEventListener('click', e => {
+        tableBody.addEventListener('click', async e => {
             const editBtn = e.target.closest('.icon-btn.edit');
             const delBtn = e.target.closest('.icon-btn.del');
             if (editBtn) {
@@ -654,6 +654,13 @@
             if (delBtn) {
                 deleteId = delBtn.dataset.id;
                 deleteName = delBtn.dataset.name;
+                const deleteNum = Number(delBtn.dataset.num);
+                // Block deletion if this starter is currently on the floor
+                const active = await ParseAPI.fetchActiveStarter();
+                if (active?.startNumber === deleteNum) {
+                    setStatus(`${deleteName} läuft gerade – bitte erst den Lauf abschliessen.`, 'err');
+                    return;
+                }
                 const sc = scoreMap[delBtn.dataset.num] ?? { quali: 0, final: 0 };
                 if (sc.quali || sc.final) {
                     const parts = [];

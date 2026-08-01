@@ -40,21 +40,54 @@ Parse.Cloud.define('refereeUpdate', async (request) => {
         return await createFinal(event, startGroupObjectId);
     }
 
+    if (action === 'publishActiveStarter') {
+        const { startNumber, runNumber, phase } = request.params;
+        const query = new Parse.Query('HT_ACTIVESTARTER');
+        query.equalTo('event', event);
+        const existing = await query.first({ useMasterKey: true });
+        // Reject if another starter is already active (startNumber differs)
+        if (existing && existing.get('startNumber') != null && existing.get('startNumber') !== startNumber) {
+            throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN,
+                `Starter ${existing.get('startNumber')} ist bereits aktiv`);
+        }
+        const payload = { startNumber, runNumber: Number(runNumber) || 1, phase: phase ?? 'quali' };
+        if (existing) {
+            for (const [k, v] of Object.entries(payload)) existing.set(k, v);
+            await existing.save(null, { useMasterKey: true });
+        } else {
+            const Active = Parse.Object.extend('HT_ACTIVESTARTER');
+            const obj = new Active();
+            for (const [k, v] of Object.entries(payload)) obj.set(k, v);
+            obj.set('event', event);
+            await obj.save(null, { useMasterKey: true });
+        }
+        return { ok: true };
+    }
+
     throw new Parse.Error(Parse.Error.INVALID_QUERY, 'Unknown action');
 });
 
 // Compute final start order for a startgroup and persist as FinalEntry records.
 // Best qualifier gets the highest final start number (starts last).
 async function createFinal(event, startGroupObjectId) {
+    const startGroup = await new Parse.Query('HT_STARTGROUP').get(startGroupObjectId, { useMasterKey: true });
+
+    // Idempotency guard — if a concurrent call already created entries, return early
+    const guardQuery = new Parse.Query('HT_FINALENTRY');
+    guardQuery.equalTo('event', event);
+    guardQuery.equalTo('startGroup', startGroup);
+    guardQuery.limit(1);
+    const guardCount = await guardQuery.count({ useMasterKey: true });
+    if (guardCount > 0) {
+        return { created: guardCount, idempotent: true };
+    }
+
     const bestOf = event.get('bestOf') ?? 8;
     const qualiRuns = event.get('qualiRuns') ?? null;
     const qualiScoreMode = event.get('qualiScoreMode') ?? 'sum'; // 'sum' | 'best'
     const judgeCount = (await new Parse.Query('HT_JUDGE')
         .equalTo('event', event)
         .count({ useMasterKey: true })) || 1;
-
-    // Load all starters in this group that are active
-    const startGroup = await new Parse.Query('HT_STARTGROUP').get(startGroupObjectId, { useMasterKey: true });
     const startersQuery = new Parse.Query('HT_STARTER');
     startersQuery.equalTo('startGroup', startGroup);
     startersQuery.notEqualTo('status', 'disqualified');
@@ -65,6 +98,7 @@ async function createFinal(event, startGroupObjectId) {
     // Load all jury scores for the event
     const scoresQuery = new Parse.Query('HT_JURYSCORE');
     scoresQuery.equalTo('event', event);
+    scoresQuery.equalTo('phase', 'quali');
     scoresQuery.limit(5000);
     scoresQuery.ascending('createdAt');
     const scores = await scoresQuery.find({ useMasterKey: true });
