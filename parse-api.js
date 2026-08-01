@@ -597,5 +597,23 @@ const ParseAPI = (() => {
         return refereeUpdate({ action: 'updateEventSettings', fields });
     }
 
-    return { login, logout, getSessionUser, fetchAllEvents, fetchEvent, fetchJudges, fetchStartGroups, updateStartGroupQualiClosed, subscribeStartGroups, updateStarterStatus, updateEventSettings, createFinal, fetchFinalEntries, fetchAllFinalEntries, subscribeFinalEntries, fetchStarters, saveStarter, deleteStarter, fetchResultsForStarter, deleteResultsForStarter, saveJuryScore, deleteQualiRun, fetchJuryScores, fetchScoreCountByStarter, fetchFinalScoreCountByStarter, fetchAllJuryScores, subscribeAllJuryScores, subscribeJuryScores, publishActiveStarter, subscribeActiveStarter, heartbeat, removePresence, fetchPresence, subscribePresence };
+    // Check whether the logged-in user has a HT_USERROLE record for the given
+    // event. ACL on each record is set to Read: <user> only — no result means no access.
+    async function checkEventAccess(eventObjectId) {
+        if (!_sessionToken) return false;
+        const eid = eventObjectId ?? CONFIG.eventObjectId;
+        if (!eid) return false;
+        const where = encodeURIComponent(JSON.stringify({
+            event: { __type: 'Pointer', className: 'HT_EVENT', objectId: eid },
+        }));
+        const res = await fetch(
+            `${CONFIG.parseServerUrl}/classes/HT_USERROLE?where=${where}&limit=1`,
+            { headers: readHeaders() }
+        );
+        if (!res.ok) return false;
+        const data = await res.json();
+        return (data.results ?? []).length > 0;
+    }
+
+    return { login, logout, getSessionUser, checkEventAccess, fetchAllEvents, fetchEvent, fetchJudges, fetchStartGroups, updateStartGroupQualiClosed, subscribeStartGroups, updateStarterStatus, updateEventSettings, createFinal, fetchFinalEntries, fetchAllFinalEntries, subscribeFinalEntries, fetchStarters, saveStarter, deleteStarter, fetchResultsForStarter, deleteResultsForStarter, saveJuryScore, deleteQualiRun, fetchJuryScores, fetchScoreCountByStarter, fetchFinalScoreCountByStarter, fetchAllJuryScores, subscribeAllJuryScores, subscribeJuryScores, publishActiveStarter, subscribeActiveStarter, heartbeat, removePresence, fetchPresence, subscribePresence };
 })();

@@ -284,25 +284,22 @@
             min-height: 1.2rem;
             margin-bottom: 0.5rem;
         }
+        /* ── Avatar menu ── */
+        .avatar-wrap { position:relative; }
+        .avatar { width:2rem;height:2rem;border-radius:50%;background:#e05b3a;color:#fff;font-size:0.8rem;font-weight:800;display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none;flex-shrink:0;border:2px solid transparent;transition:border-color 0.15s; }
+        .avatar:hover { border-color:#e05b3a44; }
+        .avatar-menu { position:absolute;top:calc(100% + 0.5rem);right:0;background:var(--card);border:1px solid var(--border);border-radius:10px;min-width:160px;box-shadow:0 8px 24px rgba(0,0,0,0.5);z-index:400;display:none;overflow:hidden; }
+        .avatar-menu.open { display:block; }
+        .avatar-menu-user { padding:0.6rem 0.85rem;font-size:0.75rem;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+        .avatar-menu-item { display:flex;align-items:center;gap:0.5rem;padding:0.6rem 0.85rem;font-size:0.85rem;font-weight:600;color:var(--text);cursor:pointer;transition:background 0.1s; }
+        .avatar-menu-item:hover { background:var(--border); }
+        .avatar-menu-item.danger { color:var(--accent); }
     </style>
 </head>
 
 <body>
-    <div id="login-overlay">
-        <div class="login-box">
-            <div class="login-title">Starter Verwaltung – Anmeldung</div>
-            <div class="login-err" id="login-err"></div>
-            <div class="form-group" style="margin-bottom:0.75rem">
-                <label class="form-label">Benutzername</label>
-                <input class="form-input" id="login-user" type="text" autocomplete="username" placeholder="admin">
-            </div>
-            <div class="form-group" style="margin-bottom:1.25rem">
-                <label class="form-label">Passwort</label>
-                <input class="form-input" id="login-pass" type="password" autocomplete="current-password">
-            </div>
-            <button class="btn btn-primary" id="login-btn" style="width:100%">Anmelden</button>
-        </div>
-    </div>
+    <!-- login-overlay kept minimal for access-denied redirect fallback -->
+    <div id="login-overlay" style="display:none"></div>
     <header>
         <div class="header-group">
             <div class="header-label">Verwaltung</div>
@@ -312,11 +309,12 @@
             <div class="header-label">Geladen</div>
             <div class="header-value" id="count-display">—</div>
         </div>
-        <div class="header-group">
-            <div class="header-label">Angemeldet als</div>
-            <div class="header-value" id="login-display" style="font-size:1rem;color:var(--muted)">—</div>
-            <button class="btn btn-ghost" id="logout-btn"
-                style="font-size:0.8rem;padding:0.3rem 0.75rem;margin-top:0.25rem">Abmelden</button>
+        <div class="avatar-wrap">
+            <div class="avatar" id="avatar-btn">?</div>
+            <div class="avatar-menu" id="avatar-menu">
+                <div class="avatar-menu-user" id="avatar-username">—</div>
+                <div class="avatar-menu-item danger" id="logout-btn">↩ Abmelden</div>
+            </div>
         </div>
     </header>
 
@@ -704,53 +702,25 @@
             }
         });
 
-        // ── login ──
-        async function doLogin() {
-            const username = document.getElementById('login-user').value.trim();
-            const password = document.getElementById('login-pass').value;
-            document.getElementById('login-err').textContent = '';
-            if (!username || !password) {
-                document.getElementById('login-err').textContent = 'Bitte Benutzername und Passwort eingeben.';
-                return;
-            }
-            document.getElementById('login-btn').disabled = true;
-            try {
-                const data = await ParseAPI.login(username, password);
-                document.getElementById('login-overlay').classList.add('hidden');
-                document.getElementById('login-display').textContent = data.username ?? username;
-                document.getElementById('login-pass').value = '';
-                await loadStarters();
-            } catch (e) {
-                document.getElementById('login-err').textContent = e.message;
-            } finally {
-                document.getElementById('login-btn').disabled = false;
-            }
-        }
-
-        document.getElementById('login-btn').addEventListener('click', doLogin);
-        document.getElementById('login-pass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
-
         document.getElementById('logout-btn').addEventListener('click', async () => {
             await ParseAPI.logout();
-            allStarters = [];
-            allGroups = [];
-            scoreMap = {};
-            tableBody.innerHTML = '';
-            document.getElementById('count-display').textContent = '—';
-            document.getElementById('login-display').textContent = '—';
-            document.getElementById('login-overlay').classList.remove('hidden');
-            document.getElementById('login-user').focus();
+            location.replace('../index.html');
         });
 
-        // restore session or show login
-        const _restoredUser = ParseAPI.getSessionUser();
-        if (_restoredUser) {
-            document.getElementById('login-overlay').classList.add('hidden');
-            document.getElementById('login-display').textContent = _restoredUser;
+        // Session required — login and event selection happen on index.html
+        (async () => {
+            if (!ParseAPI.getSessionUser()) { location.replace('../index.html'); return; }
+            const _user = ParseAPI.getSessionUser();
+            document.getElementById('avatar-btn').textContent = _user[0].toUpperCase();
+            document.getElementById('avatar-username').textContent = _user;
+            document.getElementById('avatar-btn').addEventListener('click', e => {
+                e.stopPropagation();
+                document.getElementById('avatar-menu').classList.toggle('open');
+            });
+            document.addEventListener('click', () => document.getElementById('avatar-menu').classList.remove('open'));
+            document.getElementById('login-display') && (document.getElementById('login-display').textContent = _user);
             loadStarters();
-        } else {
-            document.getElementById('login-user').focus();
-        }
+        })();
     </script>
 </body>
 

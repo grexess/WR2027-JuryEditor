@@ -130,6 +130,13 @@
             background: #30363d;
         }
 
+        a.tile.disabled {
+            pointer-events: none;
+            opacity: 0.35;
+            border-color: #30363d;
+            color: #8b949e;
+        }
+
         a.tile .badge {
             font-size: 0.75rem;
             font-weight: 600;
@@ -238,6 +245,31 @@
         .guide-print-btn:active {
             background: #30363d;
         }
+
+        #login-overlay { position:fixed;inset:0;z-index:500;background:#0d1117;display:flex;align-items:center;justify-content:center;padding:1.5rem; }
+        #login-overlay.hidden { display:none; }
+        .login-box { background:#161b22;border:1px solid #30363d;border-radius:14px;max-width:320px;width:100%;padding:1.5rem;display:flex;flex-direction:column;gap:0.75rem; }
+        .login-title { font-size:1rem;font-weight:800;color:#e6edf3;text-align:center; }
+        .login-err { font-size:0.85rem;color:#f78166;min-height:1.2em;text-align:center; }
+        .login-field { display:flex;flex-direction:column;gap:0.3rem; }
+        .login-label { font-size:0.7rem;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:0.08em; }
+        .login-input { background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:0.5rem 0.75rem;color:#e6edf3;font-size:0.95rem;outline:none;width:100%;box-sizing:border-box; }
+        .login-input:focus { border-color:#f78166; }
+        .login-btn { padding:0.65rem;border-radius:10px;border:none;background:#f78166;color:#fff;font-size:0.95rem;font-weight:700;cursor:pointer;width:100%;margin-top:0.25rem; }
+        .login-btn:active { opacity:0.85; }
+        .login-user-row { display:flex;align-items:center;justify-content:space-between;font-size:0.75rem;color:#8b949e; }
+        .login-logout-btn { background:none;border:none;color:#8b949e;font-size:0.75rem;cursor:pointer;text-decoration:underline;padding:0; }
+
+        /* ── Avatar menu ── */
+        .avatar-wrap { position:relative; }
+        .avatar { width:2rem;height:2rem;border-radius:50%;background:#e05b3a;color:#fff;font-size:0.8rem;font-weight:800;display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none;flex-shrink:0;border:2px solid transparent;transition:border-color 0.15s; }
+        .avatar:hover { border-color:#e05b3a44; }
+        .avatar-menu { position:absolute;top:calc(100% + 0.5rem);right:0;background:#161b22;border:1px solid #30363d;border-radius:10px;min-width:160px;box-shadow:0 8px 24px rgba(0,0,0,0.5);z-index:400;display:none;overflow:hidden; }
+        .avatar-menu.open { display:block; }
+        .avatar-menu-user { padding:0.6rem 0.85rem;font-size:0.75rem;color:#8b949e;border-bottom:1px solid #30363d;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+        .avatar-menu-item { display:flex;align-items:center;gap:0.5rem;padding:0.6rem 0.85rem;font-size:0.85rem;font-weight:600;color:#e6edf3;cursor:pointer;transition:background 0.1s; }
+        .avatar-menu-item:hover { background:#30363d; }
+        .avatar-menu-item.danger { color:#f78166; }
     </style>
     <script src="config.js"></script>
     <script>
@@ -248,7 +280,33 @@
 </head>
 
 <body>
-    <img class="logo" src="assets/weraceLogo.png" alt="WeRace">
+    <div id="login-overlay">
+        <div class="login-box">
+            <div class="login-title">WeRace – Anmeldung</div>
+            <div class="login-err" id="login-err"></div>
+            <div class="login-field">
+                <div class="login-label">Benutzername</div>
+                <input class="login-input" id="login-user" type="text" autocomplete="username" placeholder="Benutzername">
+            </div>
+            <div class="login-field">
+                <div class="login-label">Passwort</div>
+                <input class="login-input" id="login-pass" type="password" autocomplete="current-password">
+            </div>
+            <button class="login-btn" id="login-btn">Anmelden</button>
+        </div>
+    </div>
+
+    <div id="main-content" style="display:none;width:100%;max-width:380px;flex-direction:column;align-items:center;gap:2rem">
+        <div style="width:100%;display:flex;align-items:center;justify-content:space-between">
+            <img class="logo" src="assets/weraceLogo.png" alt="WeRace">
+            <div class="avatar-wrap">
+                <div class="avatar" id="avatar-btn" title="Konto">?</div>
+                <div class="avatar-menu" id="avatar-menu">
+                    <div class="avatar-menu-user" id="avatar-username">—</div>
+                    <div class="avatar-menu-item danger" id="logout-btn">↩ Abmelden</div>
+                </div>
+            </div>
+        </div>
 
     <!-- Event picker -->
     <div class="card" id="picker-card">
@@ -302,6 +360,7 @@
             <button class="guide-print-btn" onclick="printGuide()">Drucken ↗</button>
         </div>
     </div>
+    </div> <!-- /main-content -->
 
     <script>
         async function loadEvents() {
@@ -333,6 +392,9 @@
             localStorage.setItem('werace-event', JSON.stringify({ objectId: ev.objectId, name: ev.name }));
             CONFIG.eventObjectId = ev.objectId;
             CONFIG.eventName = ev.name;
+
+            // Enable all static tiles now that an event is set
+            document.querySelectorAll('a.tile').forEach(t => t.classList.remove('disabled'));
 
             document.getElementById('picker-card').style.display = 'none';
             document.getElementById('app-section').style.display = '';
@@ -378,11 +440,67 @@
             loadEvents();
         });
 
-        // On load: if an event is already saved, go straight to app links
-        if (CONFIG.eventObjectId) {
-            selectEvent({ objectId: CONFIG.eventObjectId, name: CONFIG.eventName });
+        // ── Auth ──
+        function setAvatar(username) {
+            const initial = (username ?? '?')[0].toUpperCase();
+            document.getElementById('avatar-btn').textContent = initial;
+            document.getElementById('avatar-username').textContent = username ?? '—';
         }
-        loadEvents();
+
+        document.getElementById('avatar-btn').addEventListener('click', e => {
+            e.stopPropagation();
+            document.getElementById('avatar-menu').classList.toggle('open');
+        });
+        document.addEventListener('click', () => document.getElementById('avatar-menu').classList.remove('open'));
+
+        function showMain(username) {
+            setAvatar(username);
+            document.getElementById('login-display') && (document.getElementById('login-display').textContent = username);
+            document.getElementById('login-overlay').classList.add('hidden');
+            document.getElementById('main-content').style.display = 'flex';
+            loadEvents();
+            if (CONFIG.eventObjectId) {
+                selectEvent({ objectId: CONFIG.eventObjectId, name: CONFIG.eventName });
+            }
+        }
+
+        async function doLogin() {
+            const username = document.getElementById('login-user').value.trim();
+            const password = document.getElementById('login-pass').value;
+            const errEl = document.getElementById('login-err');
+            errEl.textContent = '';
+            if (!username || !password) { errEl.textContent = 'Bitte Benutzername und Passwort eingeben.'; return; }
+            const btn = document.getElementById('login-btn');
+            btn.disabled = true;
+            try {
+                const data = await ParseAPI.login(username, password);
+                document.getElementById('login-pass').value = '';
+                showMain(data.username ?? username);
+            } catch (e) {
+                errEl.textContent = e.message;
+                btn.disabled = false;
+            }
+        }
+
+        document.getElementById('login-btn').addEventListener('click', doLogin);
+        document.getElementById('login-pass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+        document.getElementById('logout-btn').addEventListener('click', async () => {
+            await ParseAPI.logout();
+            document.getElementById('main-content').style.display = 'none';
+            document.getElementById('login-overlay').classList.remove('hidden');
+            document.getElementById('login-display').textContent = '';
+            document.getElementById('login-user').value = '';
+            document.getElementById('login-user').focus();
+        });
+
+        // restore session or show login
+        const _restoredUser = ParseAPI.getSessionUser();
+        if (_restoredUser) {
+            showMain(_restoredUser);
+        } else {
+            document.getElementById('login-user').focus();
+        }
 
         function printGuide() {
             const sel = document.getElementById('guide-select');
