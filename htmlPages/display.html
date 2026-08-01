@@ -507,12 +507,13 @@ if (_urlEvent) CONFIG.eventObjectId = _urlEvent;
 
         const starter = starters.find(s => s.startNumber === startnumber);
         const name = starter ? `${starter.lastName ?? ''} ${starter.firstName ?? ''}`.trim() : `#${startnumber}`;
+        const groupName = starter?.startGroup?.name ?? '';
         const phaseLabel = phase === 'final' ? 'Finale' : 'Qualifikation';
         const total = Object.values(runScores).reduce((a, s) => a + (s.total ?? 0), 0);
 
         document.getElementById('sp-startnum').textContent = `#${startnumber}`;
         document.getElementById('sp-name').textContent = name;
-        document.getElementById('sp-run').textContent = `${phaseLabel} · Lauf ${runNumber}`;
+        document.getElementById('sp-run').textContent = `${groupName ? groupName + ' · ' : ''}${phaseLabel} · Lauf ${runNumber}`;
         document.getElementById('sp-total').textContent = total.toFixed(1);
 
         const judgesEl = document.getElementById('sp-judges');
