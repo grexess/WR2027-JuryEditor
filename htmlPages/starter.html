@@ -783,7 +783,8 @@
                 <div class="waiting-dot"></div>
                 <div class="waiting-dot"></div>
             </div>
-            <div id="waiting-name" style="font-size:2rem;font-weight:800;color:var(--accent);margin-top:0.5rem"></div>
+            <div id="waiting-final-num" style="display:none;font-size:2.8rem;font-weight:900;color:var(--accent);letter-spacing:0.04em;margin-top:0.5rem"></div>
+            <div id="waiting-name" style="font-size:0.9rem;font-weight:600;color:var(--muted);margin-top:0.15rem"></div>
             <div id="run-chip"
                 style="display:none;margin-top:0.5rem;background:color-mix(in srgb,var(--accent) 15%,transparent);color:var(--accent);border:1px solid var(--accent);border-radius:999px;padding:0.2rem 0.9rem;font-size:0.75rem;font-weight:700;letter-spacing:0.06em">
             </div>
@@ -1097,8 +1098,8 @@
                             (entry.startNumber === selected ? ' selected' : '') +
                             (finalDone || excluded ? ' done' : '');
                         item.innerHTML =
-                            `<span class="picker-item-num" style="min-width:1.5rem;color:var(--muted)">${entry.finalStartNumber}</span>` +
-                            `<span class="picker-item-num">${entry.startNumber}</span>` +
+                            `<span class="picker-item-num" style="font-size:1.1rem;font-weight:900;color:var(--accent)">${entry.finalStartNumber}</span>` +
+                            `<span class="picker-item-num" style="font-size:0.75rem;color:var(--muted)">#${entry.startNumber}</span>` +
                             `<span class="picker-item-name">` +
                             `<span class="picker-item-first">${starter?.firstName ?? ''}</span>` +
                             `<span class="picker-item-last">${starter?.lastName ?? entry.startNumber}</span>` +
@@ -1224,8 +1225,8 @@
             } else if (finalNum != null) {
                 startBtn.innerHTML =
                     `<span style="font-size:1.3rem">✓</span> Jetzt starten` +
-                    ` <span class="badge" style="opacity:0.6">#${num}</span>` +
-                    ` <span class="badge">Final ${finalNum}.</span>`;
+                    ` <span class="badge">${finalNum}</span>` +
+                    ` <span class="badge" style="opacity:0.5;font-size:0.75rem">#${num}</span>`;
                 startBtn.disabled = false;
                 clearBtn.disabled = false;
             } else {
@@ -1307,7 +1308,20 @@
 
             const starter = STARTERS.find(s => s.startNumber === startNumber);
             const name = starter ? `${starter.firstName ?? ''} ${starter.lastName ?? ''}`.trim() : String(startNumber);
-            document.getElementById('waiting-name').textContent = `#${startNumber}  ${name}`;
+            const finalEntry = mode === 'finale'
+                ? Object.values(finalEntriesByGroup).flat().find(e => String(e.startNumber) === String(startNumber))
+                : null;
+            const finalNumEl = document.getElementById('waiting-final-num');
+            if (finalEntry?.finalStartNumber) {
+                finalNumEl.textContent = finalEntry.finalStartNumber;
+                finalNumEl.style.display = '';
+                document.getElementById('waiting-name').textContent = `#${startNumber}  ${name}`;
+            } else {
+                finalNumEl.style.display = 'none';
+                document.getElementById('waiting-name').textContent = `#${startNumber}  ${name}`;
+                document.getElementById('waiting-name').style.fontSize = '2rem';
+                document.getElementById('waiting-name').style.color = 'var(--accent)';
+            }
             document.getElementById('waiting-overlay').classList.remove('hidden');
             document.getElementById('picker-section').style.display = 'none';
             renderJuryGrid();
@@ -1433,7 +1447,7 @@
             mode = m;
             document.getElementById('mode-quali').classList.toggle('active', m === 'quali');
             document.getElementById('mode-finale').classList.toggle('active', m === 'finale');
-            document.querySelector('.picker-input-wrap').style.display = m === 'quali' ? '' : 'none';
+            document.querySelector('.picker-input-wrap').style.display = '';
             if (m === 'quali') {
                 renderFilterChips();
                 document.getElementById('filter-chips-finale').style.display = 'none';
@@ -1932,7 +1946,21 @@
             ParseAPI.fetchActiveStarter().then(active => {
                 if (active?.startNumber != null && activeStarter === null) {
                     mode = active.phase === 'finale' ? 'finale' : 'quali';
-                    enterWaitingForScores(String(active.startNumber), true);
+                    const runNumber = active.runNumber ?? 1;
+                    ParseAPI.fetchJuryScores(String(active.startNumber)).then(existing => {
+                        const scoresForRun = existing.filter(s =>
+                            Number(s.runNumber ?? 1) === Number(runNumber)
+                        );
+                        const judgesScored = new Set(scoresForRun.map(s => s.judgeName));
+                        const allDone = JUDGE_COUNT() > 0 && judgesScored.size >= JUDGE_COUNT();
+                        if (allDone) {
+                            ParseAPI.clearActiveStarter().catch(() => {});
+                        } else {
+                            enterWaitingForScores(String(active.startNumber), true);
+                        }
+                    }).catch(() => {
+                        enterWaitingForScores(String(active.startNumber), true);
+                    });
                 }
             }).catch(() => {});
         }

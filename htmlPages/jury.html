@@ -11,18 +11,14 @@
 
 <body>
     <header>
-        <div class="header-group">
-            <div class="header-label">Startnummer</div>
-            <div class="header-value" id="startnumber">—</div>
-        </div>
-        <div class="header-group" id="starter-name-group" style="display:none">
-            <div class="header-label">Name</div>
-            <div class="header-value" id="starter-name" style="font-size:0.95rem">—</div>
-        </div>
         <div class="header-group" id="final-group" style="display:none">
-            <div class="header-label">Finale Startnr.</div>
+            <div class="header-label">Finale</div>
             <div class="header-value" id="finalnum-value" style="color:var(--accent)">—</div>
-            <div class="header-label" id="mode-label" style="font-size:0.65rem;color:var(--green);margin-top:0.1rem">Finale</div>
+        </div>
+        <div class="header-group" id="starter-name-group">
+            <div class="header-label">Startnummer</div>
+            <div class="header-value" id="startnumber" style="color:var(--accent)">—</div>
+            <div id="starter-name" style="font-size:0.7rem;color:var(--muted);margin-top:0.1rem"></div>
         </div>
         <div class="header-group">
             <div class="header-label">Kampfrichter</div>
@@ -108,12 +104,11 @@
 
             function updateStarterName(num) {
                 const s = _allStarters.find(x => x.startNumber === String(num));
-                const grp = document.getElementById('starter-name-group');
                 if (s) {
-                    document.getElementById('starter-name').textContent = `${s.firstName ?? ''} ${s.lastName ?? ''}`.trim();
-                    grp.style.display = '';
+                    const fullName = `${s.firstName ?? ''} ${s.lastName ?? ''}`.trim();
+                    document.getElementById('starter-name').textContent = fullName;
                 } else {
-                    grp.style.display = 'none';
+                    document.getElementById('starter-name').textContent = '';
                 }
             }
 
@@ -169,18 +164,25 @@
             updateStarterName(startNum);
             renderCriteria();
             renderNumpad();
-            updateModeHeader(Number(num));
+            updateModeHeader(startNum);
             subscribePeerScores(startNum, currentRunNumber);
         }
 
         async function updateModeHeader(num) {
             try {
                 const entries = await ParseAPI.fetchAllFinalEntries();
-                const entry = entries.find(e => e.startNumber === num);
+                const entry = entries.find(e => String(e.startNumber) === String(num));
                 const group = document.getElementById('final-group');
                 if (entry) {
                     document.getElementById('finalnum-value').textContent = entry.finalStartNumber;
                     group.style.display = '';
+                    // Append original number in brackets to name
+                    const nameEl = document.getElementById('starter-name');
+                    if (nameEl.textContent) {
+                        nameEl.textContent = `${nameEl.textContent} (#${num})`;
+                    } else {
+                        nameEl.textContent = `(#${num})`;
+                    }
                 } else {
                     group.style.display = 'none';
                 }

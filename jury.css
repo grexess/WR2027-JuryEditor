@@ -835,14 +835,16 @@ main {
 
 /* ── Footer ── */
 footer {
-    flex-shrink: 0;
-    padding: 0.4rem 1rem calc(0.4rem + env(safe-area-inset-bottom, 0px));
+    flex-shrink: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 0.3rem 1rem calc(0.3rem + env(safe-area-inset-bottom, 0px));
     background: var(--bg);
     border-top: 1px solid var(--border);
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.3rem;
+    gap: 0.25rem;
 }
 
 footer img {

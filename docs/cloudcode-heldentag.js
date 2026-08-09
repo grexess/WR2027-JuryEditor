@@ -195,7 +195,8 @@ async function createFinal(event, startGroupObjectId) {
     await Parse.Object.destroyAll(existing, { useMasterKey: true });
 
     // Create new FinalEntry records:
-    // Best qualifier (index 0) gets finalStartNumber = 1
+    // Best qualifier (rank 1) starts last, worst starts first → reverse order for start sequence
+    const groupLetter = (startGroup.get('name') ?? 'X')[0].toUpperCase();
     const FinalEntry = Parse.Object.extend('HT_FINALENTRY');
     const entries = finalists.map(({ starter, qualiScore }, i) => {
         const e = new FinalEntry();
@@ -204,7 +205,7 @@ async function createFinal(event, startGroupObjectId) {
         e.set('starter', starter);
         e.set('startNumber', starter.get('startNumber'));
         e.set('qualiScore', qualiScore);
-        e.set('finalStartNumber', String(i + 1)); // best qualifier = '1'
+        e.set('finalStartNumber', `F-${groupLetter}-${i + 1}`); // F-A-1 = best qualifier
         return e;
     });
     await Parse.Object.saveAll(entries, { useMasterKey: true });
