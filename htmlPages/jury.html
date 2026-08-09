@@ -11,12 +11,8 @@
 
 <body>
     <header>
-        <div class="header-group" id="final-group" style="display:none">
-            <div class="header-label">Finale</div>
-            <div class="header-value" id="finalnum-value" style="color:var(--accent)">—</div>
-        </div>
         <div class="header-group" id="starter-name-group">
-            <div class="header-label">Startnummer</div>
+            <div class="header-label" id="startnumber-label">Startnummer</div>
             <div class="header-value" id="startnumber" style="color:var(--accent)">—</div>
             <div id="starter-name" style="font-size:0.7rem;color:var(--muted);margin-top:0.1rem"></div>
         </div>
@@ -44,7 +40,7 @@
             </button>
         </div>
     </div>
-    <div class="waiting" id="waiting">
+    <div class="waiting hidden" id="waiting">
         <div class="waiting-dots">
             <div class="waiting-dot"></div>
             <div class="waiting-dot"></div>
@@ -52,8 +48,15 @@
         </div>
         <div class="waiting-label">Warte auf Startnummer …</div>
     </div>
+    <div class="waiting hidden" id="reset-screen">
+        <div style="font-size:2.5rem;margin-bottom:0.5rem">↩</div>
+        <div style="font-size:1.1rem;font-weight:800;color:var(--accent);margin-bottom:0.3rem">Lauf zurückgesetzt</div>
+        <div style="font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.12em">Wertung gelöscht</div>
+    </div>
     <div class="content-center">
         <main id="main"></main>
+        <div id="peer-scores"></div>
+        <div class="numpad-wrap" id="numpad-wrap"></div>
     </div>
     <div class="toast" id="toast">✓ Wertung gespeichert</div>
     <div class="modal-backdrop" id="error-backdrop">
@@ -66,8 +69,6 @@
         </div>
     </div>
     <footer>
-        <div id="peer-scores"></div>
-        <div class="numpad-wrap" id="numpad-wrap"></div>
         <div class="submit-wrap" id="submit-wrap"></div>
         <img src="../assets/weraceLogo.png" alt="WeRace">
     </footer>
@@ -150,11 +151,18 @@
         let currentRunNumber = 1;
         let currentPhase = 'quali';
 
+        let _resetScreenTimer = null;
+
         function onNewStarter(num, runNumber, phase) {
+            // Cancel reset screen if it's showing
+            if (_resetScreenTimer) { clearTimeout(_resetScreenTimer); _resetScreenTimer = null; }
+            document.getElementById('reset-screen').classList.add('hidden');
             startNum = String(num);
             currentRunNumber = runNumber ?? 1;
             currentPhase = phase ?? 'quali';
+            document.getElementById('startnumber-label').textContent = 'Startnummer';
             document.getElementById('startnumber').textContent = startNum;
+            document.getElementById('startnumber').style.display = '';
             document.getElementById('waiting').classList.add('hidden');
             submitted = false;
             reviewing = false;
@@ -172,21 +180,40 @@
             try {
                 const entries = await ParseAPI.fetchAllFinalEntries();
                 const entry = entries.find(e => String(e.startNumber) === String(num));
-                const group = document.getElementById('final-group');
                 if (entry) {
-                    document.getElementById('finalnum-value').textContent = entry.finalStartNumber;
-                    group.style.display = '';
-                    // Append original number in brackets to name
-                    const nameEl = document.getElementById('starter-name');
-                    if (nameEl.textContent) {
-                        nameEl.textContent = `${nameEl.textContent} (#${num})`;
-                    } else {
-                        nameEl.textContent = `(#${num})`;
-                    }
+                    // Finale: show final number as main value, name + (orig) below
+                    document.getElementById('startnumber-label').textContent = 'Finale';
+                    document.getElementById('startnumber').textContent = entry.finalStartNumber;
+                    const baseName = _allStarters.find(x => x.startNumber === String(num));
+                    const fullName = baseName ? `${baseName.firstName ?? ''} ${baseName.lastName ?? ''}`.trim() : '';
+                    document.getElementById('starter-name').textContent = fullName ? `${fullName} (#${num})` : `(#${num})`;
                 } else {
-                    group.style.display = 'none';
+                    document.getElementById('startnumber-label').textContent = 'Startnummer';
                 }
             } catch (_) {}
+        }
+
+        function onStarterCleared() {
+            startNum = null;
+            submitted = false;
+            reviewing = false;
+            activeCrit = null;
+            inputBuffer = '';
+            _peerScores = {};
+            CRITERIA.forEach(c => scores[c] = 50);
+            document.getElementById('startnumber-label').textContent = 'Startnummer';
+            document.getElementById('startnumber').textContent = '—';
+            document.getElementById('starter-name').textContent = '';
+            renderCriteria();
+            renderNumpad();
+            // Show reset info screen briefly, then switch to waiting
+            document.getElementById('waiting').classList.add('hidden');
+            document.getElementById('reset-screen').classList.remove('hidden');
+            _resetScreenTimer = setTimeout(() => {
+                _resetScreenTimer = null;
+                document.getElementById('reset-screen').classList.add('hidden');
+                document.getElementById('waiting').classList.remove('hidden');
+            }, 2500);
         }
 
         // Live Query — receives starter from any device via Parse
@@ -195,8 +222,10 @@
             const active = await ParseAPI.fetchActiveStarter();
             if (active?.startNumber != null) {
                 onNewStarter(active.startNumber, active.runNumber ?? 1, active.phase ?? 'quali');
+            } else {
+                onStarterCleared();
             }
-        });
+        }, onStarterCleared);
 
         // On initial load: fetch active starter immediately so a page refresh doesn't show waiting screen
         ParseAPI.fetchActiveStarter().then(active => {
@@ -207,7 +236,10 @@
 
         // BroadcastChannel — fallback for same-device tabs
         const starterChannel = new BroadcastChannel('werace-starter');
-        starterChannel.addEventListener('message', e => onNewStarter(e.data.startNumber, e.data.runNumber, e.data.phase));
+        starterChannel.addEventListener('message', e => {
+            if (e.data.cleared) { onStarterCleared(); return; }
+            onNewStarter(e.data.startNumber, e.data.runNumber, e.data.phase);
+        });
 
         const scores = Object.fromEntries(CRITERIA.map(c => [c, 50]));
         let submitted = false;
@@ -303,6 +335,13 @@
                 if (idx < CRITERIA.length - 1) {
                     activeCrit = CRITERIA[idx + 1];
                     inputBuffer = '';
+                } else {
+                    // Last criterion filled — move focus to submit button
+                    renderCriteria();
+                    renderNumpad();
+                    const submitBtn = document.querySelector('#submit-wrap .submit-btn:not([disabled])');
+                    if (submitBtn) submitBtn.focus();
+                    return;
                 }
             }
             renderCriteria();

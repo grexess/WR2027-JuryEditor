@@ -284,7 +284,7 @@ const ParseAPI = (() => {
         return refereeUpdate({ action: 'clearActiveStarter' });
     }
 
-    function subscribeActiveStarter(onStartNumber, onReconnect) {
+    function subscribeActiveStarter(onStartNumber, onReconnect, onClear) {
         const ws = new WebSocket(CONFIG.parseLiveQueryUrl);
         let requestId = 1;
 
@@ -310,14 +310,18 @@ const ParseAPI = (() => {
                     },
                 }));
             }
-            if ((msg.op === 'create' || msg.op === 'update') && msg.object?.startNumber != null) {
-                onStartNumber(msg.object.startNumber, msg.object.runNumber ?? 1, msg.object.phase ?? 'quali');
+            if ((msg.op === 'create' || msg.op === 'update') && msg.object != null) {
+                if (msg.object.startNumber != null) {
+                    onStartNumber(msg.object.startNumber, msg.object.runNumber ?? 1, msg.object.phase ?? 'quali');
+                } else if (typeof onClear === 'function') {
+                    onClear();
+                }
             }
         });
 
         ws.addEventListener('close', () => {
             setTimeout(() => {
-                const newWs = subscribeActiveStarter(onStartNumber, onReconnect);
+                const newWs = subscribeActiveStarter(onStartNumber, onReconnect, onClear);
                 if (onReconnect) onReconnect();
                 return newWs;
             }, 3000);

@@ -832,8 +832,8 @@
                         <circle cx="11" cy="11" r="8" />
                         <line x1="21" y1="21" x2="16.65" y2="16.65" />
                     </svg>
-                    <input class="picker-input" id="filter-input" type="text" inputmode="numeric"
-                        placeholder="Startnummer suchen …" autocomplete="off">
+                    <input class="picker-input" id="filter-input" type="text" inputmode="text"
+                        placeholder="Nummer oder Name suchen …" autocomplete="off">
                 </div>
                 <div id="filter-chips-groups" class="filter-chips" style="display:none"></div>
                 <div id="filter-chips-runs" class="filter-chips" style="display:none"></div>
@@ -959,6 +959,11 @@
         function renderFilterChips() {
             const groupBar = document.getElementById('filter-chips-groups');
             const runsBar = document.getElementById('filter-chips-runs');
+            if (mode !== 'quali') {
+                groupBar.style.display = 'none';
+                runsBar.style.display = 'none';
+                return;
+            }
 
             const finalGroupIds = new Set(Object.keys(finalEntriesByGroup).filter(gid => finalEntriesByGroup[gid].length > 0));
 
@@ -1049,6 +1054,7 @@
 
         function renderList(filter) {
             pickerList.innerHTML = '';
+            const term = filter.trim().toLowerCase();
 
             if (mode === 'finale') {
                 let groups = Object.entries(finalEntriesByGroup).filter(([, e]) => e.length > 0);
@@ -1069,6 +1075,16 @@
                 let total = 0;
                 groups.forEach(([gid, entries], idx) => {
                     const groupName = entries[0].startGroup?.name ?? 'Finale';
+                    // Filter entries by search term
+                    const filtered = term ? [...entries].reverse().filter(entry => {
+                        const s = entry.starter;
+                        return String(entry.finalStartNumber ?? '').toLowerCase().includes(term)
+                            || String(entry.startNumber ?? '').toLowerCase().includes(term)
+                            || (s?.firstName ?? '').toLowerCase().includes(term)
+                            || (s?.lastName ?? '').toLowerCase().includes(term);
+                    }) : [...entries].reverse();
+                    if (!filtered.length) return;
+
                     const panel = document.createElement('div');
                     panel.className = 'finale-panel' + (idx === 0 ? ' open' : '');
 
@@ -1076,7 +1092,7 @@
                     hdr.className = 'finale-panel-header';
                     hdr.innerHTML =
                         `<span class="finale-panel-title">Finale – ${groupName}</span>` +
-                        `<span class="finale-panel-count">${entries.length}</span>` +
+                        `<span class="finale-panel-count">${filtered.length}</span>` +
                         `<span class="finale-panel-chevron">▼</span>`;
                     hdr.addEventListener('click', () => panel.classList.toggle('open'));
                     panel.appendChild(hdr);
@@ -1086,7 +1102,7 @@
                     body.style.borderRadius = '0';
                     body.style.border = 'none';
 
-                    for (const entry of [...entries].reverse()) {
+                    for (const entry of filtered) {
                         const starter = entry.starter;
                         const finalRuns = finalRunCounts[entry.startNumber] ?? 0;
                         const finalTotal = CONFIG.finalRuns ?? '?';
@@ -1113,6 +1129,7 @@
                                 selectedFinalNumber = entry.finalStartNumber;
                                 if (display) display.textContent = entry.startNumber;
                                 setStartBtn(entry.startNumber, entry.finalStartNumber);
+                                filterInput.value = '';
                                 renderList('');
                             });
                         }
@@ -1122,14 +1139,21 @@
                     panel.appendChild(body);
                     pickerList.appendChild(panel);
                 });
-                resultsLabel.textContent = `${total} Finalisten`;
+                resultsLabel.textContent = term
+                    ? `${total} Ergebnis${total !== 1 ? 'se' : ''}`
+                    : `${total} Finalisten`;
                 return;
             }
 
             // ── Quali mode ──
-            const term = filter.trim();
             const finalGroupIds = new Set(Object.keys(finalEntriesByGroup).filter(gid => finalEntriesByGroup[gid].length > 0));
-            let matches = START_NUMBERS.filter(n => String(n).includes(term));
+            let matches = START_NUMBERS.filter(n => {
+                if (!term) return true;
+                const s = STARTERS.find(x => x.startNumber === n);
+                return String(n).toLowerCase().includes(term)
+                    || (s?.firstName ?? '').toLowerCase().includes(term)
+                    || (s?.lastName ?? '').toLowerCase().includes(term);
+            });
 
             // Exclude finalized groups
             if (finalGroupIds.size > 0) {
@@ -1158,11 +1182,9 @@
                 matches = matches.filter(n => (runCounts[n] ?? 0) === filterRuns);
             }
 
-            const total = (filterGroup !== null || filterRuns !== null || filterDone)
-                ? matches.length + ' von ' + START_NUMBERS.filter(n => String(n).includes(term)).length
-                : matches.length;
+            const total = matches.length;
             resultsLabel.textContent = term
-                ? `${total} Ergebnis${matches.length !== 1 ? 'se' : ''}`
+                ? `${total} Ergebnis${total !== 1 ? 'se' : ''}`
                 : `${total} Starter`;
 
             const inner = document.createElement('div');
@@ -1382,6 +1404,7 @@
             const completedRun = activeRunNumber;
             if (aborted && completedStarter != null && completedRun != null) {
                 ParseAPI.deleteQualiRun(completedStarter, completedRun).catch(() => {});
+                channel.postMessage({ cleared: true });
             }
             if (!aborted && completedStarter != null) {
                 if (mode === 'finale') {

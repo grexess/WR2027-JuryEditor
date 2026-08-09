@@ -835,9 +835,7 @@ main {
 
 /* ── Footer ── */
 footer {
-    flex-shrink: 1;
-    min-height: 0;
-    overflow-y: auto;
+    flex-shrink: 0;
     padding: 0.3rem 1rem calc(0.3rem + env(safe-area-inset-bottom, 0px));
     background: var(--bg);
     border-top: 1px solid var(--border);
@@ -852,4 +850,14 @@ footer img {
     opacity: 0.6;
     width: 100%;
     object-fit: contain;
+}
+
+/* ── Footer logo ── */
+.footer-logo {
+    height: 18px;
+    opacity: 0.6;
+    width: 100%;
+    object-fit: contain;
+    margin: 0.5rem auto 0.25rem;
+    display: block;
 }
