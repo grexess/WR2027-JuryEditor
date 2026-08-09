@@ -58,7 +58,7 @@
     </div>
     <div class="content-center">
         <main id="main"></main>
-        <div class="numpad-wrap" id="numpad-wrap"></div>
+        <div id="peer-scores"></div>
     </div>
     <div class="toast" id="toast">✓ Wertung gespeichert</div>
     <div class="modal-backdrop" id="error-backdrop">
@@ -71,6 +71,7 @@
         </div>
     </div>
     <footer>
+        <div class="numpad-wrap" id="numpad-wrap"></div>
         <div class="submit-wrap" id="submit-wrap"></div>
         <img src="../assets/weraceLogo.png" alt="WeRace">
     </footer>
@@ -169,6 +170,7 @@
             renderCriteria();
             renderNumpad();
             updateModeHeader(Number(num));
+            subscribePeerScores(startNum, currentRunNumber);
         }
 
         async function updateModeHeader(num) {
@@ -211,6 +213,64 @@
         let activeCrit = startNum ? CRITERIA[0] : null;
         let inputBuffer = '';
         let _frozenStartNum = null;
+        let _peerScores = {};   // judgeName → score record
+        let _peerWs = null;
+
+        function calcWeighted(scoreRecord) {
+            return Math.round(CONFIG.criteria.reduce((a, c) =>
+                a + (scoreRecord[c.key] ?? 0) * ((c.weight ?? (100 / CONFIG.criteria.length)) / 100), 0));
+        }
+
+        function renderPeerScores() {
+            const el = document.getElementById('peer-scores');
+            const peers = Object.values(_peerScores);
+            if (!peers.length) { el.innerHTML = ''; return; }
+            el.innerHTML = '<div class="peer-scores-title">Andere Kampfrichter</div>';
+            for (const s of peers) {
+                const chip = document.createElement('div');
+                chip.className = 'peer-chip';
+                const critHtml = CONFIG.criteria.map(c => {
+                    const raw = s[c.key] ?? 0;
+                    const w = c.weight ?? (100 / CONFIG.criteria.length);
+                    const weighted = Math.round(raw * w / 100);
+                    return `<span class="peer-chip-crit">` +
+                        `<span class="peer-chip-crit-label">${c.shortLabel}</span>` +
+                        `<span class="peer-chip-crit-raw">${raw}</span>` +
+                        `<span class="peer-chip-crit-divider"></span>` +
+                        `<span class="peer-chip-crit-w">${weighted}</span>` +
+                        `</span>`;
+                }).join('');
+                chip.innerHTML =
+                    `<span class="peer-chip-name">${s.judgeName}</span>` +
+                    `<span class="peer-chip-criteria">${critHtml}</span>` +
+                    `<span class="peer-chip-total">${calcWeighted(s)}</span>`;
+                el.appendChild(chip);
+            }
+        }
+
+        function subscribePeerScores(startNumber, runNumber) {
+            if (_peerWs) { _peerWs.close(); _peerWs = null; }
+            _peerScores = {};
+            renderPeerScores();
+            // Fetch existing scores for this run
+            ParseAPI.fetchJuryScores(startNumber).then(existing => {
+                for (const s of existing) {
+                    if (s.judgeName !== judgeName &&
+                        String(s.runNumber ?? 1) === String(runNumber ?? 1)) {
+                        _peerScores[s.judgeName] = s;
+                    }
+                }
+                renderPeerScores();
+            }).catch(() => {});
+            // Subscribe to live updates
+            _peerWs = ParseAPI.subscribeJuryScores(startNumber, s => {
+                if (s.judgeName !== judgeName &&
+                    String(s.runNumber ?? 1) === String(runNumber ?? 1)) {
+                    _peerScores[s.judgeName] = s;
+                    renderPeerScores();
+                }
+            });
+        }
 
         async function saveScore(startnumber, judgeName, scores) {
             return ParseAPI.saveJuryScore(startnumber, judgeName, scores, CRITERIA, currentRunNumber, currentPhase);

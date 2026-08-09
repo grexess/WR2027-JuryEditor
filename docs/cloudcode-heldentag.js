@@ -95,10 +95,22 @@ async function createFinal(event, startGroupObjectId) {
 
     const bestOf = event.get('bestOf') ?? 8;
     const qualiRuns = event.get('qualiRuns') ?? null;
-    const qualiScoreMode = event.get('qualiScoreMode') ?? 'sum'; // 'sum' | 'best'
-    const judgeCount = (await new Parse.Query('HT_JUDGE')
-        .equalTo('event', event)
-        .count({ useMasterKey: true })) || 1;
+    const qualiScoreMode = event.get('qualiScoreMode') ?? 'sum';
+    const criteria = (event.get('criteria') ?? []).map((c, i, arr) => ({
+        ...c, weight: c.weight ?? Math.round(100 / arr.length),
+    }));
+
+    function calcJudgeTotal(s) {
+        return Math.round(criteria.reduce((a, c) =>
+            a + (s.get(c.key) ?? 0) * (c.weight / 100), 0));
+    }
+
+    function deduplicateByJudge(scoreList) {
+        const latest = new Map();
+        for (const s of scoreList) latest.set(s.get('judgeName'), s);
+        return [...latest.values()];
+    }
+
     const startersQuery = new Parse.Query('HT_STARTER');
     startersQuery.equalTo('startGroup', startGroup);
     startersQuery.notEqualTo('status', 'disqualified');
@@ -130,10 +142,13 @@ async function createFinal(event, startGroupObjectId) {
             for (const s of scoreList) {
                 const r = s.get('runNumber') ?? 1;
                 if (!byRun[r]) byRun[r] = [];
-                byRun[r].push(s.get('total') ?? 0);
+                byRun[r].push(s);
             }
             return Object.keys(byRun).map(Number).sort((a, b) => a - b)
-                .map(r => byRun[r].reduce((a, b) => a + b, 0));
+                .map(r => {
+                    const deduped = deduplicateByJudge(byRun[r]);
+                    return deduped.reduce((a, s) => a + calcJudgeTotal(s), 0);
+                });
         }
         // Fallback: detect run boundary when a judge name repeats
         const runs = [];
@@ -142,16 +157,19 @@ async function createFinal(event, startGroupObjectId) {
         for (const s of scoreList) {
             const name = s.get('judgeName');
             if (seen.has(name)) {
-                if (chunk.length) runs.push(chunk.reduce((a, b) => a + b, 0));
-                chunk = [s.get('total') ?? 0];
-                seen.clear();
-                seen.add(name);
+                if (chunk.length) {
+                    const deduped = deduplicateByJudge(chunk);
+                    runs.push(deduped.reduce((a, s) => a + calcJudgeTotal(s), 0));
+                }
+                chunk = [s]; seen.clear(); seen.add(name);
             } else {
-                chunk.push(s.get('total') ?? 0);
-                seen.add(name);
+                chunk.push(s); seen.add(name);
             }
         }
-        if (chunk.length) runs.push(chunk.reduce((a, b) => a + b, 0));
+        if (chunk.length) {
+            const deduped = deduplicateByJudge(chunk);
+            runs.push(deduped.reduce((a, s) => a + calcJudgeTotal(s), 0));
+        }
         return runs;
     }
 

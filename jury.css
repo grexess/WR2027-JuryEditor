@@ -79,7 +79,6 @@ main {
     justify-content: flex-start;
     min-height: 0;
     overflow-y: auto;
-    padding-bottom: 10rem;
 }
 
 .criterion {
@@ -124,17 +123,100 @@ main {
     color: var(--accent);
 }
 
+#peer-scores {
+    max-width: 480px;
+    width: 100%;
+    margin: 0.75rem auto 0;
+}
+
+.peer-scores-title {
+    font-size: 0.6rem;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.4rem;
+    padding: 0 0.25rem;
+}
+
+.peer-chip {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.4rem 0.6rem;
+    margin-bottom: 0.35rem;
+}
+
+.peer-chip-name {
+    font-size: 0.65rem;
+    color: var(--muted);
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.peer-chip-criteria {
+    display: flex;
+    gap: 0.3rem;
+}
+
+.peer-chip-crit {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 1.4rem;
+}
+
+.peer-chip-crit-label {
+    font-size: 0.38rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.peer-chip-crit-raw {
+    font-size: 0.5rem;
+    color: var(--muted);
+    line-height: 1.2;
+}
+
+.peer-chip-crit-divider {
+    width: 100%;
+    height: 1px;
+    background: var(--border);
+    margin: 0.08rem 0;
+}
+
+.peer-chip-crit-w {
+    font-size: 0.55rem;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1.2;
+}
+
+.peer-chip-total {
+    font-size: 0.9rem;
+    font-weight: 800;
+    color: var(--text);
+    min-width: 2rem;
+    text-align: right;
+}
+
 .numpad-wrap {
     max-width: 480px;
     width: 100%;
     margin: 0 auto;
-    padding: 0.5rem 1rem 1rem;
+    padding: 0.25rem 1rem 0.25rem;
 }
 
 .numpad {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 0.4rem;
+    gap: clamp(0.2rem, 1vh, 0.4rem);
     transition: opacity 0.15s;
 }
 
@@ -144,12 +226,12 @@ main {
 }
 
 .np-btn {
-    padding: 0.75rem 0;
+    padding: clamp(0.4rem, 1.5vh, 0.75rem) 0;
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: 10px;
     color: var(--text);
-    font-size: 1.3rem;
+    font-size: clamp(1rem, 2.5vh, 1.3rem);
     font-weight: 600;
     cursor: pointer;
     touch-action: manipulation;
@@ -173,12 +255,12 @@ main {
     justify-content: center;
     gap: 0.6rem;
     margin: 0 auto;
-    padding: 0.9rem;
+    padding: clamp(0.55rem, 1.5vh, 0.9rem);
     background: #f0c030;
     color: #000;
     border: none;
     border-radius: 10px;
-    font-size: 1.1rem;
+    font-size: clamp(0.9rem, 2.2vh, 1.1rem);
     font-weight: 700;
     cursor: pointer;
     touch-action: manipulation;
@@ -760,25 +842,19 @@ main {
 
 /* ── Footer ── */
 footer {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    padding: 0.6rem 1rem calc(0.75rem + env(safe-area-inset-bottom, 0px));
+    flex-shrink: 0;
+    padding: 0.4rem 1rem calc(0.4rem + env(safe-area-inset-bottom, 0px));
     background: var(--bg);
+    border-top: 1px solid var(--border);
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.4rem;
+    gap: 0.3rem;
 }
 
 footer img {
-    height: 22px;
+    height: 18px;
     opacity: 0.6;
-    border-top: 1px solid var(--border);
-    padding-top: 0.4rem;
     width: 100%;
-    display: flex;
-    justify-content: center;
     object-fit: contain;
 }

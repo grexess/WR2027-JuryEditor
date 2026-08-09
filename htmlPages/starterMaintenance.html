@@ -1023,8 +1023,6 @@
         }
 
         function _calcJudgeTotal(s) {
-            const hasRaw = CONFIG.criteria.some(c => s[c.key] != null);
-            if (!hasRaw) return s.total ?? 0;
             return Math.round(CONFIG.criteria.reduce((a, c) =>
                 a + (s[c.key] ?? 0) * ((c.weight ?? (100 / CONFIG.criteria.length)) / 100), 0));
         }

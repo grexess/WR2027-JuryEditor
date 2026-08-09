@@ -786,6 +786,9 @@
                 style="display:none;margin-top:1.25rem;max-width:480px;width:calc(100% - 2rem);background:var(--green);color:#000">
                 Nächster Starter
             </button>
+            <button id="abort-btn" style="margin-top:0.75rem;background:transparent;border:1px solid var(--border);border-radius:10px;color:var(--muted);font-size:0.85rem;font-weight:600;padding:0.6rem 1.5rem;cursor:pointer">
+                ✕ Lauf zurücksetzen
+            </button>
         </div>
 
         <!-- Presence overlay — shown when not all judges are online -->
@@ -1269,9 +1272,11 @@
 
                     const total = document.createElement('div');
                     total.className = 'jcard-total';
+                    const judgeTotal = Math.round(CONFIG.criteria.reduce((a, c) =>
+                        a + (s[c.key] ?? 0) * ((c.weight ?? (100 / CONFIG.criteria.length)) / 100), 0));
                     total.innerHTML =
                         `<span class="jcard-total-label">Total</span>` +
-                        `<span class="jcard-total-val">${s.total ?? '—'}</span>`;
+                        `<span class="jcard-total-val">${judgeTotal}</span>`;
                     card.appendChild(total);
                 } else {
                     const pending = document.createElement('div');
@@ -1349,10 +1354,14 @@
             _toastTimer = setTimeout(() => { el.style.display = 'none'; }, durationMs);
         }
 
-        function exitWaitingForScores() {
+        function exitWaitingForScores(aborted = false) {
             if (scoreWs) { scoreWs.close(); scoreWs = null; }
             const completedStarter = activeStarter;
-            if (completedStarter != null) {
+            const completedRun = activeRunNumber;
+            if (aborted && completedStarter != null && completedRun != null) {
+                ParseAPI.deleteQualiRun(completedStarter, completedRun).catch(() => {});
+            }
+            if (!aborted && completedStarter != null) {
                 if (mode === 'finale') {
                     finalRunCounts[completedStarter] = (finalRunCounts[completedStarter] ?? 0) + 1;
                 } else {
@@ -1409,7 +1418,8 @@
 
         filterInput.addEventListener('input', () => renderList(filterInput.value));
         clearBtn.addEventListener('click', clearSelection);
-        document.getElementById('next-btn').addEventListener('click', exitWaitingForScores);
+        document.getElementById('next-btn').addEventListener('click', () => exitWaitingForScores(false));
+        document.getElementById('abort-btn').addEventListener('click', () => exitWaitingForScores(true));
 
         function setMode(m) {
             mode = m;
@@ -1755,6 +1765,17 @@
 
         // ── Print ──
         // Shared score-grouping helpers (same logic as results.html)
+        function _calcJudgeTotal(s) {
+            return Math.round(CONFIG.criteria.reduce((a, c) =>
+                a + (s[c.key] ?? 0) * ((c.weight ?? (100 / CONFIG.criteria.length)) / 100), 0));
+        }
+
+        function _deduplicateByJudge(scores) {
+            const latest = new Map();
+            for (const s of scores) latest.set(s.judgeName, s);
+            return [...latest.values()];
+        }
+
         function _groupByRunNumber(scores) {
             if (!scores.length) return [];
             const byRun = {};
@@ -1773,12 +1794,18 @@
                     } else { chunk.push(sc); seen.add(sc.judgeName); }
                 }
                 if (chunk.length) runs.push(chunk);
-                return runs.map(c => ({ scores: c, total: c.reduce((a, s) => a + (s.total ?? 0), 0) }));
+                return runs.map(c => {
+                    const deduped = _deduplicateByJudge(c);
+                    return { scores: deduped, total: deduped.reduce((a, s) => a + _calcJudgeTotal(s), 0) };
+                });
             };
             const hasByRun = scores.some(s => s.runNumber != null);
             if (!hasByRun) return judgeRepeatFallback();
             return Object.keys(byRun).map(Number).sort((a, b) => a - b)
-                .map(r => ({ scores: byRun[r], total: byRun[r].reduce((a, s) => a + (s.total ?? 0), 0) }));
+                .map(r => {
+                    const deduped = _deduplicateByJudge(byRun[r]);
+                    return { scores: deduped, total: deduped.reduce((a, s) => a + _calcJudgeTotal(s), 0) };
+                });
         }
 
         async function init() {
@@ -1890,6 +1917,14 @@
 
             renderFilterChips();
             renderList('');
+
+            // Restore active starter if one is set (e.g. after page refresh)
+            ParseAPI.fetchActiveStarter().then(active => {
+                if (active?.startNumber != null && activeStarter === null) {
+                    mode = active.phase === 'finale' ? 'finale' : 'quali';
+                    enterWaitingForScores(String(active.startNumber));
+                }
+            }).catch(() => {});
         }
 
         init();

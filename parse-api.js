@@ -123,9 +123,7 @@ const ParseAPI = (() => {
         if (!startnumber || startnumber === 'null' || startnumber === 'undefined') {
             throw new Error('Keine gültige Startnummer');
         }
-        const total = Math.round(CONFIG.criteria.reduce((a, c) =>
-            a + (scores[c.label] ?? 0) * ((c.weight ?? (100 / CONFIG.criteria.length)) / 100), 0));
-        const body  = { startNumber: String(startnumber), judgeName, total,
+        const body  = { startNumber: String(startnumber), judgeName,
             runNumber: Number(runNumber) ?? 1, phase: phase ?? 'quali',
             event: { __type: 'Pointer', className: 'HT_EVENT', objectId: CONFIG.eventObjectId } };
         for (const c of CONFIG.criteria) body[c.key] = scores[c.label];
