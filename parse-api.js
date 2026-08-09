@@ -61,10 +61,14 @@ const ParseAPI = (() => {
         if (!res.ok) throw new Error(`Parse error ${res.status}`);
         const ev = await res.json();
         if (ev.name)          CONFIG.eventName     = ev.name;
-        if (ev.criteria)      CONFIG.criteria      = ev.criteria.map((c, i, arr) => ({
-            ...c,
-            weight: c.weight ?? Math.round(100 / arr.length),
-        }));
+        if (ev.criteria) {
+            const raw = ev.criteria.map((c, i, arr) => ({
+                ...c,
+                weight: c.weight ?? Math.round(100 / arr.length),
+            }));
+            const total = raw.reduce((a, c) => a + c.weight, 0);
+            CONFIG.criteria = total === 100 ? raw : raw.map(c => ({ ...c, weight: c.weight * 100 / total }));
+        }
         if (ev.presenceStalMs) CONFIG.presenceStalMs = ev.presenceStalMs;
         if (ev.presencePollMs) CONFIG.presencePollMs = ev.presencePollMs;
         if (ev.qualiRuns != null)   CONFIG.qualiRuns     = ev.qualiRuns;

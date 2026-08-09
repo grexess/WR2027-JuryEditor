@@ -58,7 +58,6 @@
     </div>
     <div class="content-center">
         <main id="main"></main>
-        <div id="peer-scores"></div>
     </div>
     <div class="toast" id="toast">✓ Wertung gespeichert</div>
     <div class="modal-backdrop" id="error-backdrop">
@@ -71,6 +70,7 @@
         </div>
     </div>
     <footer>
+        <div id="peer-scores"></div>
         <div class="numpad-wrap" id="numpad-wrap"></div>
         <div class="submit-wrap" id="submit-wrap"></div>
         <img src="../assets/weraceLogo.png" alt="WeRace">
@@ -229,21 +229,18 @@
             for (const s of peers) {
                 const chip = document.createElement('div');
                 chip.className = 'peer-chip';
-                const critHtml = CONFIG.criteria.map(c => {
-                    const raw = s[c.key] ?? 0;
-                    const w = c.weight ?? (100 / CONFIG.criteria.length);
-                    const weighted = Math.round(raw * w / 100);
-                    return `<span class="peer-chip-crit">` +
-                        `<span class="peer-chip-crit-label">${c.shortLabel}</span>` +
-                        `<span class="peer-chip-crit-raw">${raw}</span>` +
-                        `<span class="peer-chip-crit-divider"></span>` +
-                        `<span class="peer-chip-crit-w">${weighted}</span>` +
-                        `</span>`;
-                }).join('');
+                const critHtml = CONFIG.criteria.map(c =>
+                    `<span class="peer-chip-crit">` +
+                    `<span class="peer-chip-crit-label">${c.shortLabel}</span>` +
+                    `<span class="peer-chip-crit-raw">${s[c.key] ?? 0}</span>` +
+                    `</span>`
+                ).join('');
+                const rawSum = CONFIG.criteria.reduce((a, c) => a + (s[c.key] ?? 0), 0);
                 chip.innerHTML =
                     `<span class="peer-chip-name">${s.judgeName}</span>` +
+                    `<span class="peer-chip-divider"></span>` +
                     `<span class="peer-chip-criteria">${critHtml}</span>` +
-                    `<span class="peer-chip-total">${calcWeighted(s)}</span>`;
+                    `<span class="peer-chip-total">${rawSum}</span>`;
                 el.appendChild(chip);
             }
         }
@@ -276,9 +273,8 @@
             return ParseAPI.saveJuryScore(startnumber, judgeName, scores, CRITERIA, currentRunNumber, currentPhase);
         }
         function clamp(v) { return Math.max(0, Math.min(99, Math.round(v))); }
-        function weightedTotal() {
-            return Math.round(CONFIG.criteria.reduce((a, c) =>
-                a + (scores[c.label] ?? 0) * ((c.weight ?? (100 / CONFIG.criteria.length)) / 100), 0));
+        function rawTotal() {
+            return CRITERIA.reduce((a, c) => a + (scores[c] ?? 0), 0);
         }
 
         function selectCrit(crit) {
@@ -342,8 +338,10 @@
         function renderNumpad() {
             const wrap = document.getElementById('numpad-wrap');
             const submitWrap = document.getElementById('submit-wrap');
+            const peerEl = document.getElementById('peer-scores');
             wrap.innerHTML = '';
             submitWrap.innerHTML = '';
+            peerEl.style.display = reviewing ? '' : 'none';
 
             if (submitted) {
                 const btn = document.createElement('button');
@@ -370,7 +368,7 @@
                 const submitBtn = document.createElement('button');
                 submitBtn.className = 'submit-btn';
                 submitBtn.style.background = '#4caf50';
-                submitBtn.innerHTML = `<span style="font-size:1.3rem">✓</span> <span class="badge">${weightedTotal()}</span>`;
+                submitBtn.innerHTML = `<span style="font-size:1.3rem">✓</span> <span class="badge">${rawTotal()}</span>`;
                 submitBtn.addEventListener('click', async () => {
                     submitBtn.disabled = true;
                     submitBtn.textContent = '…';
@@ -380,7 +378,7 @@
                         document.getElementById('error-message').textContent = e.message;
                         document.getElementById('error-backdrop').classList.add('open');
                         submitBtn.disabled = false;
-                        submitBtn.innerHTML = `<span style="font-size:1.3rem">✓</span> <span class="badge">${weightedTotal()}</span>`;
+                        submitBtn.innerHTML = `<span style="font-size:1.3rem">✓</span> <span class="badge">${rawTotal()}</span>`;
                         return;
                     }
                     const toast = document.getElementById('toast');
@@ -416,7 +414,7 @@
 
             const submitBtn = document.createElement('button');
             submitBtn.className = 'submit-btn';
-            submitBtn.innerHTML = `<span style="font-size:1.3rem">✓</span> <span class="badge">${CRITERIA.reduce((a, c) => a + scores[c], 0)}</span>`;
+            submitBtn.innerHTML = `<span style="font-size:1.3rem">✓</span> <span class="badge">${rawTotal()}</span>`;
             submitBtn.addEventListener('click', () => {
                 if (!startNum) return;
                 _frozenStartNum = startNum;
