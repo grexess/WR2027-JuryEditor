@@ -260,10 +260,96 @@
             margin-top: 0.15rem;
         }
 
+        .run-judge-criteria {
+            display: flex;
+            gap: 0.3rem;
+            margin-top: 0.2rem;
+        }
+
         .run-judge-crit {
-            font-size: 0.55rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0;
+            min-width: 1.6rem;
+            background: rgba(255,255,255,0.04);
+            border-radius: 3px;
+            padding: 0.1rem 0.25rem;
+        }
+
+        .run-judge-crit-label {
+            font-size: 0.42rem;
             color: var(--muted);
-            white-space: nowrap;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .run-judge-crit-raw {
+            font-size: 0.52rem;
+            color: var(--muted);
+            line-height: 1.2;
+        }
+
+        .run-judge-crit-divider {
+            width: 100%;
+            height: 1px;
+            background: var(--border);
+            margin: 0.1rem 0;
+        }
+
+        .run-judge-crit-w {
+            font-size: 0.58rem;
+            font-weight: 700;
+            color: var(--accent);
+            line-height: 1.2;
+        }
+
+        .run-crit-sum {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.25rem 0.5rem;
+            background: rgba(255,255,255,0.04);
+            border-top: 1px solid var(--border);
+            border-radius: 0 0 4px 4px;
+            margin-top: 0.2rem;
+        }
+
+        .run-crit-sum-prefix {
+            font-size: 0.55rem;
+            font-weight: 700;
+            color: var(--accent);
+            margin-right: 0.1rem;
+        }
+
+        .run-crit-sum-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 1.6rem;
+            background: rgba(255,255,255,0.06);
+            border-radius: 3px;
+            padding: 0.1rem 0.25rem;
+        }
+
+        .run-crit-sum-label {
+            font-size: 0.42rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .run-crit-sum-raw {
+            font-size: 0.52rem;
+            color: var(--muted);
+            line-height: 1.2;
+        }
+
+        .run-crit-sum-val {
+            font-size: 0.58rem;
+            font-weight: 700;
+            color: var(--accent);
+            line-height: 1.2;
         }
 
         .run-total {
@@ -550,6 +636,23 @@
             return { allRuns };
         }
 
+        // Recalculate a single judge's score using current criteria weights when raw
+        // criterion scores (score1/score2/…) are present; otherwise fall back to stored total.
+        function calcJudgeTotal(s) {
+            const hasRaw = CONFIG.criteria.some(c => s[c.key] != null);
+            if (!hasRaw) return s.total ?? 0;
+            return Math.round(CONFIG.criteria.reduce((a, c) =>
+                a + (s[c.key] ?? 0) * ((c.weight ?? (100 / CONFIG.criteria.length)) / 100), 0));
+        }
+
+        // Deduplicate an array of score records keeping only the latest per judgeName.
+        // Input is already sorted by createdAt (oldest first) so the last entry wins.
+        function deduplicateByJudge(scores) {
+            const latest = new Map();
+            for (const s of scores) latest.set(s.judgeName, s);
+            return [...latest.values()];
+        }
+
         function groupByRunNumber(scores) {
             if (!scores.length) return [];
             const hasRunNumber = scores.some(s => s.runNumber != null);
@@ -561,7 +664,10 @@
                     byRun[r].push(s);
                 }
                 return Object.keys(byRun).map(Number).sort((a, b) => a - b)
-                    .map(r => ({ scores: byRun[r], total: byRun[r].reduce((a, s) => a + (s.total ?? 0), 0) }));
+                    .map(r => {
+                        const deduped = deduplicateByJudge(byRun[r]);
+                        return { scores: deduped, total: deduped.reduce((a, s) => a + calcJudgeTotal(s), 0) };
+                    });
             }
             // Judge-repeat fallback
             return scoreToRuns(scores);
@@ -577,14 +683,20 @@
                     byRun[r].push(s);
                 }
                 return Object.keys(byRun).map(Number).sort((a, b) => a - b)
-                    .map(r => ({ scores: byRun[r], total: byRun[r].reduce((a, s) => a + (s.total ?? 0), 0) }));
+                    .map(r => {
+                        const deduped = deduplicateByJudge(byRun[r]);
+                        return { scores: deduped, total: deduped.reduce((a, s) => a + calcJudgeTotal(s), 0) };
+                    });
             }
             const runs = [];
             let chunk = [];
             const seen = new Set();
             for (const score of scores) {
                 if (seen.has(score.judgeName)) {
-                    if (chunk.length) runs.push({ scores: chunk, total: chunk.reduce((a, s) => a + (s.total ?? 0), 0) });
+                    if (chunk.length) {
+                        const deduped = deduplicateByJudge(chunk);
+                        runs.push({ scores: deduped, total: deduped.reduce((a, s) => a + calcJudgeTotal(s), 0) });
+                    }
                     chunk = [score];
                     seen.clear();
                     seen.add(score.judgeName);
@@ -593,14 +705,17 @@
                     seen.add(score.judgeName);
                 }
             }
-            if (chunk.length) runs.push({ scores: chunk, total: chunk.reduce((a, s) => a + (s.total ?? 0), 0) });
+            if (chunk.length) {
+                const deduped = deduplicateByJudge(chunk);
+                runs.push({ scores: deduped, total: deduped.reduce((a, s) => a + calcJudgeTotal(s), 0) });
+            }
             return runs;
         }
 
         function buildResults() {
             const byStarter = {};
             for (const s of allScores) {
-                const n = s.startnumber;
+                const n = s.startNumber;
                 if (!byStarter[n]) byStarter[n] = [];
                 byStarter[n].push(s);
             }
@@ -609,8 +724,8 @@
 
             const results = [];
             for (const [numStr, scores] of Object.entries(byStarter)) {
-                const num = Number(numStr);
-                const starter = starters.find(s => s.startNumber === num);
+                const num = String(numStr);
+                const starter = starters.find(s => String(s.startNumber) === num);
 
                 if (starter?.status === 'disqualified' || starter?.status === 'removed') continue;
                 if (filterGroup !== null && starter?.startGroup?.objectId !== filterGroup) continue;
@@ -662,14 +777,14 @@
         function buildExcluded(statusFilter) {
             const byStarter = {};
             for (const s of allScores) {
-                const n = s.startnumber;
+                const n = s.startNumber;
                 if (!byStarter[n]) byStarter[n] = [];
                 byStarter[n].push(s);
             }
             const results = [];
             for (const [numStr, scores] of Object.entries(byStarter)) {
-                const num = Number(numStr);
-                const starter = starters.find(s => s.startNumber === num);
+                const num = String(numStr);
+                const starter = starters.find(s => String(s.startNumber) === num);
                 if ((starter?.status ?? 'active') !== statusFilter) continue;
                 if (filterGroup !== null && starter?.startGroup?.objectId !== filterGroup) continue;
                 const runs = scoreToRuns(scores);
@@ -689,7 +804,7 @@
             const countableStarters = groupStarters.filter(s => s.status !== 'disqualified');
 
             const phaseRunCounts = num => {
-                const scores = allScores.filter(sc => sc.startnumber === num);
+                const scores = allScores.filter(sc => String(sc.startNumber) === String(num));
                 const r = scoreToPhaseRuns(scores);
                 if (r.allRuns) {
                     const qc = CONFIG.qualiRuns ?? r.allRuns.length;
@@ -827,10 +942,17 @@
             }
 
             const openNums = new Set(
-                [...list.querySelectorAll('.result-card.open')].map(el => Number(el.dataset.num))
+                [...list.querySelectorAll('.result-card.open')].map(el => String(el.dataset.num))
             );
 
             list.innerHTML = '';
+            // Weight legend
+            if (CONFIG.criteria.some(c => c.weight != null)) {
+                const legend = document.createElement('div');
+                legend.style.cssText = 'font-size:0.7rem;color:var(--muted);text-align:center;margin-bottom:0.5rem;';
+                legend.textContent = 'Gewichtung: ' + CONFIG.criteria.map(c => `${c.shortLabel} ${c.weight}%`).join(' · ');
+                list.appendChild(legend);
+            }
             // Compute ranks: tied scores share the same rank, next rank skips (1,1,3,4…)
             // Finalists with no final runs yet get null rank (shown as —)
             const ranks = [];
@@ -955,17 +1077,44 @@
 
                             const judgesDiv = document.createElement('div');
                             judgesDiv.className = 'run-judges';
+
                             for (const score of run.scores) {
                                 const chip = document.createElement('div');
                                 chip.className = 'run-judge-chip';
-                                const critHtml = CONFIG.criteria.map(c =>
-                                    `<span class="run-judge-crit">${c.shortLabel} ${(score[c.key] ?? 0).toFixed(0)}</span>`
-                                ).join('');
+                                const critHtml = CONFIG.criteria.map(c => {
+                                    const raw = score[c.key] ?? 0;
+                                    const w = c.weight ?? (100 / CONFIG.criteria.length);
+                                    const weighted = Math.round(raw * w / 100);
+                                    return `<span class="run-judge-crit">` +
+                                        `<span class="run-judge-crit-label">${c.shortLabel}</span>` +
+                                        `<span class="run-judge-crit-raw">${raw}</span>` +
+                                        `<span class="run-judge-crit-divider"></span>` +
+                                        `<span class="run-judge-crit-w">${weighted}</span>` +
+                                        `</span>`;
+                                }).join('');
                                 chip.innerHTML =
                                     `<span class="run-judge-name">${score.judgeName}</span>` +
-                                    `<span class="run-judge-score">${(score.total ?? 0).toFixed(1)}</span>` +
+                                    `<span class="run-judge-score">${calcJudgeTotal(score).toFixed(1)}</span>` +
                                     (CONFIG.criteria.length ? `<div class="run-judge-criteria">${critHtml}</div>` : '');
                                 judgesDiv.appendChild(chip);
+                            }
+
+                            if (run.scores.length > 1 && CONFIG.criteria.length) {
+                                const sumRow = document.createElement('div');
+                                sumRow.className = 'run-crit-sum';
+                                sumRow.innerHTML = `<span class="run-crit-sum-prefix">Gesamt</span>` +
+                                    CONFIG.criteria.map(c => {
+                                        const w = c.weight ?? (100 / CONFIG.criteria.length);
+                                        const totalWeighted = run.scores.reduce((a, s) => a + Math.round((s[c.key] ?? 0) * w / 100), 0);
+                                        const totalRaw = run.scores.reduce((a, s) => a + (s[c.key] ?? 0), 0);
+                                        return `<span class="run-crit-sum-item">` +
+                                            `<span class="run-crit-sum-label">${c.shortLabel}</span>` +
+                                            `<span class="run-crit-sum-raw">${totalRaw}</span>` +
+                                            `<span class="run-judge-crit-divider"></span>` +
+                                            `<span class="run-crit-sum-val">${totalWeighted}</span>` +
+                                            `</span>`;
+                                    }).join('');
+                                judgesDiv.appendChild(sumRow);
                             }
 
                             const totalDiv = document.createElement('div');

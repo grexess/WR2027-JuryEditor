@@ -118,7 +118,7 @@ async function createFinal(event, startGroupObjectId) {
     // (fallback: judge-repeat boundary detection for old records without runNumber)
     const byStartNumber = {};
     for (const s of scores) {
-        const n = s.get('startnumber');
+        const n = s.get('startNumber');
         if (!byStartNumber[n]) byStartNumber[n] = [];
         byStartNumber[n].push(s);
     }
@@ -156,11 +156,10 @@ async function createFinal(event, startGroupObjectId) {
     }
 
     // Map startNumber → sum of all quali runs
-    const startNumberToStarter = new Map(starters.map(s => [s.get('startNumber'), s]));
+    const startNumberToStarter = new Map(starters.map(s => [String(s.get('startNumber')), s]));
     const ranked = [];
     for (const [numStr, scoreList] of Object.entries(byStartNumber)) {
-        const num = Number(numStr);
-        const starter = startNumberToStarter.get(num);
+        const starter = startNumberToStarter.get(numStr);
         if (!starter) continue;
         const allRunTotals = scoreToRuns(scoreList);
         const qualiRunTotals = qualiRuns != null ? allRunTotals.slice(0, qualiRuns) : allRunTotals;
@@ -192,13 +191,51 @@ async function createFinal(event, startGroupObjectId) {
         e.set('starter', starter);
         e.set('startNumber', starter.get('startNumber'));
         e.set('qualiScore', qualiScore);
-        e.set('finalStartNumber', i + 1); // best qualifier = 1
+        e.set('finalStartNumber', String(i + 1)); // best qualifier = '1'
         return e;
     });
     await Parse.Object.saveAll(entries, { useMasterKey: true });
 
     return { created: entries.length };
 }
+
+// Cascade-delete all data belonging to a starter when it is removed.
+Parse.Cloud.beforeDelete('HT_STARTER', async (request) => {
+    const starter = request.object;
+    const startNumber = String(starter.get('startNumber'));
+
+    await Promise.all([
+        // HT_JURYSCORE — matched by startnumber (String) scoped to same event
+        (async () => {
+            const q = new Parse.Query('HT_JURYSCORE');
+            q.equalTo('startNumber', startNumber);
+            q.limit(5000);
+            const results = await q.find({ useMasterKey: true });
+            await Parse.Object.destroyAll(results, { useMasterKey: true });
+        })(),
+
+        // HT_FINALENTRY — matched by Pointer to starter
+        (async () => {
+            const q = new Parse.Query('HT_FINALENTRY');
+            q.equalTo('starter', starter);
+            q.limit(500);
+            const results = await q.find({ useMasterKey: true });
+            await Parse.Object.destroyAll(results, { useMasterKey: true });
+        })(),
+
+        // HT_ACTIVESTARTER — clear startNumber if this starter is currently active
+        (async () => {
+            const q = new Parse.Query('HT_ACTIVESTARTER');
+            q.equalTo('startNumber', starter.get('startNumber'));
+            q.limit(10);
+            const results = await q.find({ useMasterKey: true });
+            for (const obj of results) {
+                obj.set('startNumber', null);
+            }
+            await Parse.Object.saveAll(results, { useMasterKey: true });
+        })(),
+    ]);
+});
 
 async function getEventObjectId() {
     const results = await new Parse.Query('HT_EVENT').limit(1).find({ useMasterKey: true });

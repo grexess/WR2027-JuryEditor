@@ -24,9 +24,9 @@ const CONFIG = (() => {
         qualiScoreMode: 'sum', // 'sum' | 'best'
         finalScoreMode: 'sum', // 'sum' | 'best'
         criteria: [
-            { label: 'Schwierigkeit', shortLabel: 'Schw.', key: 'score1' },
-            { label: 'Ausführung', shortLabel: 'Ausf.', key: 'score2' },
-            { label: 'Amplitude', shortLabel: 'Ampl.', key: 'score3' },
+            { label: 'Schwierigkeit', shortLabel: 'Schw.', key: 'score1', weight: 34 },
+            { label: 'Ausführung', shortLabel: 'Ausf.', key: 'score2', weight: 33 },
+            { label: 'Amplitude', shortLabel: 'Ampl.', key: 'score3', weight: 33 },
         ],
     };
 })();

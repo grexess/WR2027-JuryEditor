@@ -61,7 +61,10 @@ const ParseAPI = (() => {
         if (!res.ok) throw new Error(`Parse error ${res.status}`);
         const ev = await res.json();
         if (ev.name)          CONFIG.eventName     = ev.name;
-        if (ev.criteria)      CONFIG.criteria      = ev.criteria;
+        if (ev.criteria)      CONFIG.criteria      = ev.criteria.map((c, i, arr) => ({
+            ...c,
+            weight: c.weight ?? Math.round(100 / arr.length),
+        }));
         if (ev.presenceStalMs) CONFIG.presenceStalMs = ev.presenceStalMs;
         if (ev.presencePollMs) CONFIG.presencePollMs = ev.presencePollMs;
         if (ev.qualiRuns != null)   CONFIG.qualiRuns     = ev.qualiRuns;
@@ -117,11 +120,35 @@ const ParseAPI = (() => {
     }
 
     async function saveJuryScore(startnumber, judgeName, scores, criteria, runNumber, phase) {
-        const total = criteria.reduce((a, c) => a + scores[c], 0);
-        const body  = { startnumber: Number(startnumber), judgeName, total,
+        if (!startnumber || startnumber === 'null' || startnumber === 'undefined') {
+            throw new Error('Keine gültige Startnummer');
+        }
+        const total = Math.round(CONFIG.criteria.reduce((a, c) =>
+            a + (scores[c.label] ?? 0) * ((c.weight ?? (100 / CONFIG.criteria.length)) / 100), 0));
+        const body  = { startNumber: String(startnumber), judgeName, total,
             runNumber: Number(runNumber) ?? 1, phase: phase ?? 'quali',
             event: { __type: 'Pointer', className: 'HT_EVENT', objectId: CONFIG.eventObjectId } };
         for (const c of CONFIG.criteria) body[c.key] = scores[c.label];
+
+        // Delete any existing score for this judge/run combination before inserting (upsert).
+        const dupWhere = encodeURIComponent(JSON.stringify({
+            startNumber: String(startnumber),
+            judgeName,
+            runNumber: Number(runNumber) ?? 1,
+            event: { __type: 'Pointer', className: 'HT_EVENT', objectId: CONFIG.eventObjectId },
+        }));
+        const existing = await fetch(
+            `${CONFIG.parseServerUrl}/classes/HT_JURYSCORE?where=${dupWhere}&limit=10&keys=objectId`,
+            { headers: readHeaders() }
+        );
+        if (existing.ok) {
+            const { results: dups } = await existing.json();
+            for (const dup of dups ?? []) {
+                await fetch(`${CONFIG.parseServerUrl}/classes/HT_JURYSCORE/${dup.objectId}`,
+                    { method: 'DELETE', headers: readHeaders() });
+            }
+        }
+
         const res = await fetch(`${CONFIG.parseServerUrl}/classes/HT_JURYSCORE`, {
             method: 'POST',
             headers: writeHeaders(),
@@ -137,7 +164,7 @@ const ParseAPI = (() => {
             phase: 'quali',
         }));
         const res = await fetch(
-            `${CONFIG.parseServerUrl}/classes/HT_JURYSCORE?where=${where}&limit=2000&keys=startnumber,runNumber`,
+            `${CONFIG.parseServerUrl}/classes/HT_JURYSCORE?where=${where}&limit=2000&keys=startNumber,runNumber`,
             { headers: readHeaders() }
         );
         if (!res.ok) throw new Error(`Parse error ${res.status}`);
@@ -145,8 +172,8 @@ const ParseAPI = (() => {
         // Count distinct runNumbers per starter
         const byStarter = {};
         for (const s of data.results ?? []) {
-            if (!byStarter[s.startnumber]) byStarter[s.startnumber] = new Set();
-            byStarter[s.startnumber].add(s.runNumber ?? 1);
+            if (!byStarter[s.startNumber]) byStarter[s.startNumber] = new Set();
+            byStarter[s.startNumber].add(s.runNumber ?? 1);
         }
         const map = {};
         for (const [num, set] of Object.entries(byStarter)) map[num] = set.size;
@@ -159,7 +186,7 @@ const ParseAPI = (() => {
             phase: 'final',
         }));
         const res = await fetch(
-            `${CONFIG.parseServerUrl}/classes/HT_JURYSCORE?where=${where}&limit=1000&keys=startnumber,runNumber`,
+            `${CONFIG.parseServerUrl}/classes/HT_JURYSCORE?where=${where}&limit=1000&keys=startNumber,runNumber`,
             { headers: readHeaders() }
         );
         if (!res.ok) throw new Error(`Parse error ${res.status}`);
@@ -167,8 +194,8 @@ const ParseAPI = (() => {
         // Count distinct runNumbers per starter (each runNumber = one complete run)
         const byStarter = {};
         for (const s of data.results ?? []) {
-            if (!byStarter[s.startnumber]) byStarter[s.startnumber] = new Set();
-            byStarter[s.startnumber].add(s.runNumber ?? 1);
+            if (!byStarter[s.startNumber]) byStarter[s.startNumber] = new Set();
+            byStarter[s.startNumber].add(s.runNumber ?? 1);
         }
         const map = {};
         for (const [num, set] of Object.entries(byStarter)) map[num] = set.size;
@@ -178,7 +205,7 @@ const ParseAPI = (() => {
     async function deleteQualiRun(startnumber, runNumber) {
         const where = encodeURIComponent(JSON.stringify({
             event: { __type: 'Pointer', className: 'HT_EVENT', objectId: CONFIG.eventObjectId },
-            startnumber: Number(startnumber),
+            startNumber: String(startnumber),
             phase: 'quali',
             runNumber: Number(runNumber),
         }));
@@ -198,7 +225,7 @@ const ParseAPI = (() => {
 
     async function fetchJuryScores(startnumber) {
         const where = JSON.stringify({
-            startnumber: Number(startnumber),
+            startNumber: String(startnumber),
             event: { __type: 'Pointer', className: 'HT_EVENT', objectId: CONFIG.eventObjectId },
         });
         const res = await fetch(
@@ -231,7 +258,7 @@ const ParseAPI = (() => {
                     query: {
                         className: 'HT_JURYSCORE',
                         where: {
-                            startnumber: Number(startnumber),
+                            startNumber: String(startnumber),
                             event: { __type: 'Pointer', className: 'HT_EVENT', objectId: CONFIG.eventObjectId },
                         },
                     },
@@ -556,7 +583,7 @@ const ParseAPI = (() => {
     async function fetchResultsForStarter(startnumber) {
         const where = encodeURIComponent(JSON.stringify({
             event: { __type: 'Pointer', className: 'HT_EVENT', objectId: CONFIG.eventObjectId },
-            startnumber: Number(startnumber),
+            startNumber: String(startnumber),
         }));
         const res = await fetch(
             `${CONFIG.parseServerUrl}/classes/HT_JURYSCORE?where=${where}&limit=2000&keys=objectId,phase`,

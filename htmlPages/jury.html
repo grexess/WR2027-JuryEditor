@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Heldentag – Wertung</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏅</text></svg>">
     <link rel="stylesheet" href="../jury.css">
@@ -14,6 +14,10 @@
         <div class="header-group">
             <div class="header-label">Startnummer</div>
             <div class="header-value" id="startnumber">—</div>
+        </div>
+        <div class="header-group" id="starter-name-group" style="display:none">
+            <div class="header-label">Name</div>
+            <div class="header-value" id="starter-name" style="font-size:0.95rem">—</div>
         </div>
         <div class="header-group" id="final-group" style="display:none">
             <div class="header-label">Finale Startnr.</div>
@@ -56,7 +60,6 @@
         <main id="main"></main>
         <div class="numpad-wrap" id="numpad-wrap"></div>
     </div>
-
     <div class="toast" id="toast">✓ Wertung gespeichert</div>
     <div class="modal-backdrop" id="error-backdrop">
         <div class="modal">
@@ -67,23 +70,8 @@
             </div>
         </div>
     </div>
-    <div class="modal-backdrop" id="modal-backdrop">
-        <div class="modal">
-            <div class="modal-title">Wertung bestätigen</div>
-            <div style="text-align:center;margin-bottom:1rem"><span id="modal-startnum"></span></div>
-            <div id="modal-rows"></div>
-            <div class="modal-total">
-                <span class="modal-total-label">Gesamt</span>
-                <span class="modal-total-value" id="modal-total"></span>
-            </div>
-            <div class="modal-actions">
-                <button class="modal-cancel" id="modal-cancel">← Zurück</button>
-                <button class="modal-confirm" id="modal-confirm">✓ Abschicken</button>
-            </div>
-        </div>
-    </div>
-
     <footer>
+        <div class="submit-wrap" id="submit-wrap"></div>
         <img src="../assets/weraceLogo.png" alt="WeRace">
     </footer>
 
@@ -114,6 +102,19 @@
             }
 
             let startNum = params.get('num');
+            let _allStarters = [];
+            ParseAPI.fetchStarters().then(s => { _allStarters = s; updateStarterName(startNum); }).catch(() => {});
+
+            function updateStarterName(num) {
+                const s = _allStarters.find(x => x.startNumber === String(num));
+                const grp = document.getElementById('starter-name-group');
+                if (s) {
+                    document.getElementById('starter-name').textContent = `${s.firstName ?? ''} ${s.lastName ?? ''}`.trim();
+                    grp.style.display = '';
+                } else {
+                    grp.style.display = 'none';
+                }
+            }
 
             document.getElementById('startnumber').textContent = startNum ?? '—';
             document.getElementById('judgeid').textContent = judgeName;
@@ -160,9 +161,11 @@
             document.getElementById('startnumber').textContent = startNum;
             document.getElementById('waiting').classList.add('hidden');
             submitted = false;
-            activeCrit = null;
+            reviewing = false;
+            activeCrit = CRITERIA[0];
             inputBuffer = '';
             CRITERIA.forEach(c => scores[c] = 50);
+            updateStarterName(startNum);
             renderCriteria();
             renderNumpad();
             updateModeHeader(Number(num));
@@ -191,22 +194,35 @@
             }
         });
 
+        // On initial load: fetch active starter immediately so a page refresh doesn't show waiting screen
+        ParseAPI.fetchActiveStarter().then(active => {
+            if (active?.startNumber != null) {
+                onNewStarter(active.startNumber, active.runNumber ?? 1, active.phase ?? 'quali');
+            }
+        }).catch(() => {});
+
         // BroadcastChannel — fallback for same-device tabs
         const starterChannel = new BroadcastChannel('werace-starter');
-        starterChannel.addEventListener('message', e => onNewStarter(e.data.startnumber, e.data.runNumber, e.data.phase));
+        starterChannel.addEventListener('message', e => onNewStarter(e.data.startNumber, e.data.runNumber, e.data.phase));
 
         const scores = Object.fromEntries(CRITERIA.map(c => [c, 50]));
         let submitted = false;
-        let activeCrit = null;
+        let reviewing = false;
+        let activeCrit = startNum ? CRITERIA[0] : null;
         let inputBuffer = '';
+        let _frozenStartNum = null;
 
         async function saveScore(startnumber, judgeName, scores) {
             return ParseAPI.saveJuryScore(startnumber, judgeName, scores, CRITERIA, currentRunNumber, currentPhase);
         }
-        function clamp(v) { return Math.max(0, Math.min(100, Math.round(v))); }
+        function clamp(v) { return Math.max(0, Math.min(99, Math.round(v))); }
+        function weightedTotal() {
+            return Math.round(CONFIG.criteria.reduce((a, c) =>
+                a + (scores[c.label] ?? 0) * ((c.weight ?? (100 / CONFIG.criteria.length)) / 100), 0));
+        }
 
         function selectCrit(crit) {
-            if (submitted) return;
+            if (submitted || reviewing) return;
             activeCrit = crit;
             inputBuffer = '';
             renderCriteria();
@@ -216,9 +232,20 @@
         function numpadPress(key) {
             if (!activeCrit) return;
             const next = inputBuffer + key;
-            if (next.length <= 3 && Number(next) <= 100) {
+            const valid = next.length <= 2
+                && Number(next) <= 99
+                && !(inputBuffer === '0' && key === '0'); // block 00
+            if (valid) {
                 inputBuffer = next;
                 scores[activeCrit] = clamp(Number(inputBuffer));
+            }
+            // Auto-advance after two digits entered
+            if (inputBuffer.length === 2) {
+                const idx = CRITERIA.indexOf(activeCrit);
+                if (idx < CRITERIA.length - 1) {
+                    activeCrit = CRITERIA[idx + 1];
+                    inputBuffer = '';
+                }
             }
             renderCriteria();
             renderNumpad();
@@ -231,8 +258,8 @@
                 const row = document.createElement('div');
                 row.className = 'criterion' +
                     (crit === activeCrit ? ' active' : '') +
-                    (submitted ? ' submitted' : '');
-                row.addEventListener('click', () => selectCrit(crit));
+                    (submitted || reviewing ? ' submitted' : '');
+                if (!submitted && !reviewing) row.addEventListener('click', () => selectCrit(crit));
 
                 const label = document.createElement('div');
                 label.className = 'criterion-label';
@@ -240,7 +267,7 @@
 
                 const score = document.createElement('div');
                 score.className = 'criterion-score';
-                if (crit === activeCrit && inputBuffer !== '') {
+                if (crit === activeCrit && inputBuffer !== '' && !reviewing) {
                     score.textContent = inputBuffer;
                 } else {
                     score.textContent = scores[crit];
@@ -254,14 +281,64 @@
 
         function renderNumpad() {
             const wrap = document.getElementById('numpad-wrap');
+            const submitWrap = document.getElementById('submit-wrap');
             wrap.innerHTML = '';
+            submitWrap.innerHTML = '';
 
             if (submitted) {
                 const btn = document.createElement('button');
                 btn.className = 'submit-btn done';
                 btn.textContent = '✓ Abgeschickt';
                 btn.disabled = true;
-                wrap.appendChild(btn);
+                submitWrap.appendChild(btn);
+                return;
+            }
+
+            if (reviewing) {
+                const backBtn = document.createElement('button');
+                backBtn.className = 'submit-btn';
+                backBtn.style.cssText = 'background:var(--border);color:var(--text);margin-bottom:0.4rem';
+                backBtn.textContent = '← Ändern';
+                backBtn.addEventListener('click', () => {
+                    reviewing = false;
+                    activeCrit = CRITERIA[0];
+                    inputBuffer = '';
+                    renderCriteria();
+                    renderNumpad();
+                });
+
+                const submitBtn = document.createElement('button');
+                submitBtn.className = 'submit-btn';
+                submitBtn.style.background = '#4caf50';
+                submitBtn.innerHTML = `<span style="font-size:1.3rem">✓</span> <span class="badge">${weightedTotal()}</span>`;
+                submitBtn.addEventListener('click', async () => {
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = '…';
+                    try {
+                        await saveScore(_frozenStartNum, judgeName, scores);
+                    } catch (e) {
+                        document.getElementById('error-message').textContent = e.message;
+                        document.getElementById('error-backdrop').classList.add('open');
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = `<span style="font-size:1.3rem">✓</span> <span class="badge">${weightedTotal()}</span>`;
+                        return;
+                    }
+                    const toast = document.getElementById('toast');
+                    toast.classList.add('show');
+                    setTimeout(() => toast.classList.remove('show'), 2000);
+                    submitted = false;
+                    reviewing = false;
+                    activeCrit = null;
+                    inputBuffer = '';
+                    CRITERIA.forEach(c => scores[c] = 50);
+                    document.getElementById('startnumber').textContent = '—';
+                    document.getElementById('waiting').classList.remove('hidden');
+                    renderCriteria();
+                    renderNumpad();
+                });
+
+                submitWrap.appendChild(backBtn);
+                submitWrap.appendChild(submitBtn);
                 return;
             }
 
@@ -279,61 +356,16 @@
 
             const submitBtn = document.createElement('button');
             submitBtn.className = 'submit-btn';
-            submitBtn.style.marginTop = '0.5rem';
             submitBtn.innerHTML = `<span style="font-size:1.3rem">✓</span> <span class="badge">${CRITERIA.reduce((a, c) => a + scores[c], 0)}</span>`;
-            submitBtn.addEventListener('click', () => openModal());
-            wrap.appendChild(submitBtn);
+            submitBtn.addEventListener('click', () => {
+                if (!startNum) return;
+                _frozenStartNum = startNum;
+                reviewing = true;
+                renderCriteria();
+                renderNumpad();
+            });
+            submitWrap.appendChild(submitBtn);
         }
-
-        function openModal() {
-            const frozenStartNum = startNum; // freeze at modal-open time — startNum may change on reconnect
-            document.getElementById('modal-startnum').textContent = frozenStartNum;
-            document.getElementById('modal-startnum').style.cssText = 'color:var(--accent);font-size:1.4em;font-weight:800;';
-            document.getElementById('modal-backdrop').dataset.startNum = frozenStartNum;
-            const rows = document.getElementById('modal-rows');
-            rows.innerHTML = '';
-            for (const c of CRITERIA) {
-                const row = document.createElement('div');
-                row.className = 'modal-row';
-                row.innerHTML = `<span class="modal-crit">${c}</span><span class="modal-score">${scores[c]}</span>`;
-                rows.appendChild(row);
-            }
-            document.getElementById('modal-total').textContent = CRITERIA.reduce((a, c) => a + scores[c], 0);
-            document.getElementById('modal-backdrop').classList.add('open');
-        }
-
-        document.getElementById('error-ok').addEventListener('click', () => {
-            document.getElementById('error-backdrop').classList.remove('open');
-        });
-
-        document.getElementById('modal-cancel').addEventListener('click', () => {
-            document.getElementById('modal-backdrop').classList.remove('open');
-        });
-
-        document.getElementById('modal-confirm').addEventListener('click', async () => {
-            const confirmedStartNum = document.getElementById('modal-backdrop').dataset.startNum ?? startNum;
-            document.getElementById('modal-backdrop').classList.remove('open');
-            try {
-                await saveScore(confirmedStartNum, judgeName, scores);
-            } catch (e) {
-                document.getElementById('error-message').textContent = e.message;
-                document.getElementById('error-backdrop').classList.add('open');
-                return;
-            }
-            // show toast
-            const toast = document.getElementById('toast');
-            toast.classList.add('show');
-            setTimeout(() => toast.classList.remove('show'), 2000);
-            // reset for next rider
-            submitted = false;
-            activeCrit = null;
-            inputBuffer = '';
-            CRITERIA.forEach(c => scores[c] = 50);
-            document.getElementById('startnumber').textContent = '—';
-            document.getElementById('waiting').classList.remove('hidden');
-            renderCriteria();
-            renderNumpad();
-        });
 
         renderCriteria();
         renderNumpad();

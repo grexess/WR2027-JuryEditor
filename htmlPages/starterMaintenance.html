@@ -144,6 +144,201 @@
             font-size: 0.9rem;
         }
 
+        /* ── Settings + Print panels ── */
+        .admin-panels {
+            margin-top: 1rem;
+        }
+
+        .admin-panel {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            margin-bottom: 0.5rem;
+            overflow: hidden;
+            background: var(--bg);
+        }
+
+        .admin-panel-hdr {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.6rem 0.75rem;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .admin-panel-hdr:active { background: var(--border); }
+
+        .admin-panel-title {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .admin-panel-chevron {
+            font-size: 0.65rem;
+            color: var(--muted);
+            transition: transform 0.2s;
+        }
+
+        .admin-panel.open .admin-panel-chevron { transform: rotate(180deg); }
+
+        .admin-panel-body {
+            display: none;
+            border-top: 1px solid var(--border);
+        }
+
+        .admin-panel.open .admin-panel-body { display: block; }
+
+        .settings-section {
+            padding: 0.6rem 0.75rem 0.25rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .settings-section:last-child { border-bottom: none; }
+
+        .settings-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem;
+            padding: 0.3rem 0;
+        }
+
+        .settings-row-label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text);
+            flex: 1;
+        }
+
+        .settings-row-sub {
+            font-size: 0.65rem;
+            color: var(--muted);
+            display: block;
+            font-weight: 400;
+        }
+
+        .settings-num {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .settings-num-btn {
+            width: 1.6rem;
+            height: 1.6rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--bg);
+            color: var(--text);
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .settings-num-btn:active { background: var(--border); }
+        .settings-num-btn:disabled { opacity: 0.3; cursor: default; }
+
+        .settings-num-val {
+            min-width: 2rem;
+            text-align: center;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .settings-toggle {
+            display: flex;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .settings-toggle-btn {
+            padding: 0.25rem 0.6rem;
+            font-size: 0.7rem;
+            font-weight: 700;
+            border: none;
+            background: transparent;
+            color: var(--muted);
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .settings-toggle-btn.active {
+            background: var(--accent);
+            color: #fff;
+        }
+
+        .settings-save-btn {
+            width: calc(100% - 1.5rem);
+            margin: 0.5rem 0.75rem 0.75rem;
+            padding: 0.5rem;
+            border-radius: 8px;
+            border: none;
+            background: var(--accent);
+            color: #fff;
+            font-size: 0.8rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .settings-save-btn:active { opacity: 0.8; }
+        .settings-save-btn:disabled { opacity: 0.4; cursor: default; }
+
+        .print-group-select {
+            width: calc(100% - 1.5rem);
+            margin: 0.6rem 0.75rem 0;
+            padding: 0.35rem 0.5rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--bg);
+            color: var(--text);
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .print-btn-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.4rem;
+            padding: 0.5rem 0.75rem 0.75rem;
+        }
+
+        .print-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.2rem;
+            padding: 0.55rem 0.4rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--bg);
+            color: var(--text);
+            font-size: 0.7rem;
+            font-weight: 700;
+            cursor: pointer;
+            text-align: center;
+            line-height: 1.25;
+            transition: border-color 0.15s, background 0.15s;
+        }
+
+        .print-btn:hover {
+            border-color: var(--accent);
+            background: color-mix(in srgb, var(--accent) 8%, transparent);
+        }
+
+        .print-btn:active { opacity: 0.75; }
+
+        .print-btn-icon { font-size: 1.1rem; }
+
         /* form modal */
         .form-grid {
             display: grid;
@@ -167,6 +362,27 @@
             color: var(--muted);
             text-transform: uppercase;
             letter-spacing: 0.1em;
+        }
+
+        .form-label.required::after {
+            content: ' *';
+            color: #e74c3c;
+        }
+
+        .form-divider {
+            grid-column: 1 / -1;
+            border: none;
+            border-top: 1px solid var(--border, #333);
+            margin: 0.25rem 0;
+        }
+
+        .form-divider-label {
+            grid-column: 1 / -1;
+            font-size: 0.6rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            opacity: 0.6;
         }
 
         .form-input {
@@ -339,6 +555,7 @@
             </thead>
             <tbody id="table-body"></tbody>
         </table>
+        <div class="admin-panels" id="admin-panels"></div>
     </div>
 
     <!-- Form modal -->
@@ -346,10 +563,26 @@
         <div class="modal">
             <div class="modal-title" id="form-title">Starter hinzufügen</div>
             <div class="form-grid">
-                <div class="form-group">
-                    <label class="form-label">Startnummer</label>
-                    <input class="form-input" id="f-startNumber" type="number" min="1" placeholder="z.B. 42">
+                <div class="form-group full">
+                    <label class="form-label required">Startgruppe</label>
+                    <select class="form-input" id="f-startGroup">
+                        <option value="">— wählen —</option>
+                    </select>
                 </div>
+                <div class="form-group">
+                    <label class="form-label required">Vorname</label>
+                    <input class="form-input" id="f-firstName" type="text">
+                </div>
+                <div class="form-group">
+                    <label class="form-label required">Nachname</label>
+                    <input class="form-input" id="f-lastName" type="text">
+                </div>
+                <div class="form-group full">
+                    <label class="form-label required">Startnummer</label>
+                    <input class="form-input" id="f-startNumber" type="text" placeholder="z.B. A1">
+                </div>
+                <hr class="form-divider">
+                <span class="form-divider-label">Optional</span>
                 <div class="form-group">
                     <label class="form-label">Geschlecht</label>
                     <select class="form-input" id="f-gender">
@@ -360,22 +593,8 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Vorname</label>
-                    <input class="form-input" id="f-firstName" type="text" placeholder="Max">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Nachname</label>
-                    <input class="form-input" id="f-lastName" type="text" placeholder="Mustermann">
-                </div>
-                <div class="form-group full">
                     <label class="form-label">Geburtstag</label>
                     <input class="form-input" id="f-birthday" type="date">
-                </div>
-                <div class="form-group full">
-                    <label class="form-label">Startgruppe</label>
-                    <select class="form-input" id="f-startGroup">
-                        <option value="">— keine —</option>
-                    </select>
                 </div>
             </div>
             <div class="modal-actions">
@@ -456,7 +675,7 @@
 
         function sortValue(s, col) {
             switch (col) {
-                case 'startNumber': return s.startNumber ?? 0;
+                case 'startNumber': return s.startNumber ?? '';
                 case 'lastName': return (s.lastName ?? '').toLowerCase();
                 case 'firstName': return (s.firstName ?? '').toLowerCase();
                 case 'gender': return (GENDER_LABEL[s.gender] ?? '').toLowerCase();
@@ -498,6 +717,8 @@
 
             rows.sort((a, b) => {
                 const av = sortValue(a, sortCol), bv = sortValue(b, sortCol);
+                if (sortCol === 'startNumber')
+                    return sortDir * String(av).localeCompare(String(bv), undefined, { numeric: true });
                 return av < bv ? -sortDir : av > bv ? sortDir : 0;
             });
 
@@ -538,6 +759,472 @@
             }
         }
 
+        // ── Event Settings panel ──
+        let _settingsDraft = null;
+
+        function _freshDraft() {
+            return {
+                qualiRuns: CONFIG.qualiRuns,
+                finalRuns: CONFIG.finalRuns,
+                bestOf: CONFIG.bestOf ?? 8,
+                qualiScoreMode: CONFIG.qualiScoreMode ?? 'sum',
+                finalScoreMode: CONFIG.finalScoreMode ?? 'sum',
+                criteria: CONFIG.criteria.map((c, i, arr) => ({
+                    ...c,
+                    weight: c.weight ?? Math.round(100 / arr.length),
+                })),
+            };
+        }
+
+        function rebuildSettingsBody() {
+            const body = document.getElementById('settings-panel-body');
+            if (!body || !_settingsDraft) return;
+            body.innerHTML = '';
+            const d = _settingsDraft;
+
+            const makeNumRow = (label, sub, key, min, max, nullLabel) => {
+                const sec = document.createElement('div');
+                sec.className = 'settings-section';
+                const row = document.createElement('div');
+                row.className = 'settings-row';
+                const textWrap = document.createElement('div');
+                textWrap.className = 'settings-row-label';
+                textWrap.innerHTML = label + (sub ? `<span class="settings-row-sub">${sub}</span>` : '');
+                const ctrl = document.createElement('div');
+                ctrl.className = 'settings-num';
+                const dec = document.createElement('button');
+                dec.className = 'settings-num-btn';
+                dec.textContent = '−';
+                dec.disabled = d[key] === null || d[key] <= min;
+                dec.addEventListener('click', () => { if (d[key] !== null) { d[key] = Math.max(min, d[key] - 1); rebuildSettingsBody(); } });
+                const val = document.createElement('div');
+                val.className = 'settings-num-val';
+                val.textContent = d[key] === null ? (nullLabel ?? '∞') : d[key];
+                const inc = document.createElement('button');
+                inc.className = 'settings-num-btn';
+                inc.textContent = '+';
+                inc.disabled = d[key] !== null && d[key] >= max;
+                inc.addEventListener('click', () => { d[key] = d[key] === null ? min : Math.min(max, d[key] + 1); rebuildSettingsBody(); });
+                if (nullLabel !== undefined) {
+                    const inf = document.createElement('button');
+                    inf.className = 'settings-num-btn';
+                    inf.style.fontSize = '0.75rem';
+                    inf.title = d[key] === null ? 'Feste Anzahl setzen' : 'Unbegrenzt';
+                    inf.textContent = d[key] === null ? '#' : '∞';
+                    inf.addEventListener('click', () => { d[key] = d[key] === null ? min : null; rebuildSettingsBody(); });
+                    ctrl.append(dec, val, inc, inf);
+                } else {
+                    ctrl.append(dec, val, inc);
+                }
+                row.appendChild(textWrap);
+                row.appendChild(ctrl);
+                sec.appendChild(row);
+                body.appendChild(sec);
+            };
+
+            makeNumRow('Quali-Läufe', 'Läufe pro Starter in der Qualifikation', 'qualiRuns', 1, 10, '∞');
+            makeNumRow('Final-Läufe', 'Läufe pro Finalist im Finale', 'finalRuns', 1, 10, '∞');
+            makeNumRow('Finalisten (Best-Of)', 'Anzahl Starter die ins Finale einziehen', 'bestOf', 1, 30);
+
+            const makeModeRow = (label, sub, key, runs) => {
+                if (runs !== null && runs <= 1) return;
+                const sec = document.createElement('div');
+                sec.className = 'settings-section';
+                const row = document.createElement('div');
+                row.className = 'settings-row';
+                const lbl = document.createElement('div');
+                lbl.className = 'settings-row-label';
+                lbl.innerHTML = label + (sub ? `<span class="settings-row-sub">${sub}</span>` : '');
+                const toggle = document.createElement('div');
+                toggle.className = 'settings-toggle';
+                ['sum', 'best'].forEach(m => {
+                    const btn = document.createElement('button');
+                    btn.className = 'settings-toggle-btn' + (d[key] === m ? ' active' : '');
+                    btn.textContent = m === 'sum' ? 'Summe' : 'Bester Lauf';
+                    btn.addEventListener('click', () => { d[key] = m; rebuildSettingsBody(); });
+                    toggle.appendChild(btn);
+                });
+                row.append(lbl, toggle);
+                sec.appendChild(row);
+                body.appendChild(sec);
+            };
+
+            makeModeRow('Quali-Wertung', 'Wie wird die Qualiplatzierung berechnet?', 'qualiScoreMode', d.qualiRuns);
+            makeModeRow('Final-Wertung', 'Wie wird die Finalplatzierung berechnet?', 'finalScoreMode', d.finalRuns);
+
+            const critSec = document.createElement('div');
+            critSec.className = 'settings-section';
+            const critTitle = document.createElement('div');
+            critTitle.className = 'settings-row-label';
+            critTitle.style.cssText = 'font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;padding:0.5rem 0 0.25rem';
+            critTitle.textContent = 'Bewertungskriterien';
+            critSec.appendChild(critTitle);
+
+            const weightSumEl = document.createElement('div');
+            weightSumEl.style.cssText = 'font-size:0.75rem;font-weight:700;margin-bottom:0.4rem;text-align:right';
+            let saveBtn;
+
+            const updateWeightSum = () => {
+                const sum = d.criteria.reduce((a, c) => a + (Number(c.weight) || 0), 0);
+                weightSumEl.textContent = `Summe: ${sum}%`;
+                weightSumEl.style.color = sum === 100 ? 'var(--green)' : '#e3a007';
+                if (saveBtn) saveBtn.disabled = sum !== 100;
+            };
+
+            d.criteria.forEach((c, idx) => {
+                const row = document.createElement('div');
+                row.style.cssText = 'display:grid;grid-template-columns:1fr auto;gap:0.4rem;align-items:center;margin-bottom:0.4rem';
+                const inputs = document.createElement('div');
+                inputs.style.cssText = 'display:flex;gap:0.4rem';
+                const labelIn = document.createElement('input');
+                labelIn.type = 'text'; labelIn.value = c.label; labelIn.placeholder = 'Bezeichnung';
+                labelIn.style.cssText = 'flex:2;padding:0.35rem 0.5rem;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:0.85rem;outline:none';
+                labelIn.addEventListener('input', () => { d.criteria[idx].label = labelIn.value.trim(); });
+                const shortIn = document.createElement('input');
+                shortIn.type = 'text'; shortIn.value = c.shortLabel; shortIn.placeholder = 'Kürzel'; shortIn.maxLength = 8;
+                shortIn.style.cssText = 'flex:1;padding:0.35rem 0.5rem;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:0.85rem;outline:none';
+                shortIn.addEventListener('input', () => { d.criteria[idx].shortLabel = shortIn.value.trim(); });
+                const weightIn = document.createElement('input');
+                weightIn.type = 'number'; weightIn.value = c.weight ?? Math.round(100 / d.criteria.length);
+                weightIn.min = 1; weightIn.max = 100; weightIn.placeholder = '%';
+                weightIn.style.cssText = 'width:3.5rem;padding:0.35rem 0.4rem;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:0.85rem;outline:none;text-align:center';
+                weightIn.addEventListener('input', () => {
+                    d.criteria[idx].weight = Math.max(1, Math.min(100, parseInt(weightIn.value) || 0));
+                    updateWeightSum();
+                });
+                inputs.append(labelIn, shortIn, weightIn);
+                const keyBadge = document.createElement('span');
+                keyBadge.textContent = c.key;
+                keyBadge.style.cssText = 'font-size:0.65rem;color:var(--muted);white-space:nowrap';
+                row.append(inputs, keyBadge);
+                critSec.appendChild(row);
+            });
+
+            critSec.appendChild(weightSumEl);
+            updateWeightSum();
+            body.appendChild(critSec);
+
+            const keysChanged = d.criteria.some((c, i) => c.key !== CONFIG.criteria[i]?.key);
+            if (keysChanged) {
+                const warn = document.createElement('div');
+                warn.style.cssText = 'font-size:0.75rem;color:#e3a007;background:color-mix(in srgb,#e3a007 12%,transparent);border-radius:6px;padding:0.4rem 0.6rem;margin-bottom:0.5rem;line-height:1.4';
+                warn.textContent = '⚠ Kriterien-Keys wurden geändert. Kampfrichter-Apps müssen nach dem Speichern neu geladen werden.';
+                body.appendChild(warn);
+            }
+            saveBtn = document.createElement('button');
+            saveBtn.className = 'settings-save-btn';
+            saveBtn.textContent = 'Einstellungen speichern';
+            updateWeightSum(); // set initial disabled state now that saveBtn exists
+            saveBtn.addEventListener('click', async () => {
+                saveBtn.disabled = true;
+                saveBtn.textContent = '…';
+                try {
+                    await ParseAPI.updateEventSettings({
+                        qualiRuns: d.qualiRuns, finalRuns: d.finalRuns, bestOf: d.bestOf,
+                        qualiScoreMode: d.qualiScoreMode, finalScoreMode: d.finalScoreMode, criteria: d.criteria,
+                    });
+                    CONFIG.qualiRuns = d.qualiRuns; CONFIG.finalRuns = d.finalRuns; CONFIG.bestOf = d.bestOf;
+                    CONFIG.qualiScoreMode = d.qualiScoreMode; CONFIG.finalScoreMode = d.finalScoreMode; CONFIG.criteria = d.criteria;
+                    _settingsDraft = null;
+                    saveBtn.textContent = '✓ Gespeichert';
+                    setTimeout(() => renderAdminPanels(), 1200);
+                } catch (_) {
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = '✕ Fehler – nochmal versuchen';
+                }
+            });
+            body.appendChild(saveBtn);
+        }
+
+        // ── Print panel ──
+        function _esc(str) {
+            return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        function _nowStr() {
+            const d = new Date();
+            return d.toLocaleDateString('de-DE') + ' ' + d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function _printStartlist(groupName, sorted, eventName) {
+            const rows = sorted.map(s => `<tr>
+                <td class="num">${_esc(s.startNumber ?? '—')}</td>
+                <td>${_esc(s.firstName ?? '')} ${_esc(s.lastName ?? '')}</td>
+                <td class="blank"></td></tr>`).join('');
+            return `<section><div class="doc-header">
+                <span class="doc-event">${_esc(eventName)}</span>
+                <span class="doc-type">Startliste Qualifikation</span>
+                <span class="doc-group">${_esc(groupName)}</span></div>
+                <table><thead><tr><th>Nr.</th><th>Name</th><th>Unterschrift</th></tr></thead>
+                <tbody>${rows}</tbody></table>
+                <div class="doc-footer">${sorted.length} Starter · ${_nowStr()}</div></section>`;
+        }
+
+        function _calcJudgeTotal(s) {
+            const hasRaw = CONFIG.criteria.some(c => s[c.key] != null);
+            if (!hasRaw) return s.total ?? 0;
+            return Math.round(CONFIG.criteria.reduce((a, c) =>
+                a + (s[c.key] ?? 0) * ((c.weight ?? (100 / CONFIG.criteria.length)) / 100), 0));
+        }
+
+        function _deduplicateByJudge(scores) {
+            const latest = new Map();
+            for (const s of scores) latest.set(s.judgeName, s);
+            return [...latest.values()];
+        }
+
+        function _phaseRuns(scores) {
+            const qualiScores = scores.filter(s => (s.phase ?? 'quali') === 'quali');
+            const finalScores = scores.filter(s => s.phase === 'final');
+            const toRuns = list => {
+                const byRun = {};
+                for (const s of list) {
+                    const r = s.runNumber ?? 1;
+                    if (!byRun[r]) byRun[r] = { runNumber: r, scores: [] };
+                    byRun[r].scores.push(s);
+                }
+                return Object.values(byRun).sort((a, b) => a.runNumber - b.runNumber).map(run => {
+                    const deduped = _deduplicateByJudge(run.scores);
+                    return { runNumber: run.runNumber, scores: deduped, total: deduped.reduce((a, s) => a + _calcJudgeTotal(s), 0) };
+                });
+            };
+            return { qualiRuns: toRuns(qualiScores), finalRuns: toRuns(finalScores) };
+        }
+
+        function _runPill(run, ri, criteria) {
+            const detail = criteria.map(c => {
+                const weighted = run.scores.reduce((a, s) => a + Math.round((s[c.key] ?? 0) * ((c.weight ?? (100 / criteria.length)) / 100)), 0);
+                const raw = run.scores.reduce((a, s) => a + (s[c.key] ?? 0), 0);
+                return `<strong>${_esc(c.shortLabel)}&nbsp;${weighted}</strong>&nbsp;<span style="font-size:6.5pt;color:#999">(${raw})</span>`;
+            }).join(' / ');
+            return `<span class="run-pill"><strong>${ri + 1}:&nbsp;${run.total}</strong><span class="run-detail">${detail}</span></span>`;
+        }
+
+        function _buildQualiResults(groupStarters, allScores, finalistNums) {
+            const rows = [];
+            for (const starter of groupStarters) {
+                if (starter.status === 'disqualified') { rows.push({ starter, dq: true }); continue; }
+                const scores = allScores.filter(s => String(s.startNumber) === String(starter.startNumber));
+                const { qualiRuns } = _phaseRuns(scores);
+                if (!qualiRuns.length) { rows.push({ starter, noRuns: true }); continue; }
+                const total = qualiRuns.reduce((a, r) => a + r.total, 0);
+                const best = Math.max(...qualiRuns.map(r => r.total));
+                const score = (CONFIG.qualiScoreMode ?? 'sum') === 'best' ? best : total;
+                rows.push({ starter, qualiRuns, score, isFinal: finalistNums.has(starter.startNumber) });
+            }
+            rows.sort((a, b) => { if (a.dq || a.noRuns) return 1; if (b.dq || b.noRuns) return -1; return b.score - a.score; });
+            return rows;
+        }
+
+        function _printQualiResults(groupName, rows, criteria, eventName) {
+            const scoreLabel = (CONFIG.qualiScoreMode ?? 'sum') === 'best' ? 'Bester Lauf' : 'Gesamt';
+            const qualiRuns = CONFIG.qualiRuns ?? '∞';
+            const tableRows = rows.map((r, i) => {
+                if (r.dq) return `<tr class="excluded"><td class="rank">—</td><td class="num">${_esc(r.starter.startNumber)}</td><td>${_esc(r.starter.firstName ?? '')} ${_esc(r.starter.lastName ?? '')}</td><td class="dq-cell">DSQ</td><td class="score">—</td></tr>`;
+                if (r.noRuns) return `<tr class="excluded"><td class="rank">—</td><td class="num">${_esc(r.starter.startNumber)}</td><td>${_esc(r.starter.firstName ?? '')} ${_esc(r.starter.lastName ?? '')}</td><td>—</td><td class="score">—</td></tr>`;
+                const runScores = r.qualiRuns.map((run, ri) => _runPill(run, ri, criteria)).join(' ');
+                const finBadge = r.isFinal ? '<span class="fin-badge">FINAL</span>' : '';
+                return `<tr><td class="rank">${i + 1}</td><td class="num">${_esc(r.starter.startNumber)}</td><td>${_esc(r.starter.firstName ?? '')} ${_esc(r.starter.lastName ?? '')}${finBadge}</td><td class="runs-cell">${runScores}</td><td class="score">${r.score}</td></tr>`;
+            }).join('');
+            return `<section><div class="doc-header">
+                <span class="doc-event">${_esc(eventName)}</span>
+                <span class="doc-type">Ergebnisse Qualifikation</span>
+                <span class="doc-group">${_esc(groupName)}</span></div>
+                <table><thead><tr><th>Platz</th><th>Nr.</th><th>Name</th><th>Läufe (${qualiRuns}×)</th><th>${_esc(scoreLabel)}</th></tr></thead>
+                <tbody>${tableRows}</tbody></table>
+                <div class="doc-footer">${rows.filter(r => !r.dq && !r.noRuns).length} Gewertet · Gewichtung: ${criteria.map(c => `${_esc(c.shortLabel)} ${c.weight ?? '—'}%`).join(', ')} · ${_nowStr()}</div></section>`;
+        }
+
+        function _printFinalStartlist(groupName, finalEntries, eventName) {
+            const rows = finalEntries.map(e => `<tr>
+                <td class="num">${_esc(e.finalStartNumber ?? '—')}</td>
+                <td class="num">${_esc(e.startNumber ?? e.starter?.startNumber ?? '—')}</td>
+                <td>${_esc(e.starter?.firstName ?? '')} ${_esc(e.starter?.lastName ?? '')}</td>
+                <td class="blank"></td></tr>`).join('');
+            return `<section><div class="doc-header">
+                <span class="doc-event">${_esc(eventName)}</span>
+                <span class="doc-type">Startliste Finale</span>
+                <span class="doc-group">${_esc(groupName)}</span></div>
+                <table><thead><tr><th>F-Nr.</th><th>Nr.</th><th>Name</th><th>Unterschrift</th></tr></thead>
+                <tbody>${rows}</tbody></table>
+                <div class="doc-footer">${finalEntries.length} Finalisten · ${_nowStr()}</div></section>`;
+        }
+
+        function _buildFinalResults(groupStarters, allScores, allFinalEntries, gid, finalistNums) {
+            const rows = [];
+            const entriesByNum = {};
+            for (const fe of allFinalEntries.filter(fe => fe.startGroup?.objectId === gid))
+                entriesByNum[fe.startNumber ?? fe.starter?.startNumber] = fe;
+            for (const starter of groupStarters) {
+                if (!finalistNums.has(starter.startNumber)) continue;
+                if (starter.status === 'disqualified') { rows.push({ starter, dq: true, finalStartNum: '—' }); continue; }
+                const scores = allScores.filter(s => String(s.startNumber) === String(starter.startNumber));
+                const { finalRuns } = _phaseRuns(scores);
+                const fe = entriesByNum[starter.startNumber];
+                const finalStartNum = fe?.finalStartNumber ?? '—';
+                if (!finalRuns.length) { rows.push({ starter, noRuns: true, finalStartNum }); continue; }
+                const total = finalRuns.reduce((a, r) => a + r.total, 0);
+                const best = Math.max(...finalRuns.map(r => r.total));
+                const score = (CONFIG.finalScoreMode ?? 'sum') === 'best' ? best : total;
+                rows.push({ starter, finalRuns, score, finalStartNum });
+            }
+            rows.sort((a, b) => { if (a.dq || a.noRuns) return 1; if (b.dq || b.noRuns) return -1; return b.score - a.score; });
+            return rows;
+        }
+
+        function _printFinalResults(groupName, rows, criteria, eventName) {
+            const scoreLabel = (CONFIG.finalScoreMode ?? 'sum') === 'best' ? 'Bester Lauf' : 'Gesamt';
+            const finalRuns = CONFIG.finalRuns ?? '∞';
+            const tableRows = rows.map((r, i) => {
+                if (r.dq) return `<tr class="excluded"><td class="rank">—</td><td class="num">${_esc(r.finalStartNum)}</td><td class="num muted">${_esc(r.starter.startNumber)}</td><td>${_esc(r.starter.firstName ?? '')} ${_esc(r.starter.lastName ?? '')}</td><td class="dq-cell">DSQ</td><td class="score">—</td></tr>`;
+                if (r.noRuns) return `<tr class="excluded"><td class="rank">—</td><td class="num">${_esc(r.finalStartNum)}</td><td class="num muted">${_esc(r.starter.startNumber)}</td><td>${_esc(r.starter.firstName ?? '')} ${_esc(r.starter.lastName ?? '')}</td><td>—</td><td class="score">—</td></tr>`;
+                const runScores = r.finalRuns.map((run, ri) => _runPill(run, ri, criteria)).join(' ');
+                const medal = i === 0 ? ' 🥇' : i === 1 ? ' 🥈' : i === 2 ? ' 🥉' : '';
+                return `<tr${i < 3 ? ` class="podium podium-${i + 1}"` : ''}><td class="rank">${i + 1}${medal}</td><td class="num">${_esc(r.finalStartNum)}</td><td class="num muted">${_esc(r.starter.startNumber)}</td><td>${_esc(r.starter.firstName ?? '')} ${_esc(r.starter.lastName ?? '')}</td><td class="runs-cell">${runScores}</td><td class="score">${r.score}</td></tr>`;
+            }).join('');
+            return `<section><div class="doc-header">
+                <span class="doc-event">${_esc(eventName)}</span>
+                <span class="doc-type">Ergebnisse Finale</span>
+                <span class="doc-group">${_esc(groupName)}</span></div>
+                <table><thead><tr><th>Platz</th><th>F-Nr.</th><th>Nr.</th><th>Name</th><th>Läufe (${finalRuns}×)</th><th>${_esc(scoreLabel)}</th></tr></thead>
+                <tbody>${tableRows}</tbody></table>
+                <div class="doc-footer">${rows.filter(r => !r.dq && !r.noRuns).length} Gewertet · Gewichtung: ${criteria.map(c => `${_esc(c.shortLabel)} ${c.weight ?? '—'}%`).join(', ')} · ${_nowStr()}</div></section>`;
+        }
+
+        function _openPrintWindow(sectionsHtml, eventName) {
+            const win = window.open('', '_blank');
+            win.document.write(`<!DOCTYPE html><html lang="de"><head>
+<meta charset="UTF-8"><title>${_esc(eventName)} – Drucken</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:10pt;color:#111;background:#fff;padding:0}
+section{page-break-after:always;padding:1.2cm 1.4cm 1cm}
+section:last-child{page-break-after:avoid}
+.doc-header{display:flex;align-items:baseline;gap:0.6em;flex-wrap:wrap;margin-bottom:0.7em;border-bottom:2px solid #111;padding-bottom:0.4em}
+.doc-event{font-size:9pt;color:#555;white-space:nowrap}
+.doc-type{font-size:13pt;font-weight:800;flex:1}
+.doc-group{font-size:11pt;font-weight:700;color:#2c5282;white-space:nowrap}
+.doc-footer{margin-top:0.5em;font-size:8pt;color:#777;text-align:right}
+table{width:100%;border-collapse:collapse;font-size:9.5pt}
+thead tr{border-bottom:1.5px solid #111}
+th{padding:0.25em 0.5em;text-align:left;font-size:8.5pt;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#444;white-space:nowrap}
+td{padding:0.3em 0.5em;border-bottom:1px solid #e0e0e0;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+.rank{font-weight:800;font-size:11pt;text-align:right;width:2.5em;white-space:nowrap}
+.num{font-weight:700;text-align:right;width:3em;color:#333}
+.muted{color:#888}
+.score{font-weight:800;font-size:11pt;text-align:right;width:3.5em}
+.blank{width:4cm}
+.runs-cell{font-size:8.5pt;color:#444}
+.run-pill{display:inline-block;background:#f0f0f0;border-radius:3px;padding:0.15em 0.4em;margin:0.1em 0.15em;white-space:nowrap;vertical-align:top}
+.run-detail{display:block;font-size:7pt;color:#777;font-weight:400;margin-top:0.1em}
+.dq-cell{color:#c0392b;font-weight:700;font-size:8.5pt}
+.excluded td{opacity:0.55}
+.fin-badge{display:inline-block;font-size:6.5pt;font-weight:800;color:#fff;background:#2c5282;border-radius:2px;padding:0.1em 0.3em;margin-left:0.3em;vertical-align:middle}
+.podium-1 td{background:#fffbea}.podium-2 td{background:#f7f7f7}.podium-3 td{background:#fff9f5}
+@media print{section{padding:0.8cm 1cm 0.7cm}body{font-size:9pt}.blank{width:3cm}}
+</style></head><body>${sectionsHtml}</body></html>`);
+            win.document.close();
+            win.focus();
+            setTimeout(() => win.print(), 300);
+        }
+
+        async function printDoc(type, groupId) {
+            const [allScores, allFinalEntries] = await Promise.all([
+                ParseAPI.fetchAllJuryScores(),
+                ParseAPI.fetchAllFinalEntries(),
+            ]);
+            const starters = allStarters.length ? allStarters : await ParseAPI.fetchStarters();
+            const groups = allGroups.length ? allGroups : await ParseAPI.fetchStartGroups();
+            const targetGroups = groupId === '__all__' ? groups : groups.filter(g => g.objectId === groupId);
+            const eventName = CONFIG.eventName ?? 'WeRace';
+            const criteria = CONFIG.criteria ?? [];
+            let sectionsHtml = '';
+            for (const group of targetGroups) {
+                const gid = group.objectId;
+                const groupStarters = starters.filter(s => s.startGroup?.objectId === gid && s.status !== 'removed');
+                const finalistNums = new Set(allFinalEntries.filter(fe => fe.startGroup?.objectId === gid).map(fe => fe.startNumber ?? fe.starter?.startNumber));
+                if (type === 'startlist') {
+                    sectionsHtml += _printStartlist(group.name, [...groupStarters].sort((a, b) => String(a.startNumber).localeCompare(String(b.startNumber), undefined, { numeric: true })), eventName);
+                } else if (type === 'quali-results') {
+                    sectionsHtml += _printQualiResults(group.name, _buildQualiResults(groupStarters, allScores, finalistNums), criteria, eventName);
+                } else if (type === 'final-startlist') {
+                    const finalEntries = allFinalEntries.filter(fe => fe.startGroup?.objectId === gid).sort((a, b) => Number(a.finalStartNumber) - Number(b.finalStartNumber));
+                    sectionsHtml += _printFinalStartlist(group.name, finalEntries, eventName);
+                } else if (type === 'final-results') {
+                    sectionsHtml += _printFinalResults(group.name, _buildFinalResults(groupStarters, allScores, allFinalEntries, gid, finalistNums), criteria, eventName);
+                }
+            }
+            _openPrintWindow(sectionsHtml, eventName);
+        }
+
+        function renderAdminPanels() {
+            const container = document.getElementById('admin-panels');
+            const openIds = new Set([...container.querySelectorAll('.admin-panel.open')].map(el => el.dataset.pid));
+            container.innerHTML = '';
+
+            // ── Settings panel ──
+            const settingsOpen = openIds.has('settings');
+            const sp = document.createElement('div');
+            sp.className = 'admin-panel' + (settingsOpen ? ' open' : '');
+            sp.dataset.pid = 'settings';
+            const spHdr = document.createElement('div');
+            spHdr.className = 'admin-panel-hdr';
+            spHdr.innerHTML = `<div class="admin-panel-title">⚙ Event-Einstellungen</div><span class="admin-panel-chevron">▼</span>`;
+            spHdr.addEventListener('click', () => {
+                sp.classList.toggle('open');
+                if (sp.classList.contains('open') && !_settingsDraft) { _settingsDraft = _freshDraft(); rebuildSettingsBody(); }
+            });
+            const spBody = document.createElement('div');
+            spBody.className = 'admin-panel-body';
+            spBody.id = 'settings-panel-body';
+            sp.append(spHdr, spBody);
+            container.appendChild(sp);
+            if (settingsOpen) { if (!_settingsDraft) _settingsDraft = _freshDraft(); rebuildSettingsBody(); }
+
+            // ── Print panel ──
+            const printOpen = openIds.has('print');
+            const pp = document.createElement('div');
+            pp.className = 'admin-panel' + (printOpen ? ' open' : '');
+            pp.dataset.pid = 'print';
+            const ppHdr = document.createElement('div');
+            ppHdr.className = 'admin-panel-hdr';
+            ppHdr.innerHTML = `<div class="admin-panel-title">🖨 Drucken</div><span class="admin-panel-chevron">▼</span>`;
+            ppHdr.addEventListener('click', () => pp.classList.toggle('open'));
+            const ppBody = document.createElement('div');
+            ppBody.className = 'admin-panel-body';
+            const sel = document.createElement('select');
+            sel.className = 'print-group-select';
+            sel.innerHTML = '<option value="__all__">Alle Startgruppen</option>';
+            for (const g of allGroups) {
+                const opt = document.createElement('option');
+                opt.value = g.objectId; opt.textContent = g.name;
+                sel.appendChild(opt);
+            }
+            ppBody.appendChild(sel);
+            const btnRow = document.createElement('div');
+            btnRow.className = 'print-btn-row';
+            for (const { type, icon, label } of [
+                { type: 'startlist',      icon: '📋', label: 'Startliste\nQualifikation' },
+                { type: 'quali-results',  icon: '📊', label: 'Ergebnisse\nQualifikation' },
+                { type: 'final-startlist',icon: '🏁', label: 'Startliste\nFinale' },
+                { type: 'final-results',  icon: '🏆', label: 'Ergebnisse\nFinale' },
+            ]) {
+                const btn = document.createElement('button');
+                btn.className = 'print-btn';
+                btn.innerHTML = `<span class="print-btn-icon">${icon}</span>${label.replace('\n', '<br>')}`;
+                btn.addEventListener('click', async () => {
+                    btn.style.opacity = '0.5'; btn.style.pointerEvents = 'none';
+                    try { await printDoc(type, sel.value); }
+                    finally { btn.style.opacity = ''; btn.style.pointerEvents = ''; }
+                });
+                btnRow.appendChild(btn);
+            }
+            ppBody.appendChild(btnRow);
+            pp.append(ppHdr, ppBody);
+            container.appendChild(pp);
+        }
+
         async function loadStarters() {
             await ParseAPI.fetchEvent().catch(() => { });
             document.title = `${CONFIG.eventName} – Registrierung`;
@@ -556,6 +1243,7 @@
                     scoreMap[num] = { quali: qualiMap[num] ?? 0, final: finalMap[num] ?? 0 };
                 }
                 renderTable(searchInput.value);
+                renderAdminPanels();
                 setStatus('');
             } catch (e) {
                 setStatus(e.message, 'err');
@@ -579,32 +1267,67 @@
         updateSortHeaders();
 
         // ── form modal ──
-        function openForm(starter = null) {
+        function nextStartNumberForGroup(groupId) {
+            const group = allGroups.find(g => g.objectId === groupId);
+            if (!group) return '';
+            const prefix = group.name.charAt(0).toUpperCase();
+            const existing = allStarters
+                .filter(s => typeof s.startNumber === 'string' && s.startNumber.toUpperCase().startsWith(prefix))
+                .map(s => parseInt(s.startNumber.slice(prefix.length), 10))
+                .filter(n => !isNaN(n));
+            const next = existing.length ? Math.max(...existing) + 1 : 1;
+            return `${prefix}${next}`;
+        }
+
+        async function openForm(starter = null) {
             editId = starter?.objectId ?? null;
             document.getElementById('form-title').textContent = starter ? 'Starter bearbeiten' : 'Starter hinzufügen';
-            document.getElementById('f-startNumber').value = starter?.startNumber ?? '';
+            populateGroupSelect(starter?.startGroup?.objectId ?? '');
             document.getElementById('f-firstName').value = starter?.firstName ?? '';
             document.getElementById('f-lastName').value = starter?.lastName ?? '';
+            const sc = starter ? (scoreMap[starter.startNumber] ?? { quali: 0, final: 0 }) : { quali: 0, final: 0 };
+            const hasScores = sc.quali > 0 || sc.final > 0;
+            const active = starter ? await ParseAPI.fetchActiveStarter() : null;
+            const isActive = active?.startNumber === starter?.startNumber;
+            const locked = hasScores || isActive;
+            const lockedMsg = isActive
+                ? 'Kann nicht geändert werden – Starter ist gerade aktiv.'
+                : hasScores
+                    ? 'Kann nicht geändert werden – es existieren bereits Wertungen.'
+                    : '';
+            const numInput = document.getElementById('f-startNumber');
+            numInput.disabled = locked;
+            numInput.title = lockedMsg;
+            const groupSel = document.getElementById('f-startGroup');
+            groupSel.disabled = locked;
+            groupSel.title = lockedMsg;
+            if (starter) {
+                numInput.value = starter.startNumber ?? '';
+            } else {
+                const groupId = document.getElementById('f-startGroup').value;
+                numInput.value = groupId ? nextStartNumberForGroup(groupId) : '';
+            }
             document.getElementById('f-gender').value = starter?.gender ?? '';
             const bd = starter?.birthday?.iso ?? starter?.birthday ?? '';
             document.getElementById('f-birthday').value = bd ? bd.slice(0, 10) : '';
-            populateGroupSelect(starter?.startGroup?.objectId ?? '');
             document.getElementById('form-err').textContent = '';
-            const sc = starter ? (scoreMap[starter.startNumber] ?? { quali: 0, final: 0 }) : { quali: 0, final: 0 };
-            const hasScores = sc.quali > 0 || sc.final > 0;
-            const numInput = document.getElementById('f-startNumber');
-            numInput.disabled = hasScores;
-            numInput.title = hasScores ? 'Startnummer kann nicht geändert werden – es existieren bereits Wertungen.' : '';
             document.getElementById('form-backdrop').classList.add('open');
-            (hasScores ? document.getElementById('f-firstName') : numInput).focus();
+            document.getElementById('f-startGroup').focus();
         }
+
+        document.getElementById('f-startGroup').addEventListener('change', () => {
+            const numInput = document.getElementById('f-startNumber');
+            if (numInput.disabled) return;  // locked due to existing scores
+            const groupId = document.getElementById('f-startGroup').value;
+            numInput.value = groupId ? nextStartNumberForGroup(groupId) : '';
+        });
 
         document.getElementById('add-btn').addEventListener('click', () => openForm());
         document.getElementById('form-cancel').addEventListener('click', () =>
             document.getElementById('form-backdrop').classList.remove('open'));
 
         document.getElementById('form-save').addEventListener('click', async () => {
-            const startNumber = Number(document.getElementById('f-startNumber').value);
+            const startNumber = document.getElementById('f-startNumber').value.trim();
             const firstName = document.getElementById('f-firstName').value.trim();
             const lastName = document.getElementById('f-lastName').value.trim();
             const gender = document.getElementById('f-gender').value;
@@ -654,7 +1377,7 @@
             if (delBtn) {
                 deleteId = delBtn.dataset.id;
                 deleteName = delBtn.dataset.name;
-                const deleteNum = Number(delBtn.dataset.num);
+                const deleteNum = delBtn.dataset.num;
                 // Block deletion if this starter is currently on the floor
                 const active = await ParseAPI.fetchActiveStarter();
                 if (active?.startNumber === deleteNum) {
