@@ -241,9 +241,17 @@
             }
         }
 
+        .tile-icon {
+            font-size: 1.4rem;
+            line-height: 1;
+            flex-shrink: 0;
+            margin-right: 0.6rem;
+        }
+
         .tile-label {
             display: flex;
             flex-direction: column;
+            flex: 1;
         }
 
         .change-btn {
@@ -555,26 +563,25 @@
 
             <div class="link-label">Organisation</div>
             <a class="tile c1" href="htmlPages/starter.html" target="werace-starter" rel="noopener">
-                <div class="tile-label">Tablet 1: Startbereich<div class="tile-sub">Starter starten, Qualifikation &amp; Finale verwalten</div>
-                </div>
+                <span class="tile-icon">🎤</span>
+                <div class="tile-label">Tablet 1: Startbereich<div class="tile-sub">Starter starten, Qualifikation &amp; Finale verwalten</div></div>
                 <span class="badge">↗</span>
             </a>
             <a class="tile c2" href="htmlPages/starterMaintenance.html" target="werace-starter-admin" rel="noopener">
-                <div class="tile-label">Tablet 2: Verwaltung<div class="tile-sub">Starter verwalten, Event-Einstellungen, Drucken</div>
-                </div>
+                <span class="tile-icon">📋</span>
+                <div class="tile-label">Tablet 2: Verwaltung<div class="tile-sub">Starter verwalten, Event-Einstellungen, Drucken</div></div>
                 <span class="badge">↗</span>
             </a>
 
             <div class="link-label" style="margin-top:0.25rem">Public</div>
             <a class="tile c3" href="htmlPages/results.html" target="werace-results" rel="noopener">
-                <div class="tile-label">Ergebnisse<div class="tile-sub">Für Einzelgeräte per Zuschauer</div>
-                </div>
+                <span class="tile-icon">🏆</span>
+                <div class="tile-label">Ergebnisse<div class="tile-sub">Für Einzelgeräte per Zuschauer</div></div>
                 <span class="badge">↗</span>
             </a>
             <a class="tile c3" href="htmlPages/display.html" target="werace-display" rel="noopener" id="display-link">
-                <div class="tile-label">Anzeigetafel<div class="tile-sub">TV-Modus – rotiert automatisch zwischen
-                        Gruppen</div>
-                </div>
+                <span class="tile-icon">📺</span>
+                <div class="tile-label">Anzeigetafel<div class="tile-sub">TV-Modus – rotiert automatisch zwischen Gruppen</div></div>
                 <span class="badge">↗</span>
             </a>
 
@@ -654,7 +661,7 @@
                     a.href = `htmlPages/jury.html?token=${encodeURIComponent(token)}`;
                     a.target = `werace-jury-${token}`;
                     a.rel = 'noopener';
-                    a.innerHTML = `<div class="tile-label">Wertung – ${name}<div class="tile-sub">Tablet Kampfrichter</div></div> <span class="badge">↗</span>`;
+                    a.innerHTML = `<span class="tile-icon">🏅</span><div class="tile-label">Wertung – ${name}<div class="tile-sub">Tablet Kampfrichter</div></div><span class="badge">↗</span>`;
                     juryLinks.appendChild(a);
 
                     // add option to guide select

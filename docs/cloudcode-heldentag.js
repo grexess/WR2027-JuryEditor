@@ -56,11 +56,6 @@ Parse.Cloud.define('refereeUpdate', async (request) => {
         const query = new Parse.Query('HT_ACTIVESTARTER');
         query.equalTo('event', event);
         const existing = await query.first({ useMasterKey: true });
-        // Only block if another starter is currently active (startNumber not null and different)
-        if (existing && existing.get('startNumber') != null && existing.get('startNumber') !== startNumber) {
-            throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN,
-                `Starter ${existing.get('startNumber')} ist bereits aktiv`);
-        }
         const payload = { startNumber, runNumber: Number(runNumber) || 1, phase: phase ?? 'quali' };
         if (existing) {
             for (const [k, v] of Object.entries(payload)) existing.set(k, v);
