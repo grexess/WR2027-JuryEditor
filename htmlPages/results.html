@@ -16,6 +16,34 @@
             margin: 0 auto;
             padding: 0.5rem 1rem 0;
             box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .info-fieldset,
+        .filter-fieldset {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.35rem 0.75rem 0.5rem;
+            margin: 0;
+        }
+
+        .info-fieldset legend,
+        .filter-fieldset legend {
+            font-size: 0.55rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--muted);
+            padding: 0 0.35rem;
+        }
+
+        .weight-legend {
+            font-size: 0.68rem;
+            color: var(--muted);
+            text-align: center;
+            padding-top: 0.15rem;
         }
 
         .results-list {
@@ -40,7 +68,7 @@
         .result-header {
             display: grid;
             grid-template-columns: 2.5rem 1fr auto;
-            align-items: start;
+            align-items: center;
             gap: 0.75rem;
             padding: 0.65rem 1rem;
             cursor: pointer;
@@ -87,7 +115,7 @@
         .result-name {
             display: flex;
             flex-direction: column;
-            gap: 0.05rem;
+            gap: 0.25rem;
             min-width: 0;
         }
 
@@ -97,27 +125,74 @@
             gap: 0.4rem;
         }
 
+        /* ── Quali start number chip ── */
         .result-num {
-            font-size: 0.7rem;
-            color: var(--accent);
-            font-weight: 700;
+            font-size: 0.65rem;
+            font-weight: 800;
+            color: #fff;
+            background: var(--num);
+            border-radius: 4px;
+            padding: 0.1rem 0.4rem;
+            letter-spacing: 0.02em;
+            white-space: nowrap;
         }
 
+        /* ── Final start number chip ── */
+        .result-final-num {
+            font-size: 0.65rem;
+            font-weight: 800;
+            color: #1a1a1a;
+            background: #ffd700;
+            border-radius: 4px;
+            padding: 0.1rem 0.4rem;
+            align-self: center;
+            letter-spacing: 0.02em;
+            white-space: nowrap;
+        }
+
+        /* ── Start group badge — tinted by group mode ── */
         .result-group-badge {
             font-size: 0.65rem;
             font-weight: 600;
             color: var(--muted);
-            background: var(--border);
+            background: color-mix(in srgb, var(--muted) 12%, transparent);
+            border: 1px solid color-mix(in srgb, var(--muted) 25%, transparent);
             border-radius: 4px;
             padding: 0.1rem 0.35rem;
             white-space: nowrap;
         }
+        .result-group-badge.quali-running {
+            color: #e3a007;
+            background: color-mix(in srgb, #e3a007 12%, transparent);
+            border-color: color-mix(in srgb, #e3a007 30%, transparent);
+        }
+        .result-group-badge.quali-done {
+            color: var(--green);
+            background: color-mix(in srgb, var(--green) 12%, transparent);
+            border-color: color-mix(in srgb, var(--green) 30%, transparent);
+        }
+        .result-group-badge.final-idle {
+            color: var(--muted);
+            background: color-mix(in srgb, var(--muted) 12%, transparent);
+            border-color: color-mix(in srgb, var(--muted) 25%, transparent);
+        }
+        .result-group-badge.final-running {
+            color: var(--accent);
+            background: color-mix(in srgb, var(--accent) 12%, transparent);
+            border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+        }
+        .result-group-badge.final-done {
+            color: #ffd700;
+            background: color-mix(in srgb, #ffd700 12%, transparent);
+            border-color: color-mix(in srgb, #ffd700 30%, transparent);
+        }
 
+        /* ── Run-status chip (Quali progress) ── */
         .result-runs-badge {
             font-size: 0.65rem;
             font-weight: 700;
-            color: var(--accent);
-            background: color-mix(in srgb, var(--accent) 15%, transparent);
+            color: var(--muted);
+            background: color-mix(in srgb, var(--muted) 12%, transparent);
             border-radius: 4px;
             padding: 0.1rem 0.35rem;
             white-space: nowrap;
@@ -128,21 +203,35 @@
             background: color-mix(in srgb, var(--green) 15%, transparent);
         }
 
-        .result-runs-badge.final {
-            color: #ffd700;
-            background: color-mix(in srgb, #ffd700 15%, transparent);
+        /* ── Final run-status chip: grey / yellow / green ── */
+        .result-runs-badge.final-none {
+            color: var(--muted);
+            background: color-mix(in srgb, var(--muted) 12%, transparent);
         }
 
+        .result-runs-badge.final-partial {
+            color: #e3a007;
+            background: color-mix(in srgb, #e3a007 15%, transparent);
+        }
+
+        .result-runs-badge.final-done {
+            color: var(--green);
+            background: color-mix(in srgb, var(--green) 15%, transparent);
+        }
+
+        /* ── Quali score chip — always visible, unobtrusive ── */
         .result-quali-pill {
             font-size: 0.65rem;
             font-weight: 600;
             color: var(--muted);
-            background: var(--border);
+            background: color-mix(in srgb, var(--muted) 10%, transparent);
+            border: 1px solid color-mix(in srgb, var(--muted) 20%, transparent);
             border-radius: 4px;
             padding: 0.1rem 0.35rem;
             white-space: nowrap;
         }
 
+        /* ── Per-run score pills (right side) ── */
         .result-run-pill {
             font-size: 0.7rem;
             font-weight: 700;
@@ -151,6 +240,12 @@
             border-radius: 4px;
             padding: 0.05rem 0.35rem;
             white-space: nowrap;
+        }
+
+        .result-run-pill.best {
+            color: var(--green);
+            background: color-mix(in srgb, var(--green) 18%, transparent);
+            outline: 1px solid color-mix(in srgb, var(--green) 40%, transparent);
         }
 
         .result-run-pill.pending {
@@ -163,6 +258,7 @@
             font-size: 0.75rem;
             color: var(--muted);
             font-weight: 400;
+            white-space: nowrap;
         }
 
         .result-last {
@@ -172,6 +268,21 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+        }
+
+        .result-name-row {
+            display: flex;
+            align-items: baseline;
+            gap: 0.4rem;
+            min-width: 0;
+        }
+
+        .result-fullname {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: baseline;
+            gap: 0.2rem 0.35rem;
+            min-width: 0;
         }
 
         .result-best {
@@ -468,17 +579,14 @@
             color: var(--muted);
             display: flex;
             justify-content: center;
-            gap: 0.5rem;
+            gap: 0.75rem;
             flex-wrap: wrap;
         }
 
         .ranking-mode-badge {
             display: inline-flex;
             align-items: center;
-            gap: 0.25rem;
-            background: var(--border);
-            border-radius: 4px;
-            padding: 0.1rem 0.4rem;
+            gap: 0.3rem;
             white-space: nowrap;
         }
 
@@ -563,6 +671,11 @@
             opacity: 0.35;
         }
 
+        .run-row.best-run {
+            background: color-mix(in srgb, var(--green) 6%, transparent);
+            border-left: 2px solid color-mix(in srgb, var(--green) 50%, transparent);
+        }
+
         .run-missing-text {
             font-size: 0.7rem;
             font-style: italic;
@@ -593,9 +706,15 @@
 
     <div class="content-center">
         <div class="results-controls">
-            <div id="group-chips" class="filter-chips" style="display:none;flex-wrap:wrap;justify-content:center"></div>
-            <div class="results-count-label" id="count-label"></div>
-            <div class="ranking-mode-label" id="ranking-mode-label" style="display:none"></div>
+            <fieldset class="info-fieldset" id="info-fieldset" style="display:none">
+                <legend>Wertung</legend>
+                <div class="ranking-mode-label" id="ranking-mode-label"></div>
+                <div class="weight-legend" id="weight-legend" style="display:none"></div>
+            </fieldset>
+            <fieldset class="filter-fieldset" id="filter-fieldset" style="display:none">
+                <legend>Gruppe</legend>
+                <div id="group-chips" class="filter-chips" style="flex-wrap:wrap;justify-content:center"></div>
+            </fieldset>
         </div>
         <div class="results-list" id="results-list">
             <div class="results-empty">Lade Ergebnisse …</div>
@@ -745,6 +864,8 @@
                 const qualiCount = CONFIG.qualiRuns ?? qualiRuns.length;
                 const finalCount = CONFIG.finalRuns ?? 0;
                 const isFinal = finalistNums.has(num);
+                const finalEntry = allFinalEntries.find(fe => String(fe.startNumber ?? fe.starter?.startNumber) === num);
+                const finalStartNumber = finalEntry?.finalStartNumber ?? null;
 
                 const qualiComplete = qualiRuns.length >= qualiCount;
                 const finalComplete = !isFinal || finalRuns.length >= finalCount;
@@ -758,7 +879,7 @@
                 const finalScore = (CONFIG.finalScoreMode ?? 'sum') === 'best' ? finalBest : finalTotal;
                 const best = isFinal ? (finalRuns.length ? finalScore : qualiScore) : qualiScore;
 
-                results.push({ num, starter, qualiRuns, finalRuns, qualiCount, finalCount, isFinal, qualiScore, finalScore, finalTotal, best, complete });
+                results.push({ num, starter, qualiRuns, finalRuns, qualiCount, finalCount, isFinal, finalStartNumber, qualiScore, finalScore, finalTotal, best, complete });
             }
 
             // Finalists with no final runs yet sort below finalists who have run,
@@ -842,6 +963,7 @@
 
         function renderGroupChips() {
             const bar = document.getElementById('group-chips');
+            const filterFieldset = document.getElementById('filter-fieldset');
             const groups = [];
             const seen = new Set();
             for (const s of starters) {
@@ -852,7 +974,7 @@
             }
             groups.sort((a, b) => a.name.localeCompare(b.name));
 
-            bar.style.display = groups.length ? '' : 'none';
+            filterFieldset.style.display = groups.length ? '' : 'none';
             bar.innerHTML = '';
 
             const modeLabels = {
@@ -911,11 +1033,11 @@
                 ? results.length + ' von ' + buildResultsAll().length
                 : results.length;
             document.getElementById('starter-count').textContent = results.length;
-            document.getElementById('count-label').textContent =
-                results.length + (results.length !== 1 ? ' Starter' : ' Starter');
 
-            // Ranking mode indicator — only show when the choice is meaningful (runs > 1)
+            // Info fieldset: ranking mode + weights
             const modeEl = document.getElementById('ranking-mode-label');
+            const weightEl = document.getElementById('weight-legend');
+            const infoFieldset = document.getElementById('info-fieldset');
             const qualiMulti = CONFIG.qualiRuns === null || CONFIG.qualiRuns > 1;
             const finalMulti = CONFIG.finalRuns === null || CONFIG.finalRuns > 1;
             const modeParts = [];
@@ -927,12 +1049,17 @@
                 const mv = (CONFIG.finalScoreMode ?? 'sum') === 'best' ? 'Bester Lauf' : 'Summe';
                 modeParts.push(`Final <span class="mode-val">${mv}</span>`);
             }
-            if (modeParts.length) {
-                modeEl.style.display = '';
-                modeEl.innerHTML = modeParts.map(p => `<span class="ranking-mode-badge">${p}</span>`).join('');
+            modeEl.innerHTML = modeParts.map(p => `<span class="ranking-mode-badge">${p}</span>`).join('');
+            modeEl.style.display = modeParts.length ? '' : 'none';
+
+            const hasWeights = CONFIG.criteria.some(c => c.weight != null);
+            if (hasWeights) {
+                weightEl.textContent = 'Gewichtung: ' + CONFIG.criteria.map(c => `${c.shortLabel} ${c.weight}%`).join(' · ');
+                weightEl.style.display = '';
             } else {
-                modeEl.style.display = 'none';
+                weightEl.style.display = 'none';
             }
+            infoFieldset.style.display = (modeParts.length || hasWeights) ? '' : 'none';
 
             if (!results.length) {
                 list.innerHTML = '<div class="results-empty">Noch keine Wertungen</div>';
@@ -944,13 +1071,6 @@
             );
 
             list.innerHTML = '';
-            // Weight legend
-            if (CONFIG.criteria.some(c => c.weight != null)) {
-                const legend = document.createElement('div');
-                legend.style.cssText = 'font-size:0.7rem;color:var(--muted);text-align:center;margin-bottom:0.5rem;';
-                legend.textContent = 'Gewichtung: ' + CONFIG.criteria.map(c => `${c.shortLabel} ${c.weight}%`).join(' · ');
-                list.appendChild(legend);
-            }
             // Compute ranks: tied scores share the same rank, next rank skips (1,1,3,4…)
             // Finalists with no final runs yet get null rank (shown as —)
             const ranks = [];
@@ -967,7 +1087,7 @@
                 }
             }
 
-            results.forEach(({ num, starter, qualiRuns, finalRuns, qualiCount, finalCount, isFinal, qualiScore, finalScore, finalTotal, best, complete }, i) => {
+            results.forEach(({ num, starter, qualiRuns, finalRuns, qualiCount, finalCount, isFinal, finalStartNumber, qualiScore, finalScore, finalTotal, best, complete }, i) => {
                 const card = document.createElement('div');
                 card.className = 'result-card' + (openNums.has(num) ? ' open' : '');
                 card.dataset.num = num;
@@ -978,6 +1098,8 @@
                 const firstName = starter?.firstName ?? '';
                 const lastName = starter?.lastName ?? String(num);
                 const groupName = starter?.startGroup?.name ?? '';
+                const sg = startGroups.find(x => x.objectId === starter?.startGroup?.objectId);
+                const groupModeClass = groupName ? groupMode(sg) : '';
                 const qualiDone = qualiRuns.length >= qualiCount;
                 const finalDone = isFinal && finalRuns.length >= finalCount;
                 const phaseDone = isFinal ? finalDone : qualiDone;
@@ -986,26 +1108,38 @@
                 let badgeText, badgeClass;
                 if (isFinal) {
                     badgeText = `${finalRuns.length}/${finalCount} Final`;
-                    badgeClass = 'result-runs-badge' + (finalDone ? ' final' : '');
+                    badgeClass = 'result-runs-badge ' + (finalDone ? 'final-done' : finalRuns.length > 0 ? 'final-partial' : 'final-none');
                 } else {
                     badgeText = `${qualiRuns.length}/${qualiCount} Quali`;
                     badgeClass = 'result-runs-badge' + (qualiDone ? ' complete' : '');
                 }
 
-                // Quali score pill shown for finalists
-                const qualiPillHtml = isFinal
+                // Quali score pill — only shown for finalists when there's an actual quali score
+                const qualiPillHtml = (isFinal && qualiScore > 0)
                     ? `<span class="result-quali-pill">Q ${qualiScore.toFixed(1)}</span>`
                     : '';
 
-                // Final run pills on the right (only when multiple final runs expected)
+                // Final start number chip — only for finalists
+                const finalNumHtml = (isFinal && finalStartNumber)
+                    ? `<span class="result-final-num">${finalStartNumber}</span>`
+                    : '';
+
+                // Run pills on the right
                 const buildRunPills = (runs, totalExpected) => {
-                    if (totalExpected <= 1) return '';
+                    if (totalExpected <= 1 && runs.length <= 1) {
+                        if (!runs.length) return '';
+                        return `<div class="result-run-pills"><span class="result-run-pill best">1· ${runs[0].total.toFixed(1)}</span></div>`;
+                    }
+                    const bestTotal = runs.length ? Math.max(...runs.map(r => r.total)) : -Infinity;
                     let html = `<div class="result-run-pills">`;
                     for (let ri = 0; ri < totalExpected; ri++) {
                         const run = runs[ri];
-                        html += run
-                            ? `<span class="result-run-pill">${ri + 1}· ${run.total.toFixed(1)}</span>`
-                            : `<span class="result-run-pill pending">${ri + 1}· —</span>`;
+                        if (run) {
+                            const isBest = run.total === bestTotal;
+                            html += `<span class="result-run-pill${isBest ? ' best' : ''}">${ri + 1}· ${run.total.toFixed(1)}</span>`;
+                        } else {
+                            html += `<span class="result-run-pill pending">${ri + 1}· —</span>`;
+                        }
                     }
                     return html + `</div>`;
                 };
@@ -1021,17 +1155,22 @@
                 header.innerHTML =
                     `<div class="result-rank${rankClass}">${rankDisplay}</div>` +
                     `<div class="result-name">` +
+                    `<div class="result-name-row">` +
+                    finalNumHtml +
+                    `<div class="result-fullname">` +
+                    (firstName ? `<span class="result-first">${firstName}</span>` : '') +
+                    `<span class="result-last">${lastName}</span>` +
+                    `</div>` +
+                    `</div>` +
                     `<div class="result-meta">` +
                     `<span class="result-num">#${num}</span>` +
-                    (groupName ? `<span class="result-group-badge">${groupName}</span>` : '') +
+                    (groupName ? `<span class="result-group-badge ${groupModeClass}">${groupName}</span>` : '') +
                     `<span class="${badgeClass}">${badgeText}</span>` +
                     qualiPillHtml +
                     `</div>` +
-                    `<span class="result-first">${firstName}</span>` +
-                    `<span class="result-last">${lastName}</span>` +
                     `</div>` +
                     `<div class="result-right">` +
-                    `<div class="result-best${phaseDone ? '' : ' incomplete'}">${displayScore.toFixed(1)}</div>` +
+                    `<div class="result-best${displayScore > 0 ? '' : ' incomplete'}">${displayScore.toFixed(1)}</div>` +
                     pillsHtml +
                     `</div>`;
                 header.addEventListener('click', () => card.classList.toggle('open'));
@@ -1043,6 +1182,7 @@
                 // Helper: render a phase block (quali or final)
                 const renderPhase = (phaseRuns, totalExpected, phaseTotal, label, isFinalPhase) => {
                     const phaseComplete = phaseRuns.length >= totalExpected;
+                    const bestRunTotal = phaseRuns.length > 1 ? Math.max(...phaseRuns.map(r => r.total)) : -Infinity;
                     const phaseHdr = document.createElement('div');
                     phaseHdr.className = 'run-phase-header';
                     phaseHdr.innerHTML =
@@ -1054,8 +1194,9 @@
 
                     for (let ri = 0; ri < totalExpected; ri++) {
                         const run = phaseRuns[ri];
+                        const isBestRun = run && phaseRuns.length > 1 && run.total === bestRunTotal;
                         const row = document.createElement('div');
-                        row.className = 'run-row' + (run ? '' : ' missing');
+                        row.className = 'run-row' + (run ? '' : ' missing') + (isBestRun ? ' best-run' : '');
 
                         if (!run) {
                             const labelWrap = document.createElement('div');
@@ -1071,7 +1212,7 @@
                         } else {
                             const labelWrap = document.createElement('div');
                             labelWrap.style.cssText = 'display:flex;flex-direction:column;gap:0.2rem';
-                            labelWrap.innerHTML = `<span class="run-label">Lauf ${ri + 1}</span>`;
+                            labelWrap.innerHTML = `<span class="run-label">Lauf ${ri + 1}${isBestRun ? ' <span class="run-best-badge">Bester</span>' : ''}</span>`;
 
                             const judgesDiv = document.createElement('div');
                             judgesDiv.className = 'run-judges';

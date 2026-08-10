@@ -137,6 +137,7 @@ const ParseAPI = (() => {
             startNumber: String(startnumber),
             judgeName,
             runNumber: Number(runNumber) ?? 1,
+            phase: phase ?? 'quali',
             event: { __type: 'Pointer', className: 'HT_EVENT', objectId: CONFIG.eventObjectId },
         }));
         const existing = await fetch(
@@ -204,11 +205,11 @@ const ParseAPI = (() => {
         return map;
     }
 
-    async function deleteQualiRun(startnumber, runNumber) {
+    async function deleteQualiRun(startnumber, runNumber, phase = 'quali') {
         const where = encodeURIComponent(JSON.stringify({
             event: { __type: 'Pointer', className: 'HT_EVENT', objectId: CONFIG.eventObjectId },
             startNumber: String(startnumber),
-            phase: 'quali',
+            phase,
             runNumber: Number(runNumber),
         }));
         const res = await fetch(

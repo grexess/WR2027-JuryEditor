@@ -45,8 +45,7 @@ Parse.Cloud.define('refereeUpdate', async (request) => {
         query.equalTo('event', event);
         const existing = await query.first({ useMasterKey: true });
         if (existing) {
-            existing.set('startNumber', null);
-            await existing.save(null, { useMasterKey: true });
+            await existing.destroy({ useMasterKey: true });
         }
         return { ok: true };
     }
@@ -237,16 +236,13 @@ Parse.Cloud.beforeDelete('HT_STARTER', async (request) => {
             await Parse.Object.destroyAll(results, { useMasterKey: true });
         })(),
 
-        // HT_ACTIVESTARTER — clear startNumber if this starter is currently active
+        // HT_ACTIVESTARTER — destroy record if this starter is currently active
         (async () => {
             const q = new Parse.Query('HT_ACTIVESTARTER');
             q.equalTo('startNumber', starter.get('startNumber'));
             q.limit(10);
             const results = await q.find({ useMasterKey: true });
-            for (const obj of results) {
-                obj.set('startNumber', null);
-            }
-            await Parse.Object.saveAll(results, { useMasterKey: true });
+            await Parse.Object.destroyAll(results, { useMasterKey: true });
         })(),
     ]);
 });

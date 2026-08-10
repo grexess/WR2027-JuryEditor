@@ -6,6 +6,7 @@
     --text: #e6edf3;
     --muted: #8b949e;
     --green: #3fb950;
+    --num: #58a6ff;
 }
 
 * {
@@ -585,7 +586,7 @@ main {
     min-width: 2rem;
     text-align: right;
     flex-shrink: 0;
-    color: var(--accent);
+    color: var(--num);
 }
 
 .picker-item-name {
@@ -847,9 +848,12 @@ footer {
 
 footer img {
     height: 18px;
-    opacity: 0.6;
     width: 100%;
     object-fit: contain;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
 }
 
 /* ── Footer logo ── */

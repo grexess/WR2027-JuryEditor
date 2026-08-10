@@ -109,7 +109,7 @@
 
         td.num {
             font-weight: 800;
-            color: var(--accent);
+            color: var(--num);
             width: 3rem;
         }
 
@@ -1356,7 +1356,7 @@ tr:last-child td{border-bottom:none}
             const sc = starter ? (scoreMap[starter.startNumber] ?? { quali: 0, final: 0 }) : { quali: 0, final: 0 };
             const hasScores = sc.quali > 0 || sc.final > 0;
             const active = starter ? await ParseAPI.fetchActiveStarter() : null;
-            const isActive = active?.startNumber === starter?.startNumber;
+            const isActive = !!starter && active?.startNumber === starter?.startNumber;
             const locked = hasScores || isActive;
             const lockedMsg = isActive
                 ? 'Kann nicht geändert werden – Starter ist gerade aktiv.'

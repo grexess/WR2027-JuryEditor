@@ -390,7 +390,7 @@
         .drawer-item-num {
             font-size: 0.85rem;
             font-weight: 800;
-            color: var(--accent);
+            color: var(--num);
             text-align: right;
         }
 
@@ -740,26 +740,27 @@
         </div>
     </div>
 
-    <!-- Finale starten – Bestätigungs-Popup -->
-    <div id="final-confirm-overlay" style="
+    <!-- Lauf zurücksetzen – Bestätigungs-Popup -->
+    <div id="abort-confirm-overlay" style="
         display:none;position:fixed;inset:0;z-index:210;
         background:rgba(0,0,0,0.72);
         align-items:center;justify-content:center;padding:1.5rem">
         <div style="
             background:var(--card);border:1px solid var(--border);border-radius:14px;
             max-width:340px;width:100%;padding:1.5rem;text-align:center">
-            <div style="font-size:1.8rem;margin-bottom:0.5rem">🏁</div>
-            <div style="font-size:1rem;font-weight:800;color:var(--text);margin-bottom:0.4rem" id="final-confirm-title">
-            </div>
-            <div style="font-size:0.85rem;color:var(--muted);margin-bottom:1.4rem" id="final-confirm-msg"></div>
+            <div style="font-size:1.8rem;margin-bottom:0.5rem">⚠️</div>
+            <div style="font-size:1rem;font-weight:800;color:var(--text);margin-bottom:0.4rem">Lauf zurücksetzen?</div>
+            <div style="font-size:0.85rem;color:var(--muted);margin-bottom:1.4rem">Alle Wertungen dieses Laufs werden unwiderruflich gelöscht.</div>
             <div style="display:flex;gap:0.75rem">
-                <button id="final-confirm-cancel" style="
+                <button id="abort-confirm-cancel" style="
                     flex:1;padding:0.85rem;border-radius:10px;border:1px solid var(--border);
                     background:transparent;color:var(--text);font-size:0.95rem;font-weight:700;cursor:pointer">
                     ← Abbrechen
                 </button>
-                <button id="final-confirm-ok" class="submit-btn" style="flex:1">
-                    Finale erstellen
+                <button id="abort-confirm-ok" style="
+                    flex:1;padding:0.85rem;border-radius:10px;border:none;
+                    background:#e74c3c;color:#fff;font-size:0.95rem;font-weight:700;cursor:pointer">
+                    Zurücksetzen
                 </button>
             </div>
         </div>
@@ -783,7 +784,7 @@
                 <div class="waiting-dot"></div>
                 <div class="waiting-dot"></div>
             </div>
-            <div id="waiting-final-num" style="display:none;font-size:2.8rem;font-weight:900;color:var(--accent);letter-spacing:0.04em;margin-top:0.5rem"></div>
+            <div id="waiting-final-num" style="display:none;font-size:2.8rem;font-weight:900;color:var(--num);letter-spacing:0.04em;margin-top:0.5rem"></div>
             <div id="waiting-name" style="font-size:0.9rem;font-weight:600;color:var(--muted);margin-top:0.15rem"></div>
             <div id="run-chip"
                 style="display:none;margin-top:0.5rem;background:color-mix(in srgb,var(--accent) 15%,transparent);color:var(--accent);border:1px solid var(--accent);border-radius:999px;padding:0.2rem 0.9rem;font-size:0.75rem;font-weight:700;letter-spacing:0.06em">
@@ -877,8 +878,8 @@
         let filterRuns = null;   // run count number or null = all
         let filterDone = false;  // show only finished starters when true
         let closedGroups = new Set(); // objectIds of groups with qualiClosed=true
-        let _pendingFinalGroup = null; // set when confirmation popup is shown
         let _chipTicker = null;
+        let _starting = false; // true while publishActiveStarter is in flight
         const STALE_MS = CONFIG.presenceStalMs;
 
         // ── Presence ──
@@ -1114,7 +1115,7 @@
                             (entry.startNumber === selected ? ' selected' : '') +
                             (finalDone || excluded ? ' done' : '');
                         item.innerHTML =
-                            `<span class="picker-item-num" style="font-size:1.1rem;font-weight:900;color:var(--accent)">${entry.finalStartNumber}</span>` +
+                            `<span class="picker-item-num" style="font-size:1.1rem;font-weight:900;color:var(--num)">${entry.finalStartNumber}</span>` +
                             `<span class="picker-item-num" style="font-size:0.75rem;color:var(--muted)">#${entry.startNumber}</span>` +
                             `<span class="picker-item-name">` +
                             `<span class="picker-item-first">${starter?.firstName ?? ''}</span>` +
@@ -1238,6 +1239,7 @@
         }
 
         function setStartBtn(num, finalNum) {
+            if (_starting) return;
             startBtn.style.background = '';
             startBtn.style.color = '';
             if (num === null) {
@@ -1324,6 +1326,7 @@
             activeRunNumber = mode === 'finale'
                 ? (finalRunCounts[startNumber] ?? 0) + 1
                 : (runCounts[startNumber] ?? 0) + 1;
+            const activePhase = mode === 'finale' ? 'final' : 'quali';
             scoredBy = new Set();
             juryScores = {};
             const runStartedAt = new Date(Date.now() - 10000); // 10s tolerance for client/server clock drift
@@ -1351,7 +1354,7 @@
             if (scoreWs) scoreWs.close();
             const _subscribeScores = () => {
                 scoreWs = ParseAPI.subscribeJuryScores(startNumber, score => {
-                    if (score.judgeName) {
+                    if (score.judgeName && (score.phase ?? 'quali') === activePhase) {
                         scoredBy.add(score.judgeName);
                         juryScores[score.judgeName] = score;
                     }
@@ -1363,7 +1366,7 @@
                         ParseAPI.fetchJuryScores(startNumber).then(existing => {
                             existing.forEach(s => {
                                 const createdAt = new Date(s.createdAt?.iso ?? s.createdAt);
-                                if (s.judgeName && createdAt >= runStartedAt) {
+                                if (s.judgeName && (s.phase ?? 'quali') === activePhase && createdAt >= runStartedAt) {
                                     scoredBy.add(s.judgeName);
                                     juryScores[s.judgeName] = s;
                                 }
@@ -1380,7 +1383,8 @@
                     const matchesRun = s.runNumber != null
                         ? Number(s.runNumber) === activeRunNumber
                         : new Date(s.createdAt?.iso ?? s.createdAt) >= runStartedAt;
-                    if (s.judgeName && (isRestore || matchesRun)) {
+                    const matchesPhase = (s.phase ?? 'quali') === activePhase;
+                    if (s.judgeName && matchesPhase && matchesRun) {
                         scoredBy.add(s.judgeName);
                         juryScores[s.judgeName] = s;
                     }
@@ -1398,12 +1402,13 @@
             _toastTimer = setTimeout(() => { el.style.display = 'none'; }, durationMs);
         }
 
-        function exitWaitingForScores(aborted = false) {
+        async function exitWaitingForScores(aborted = false) {
             if (scoreWs) { scoreWs.close(); scoreWs = null; }
             const completedStarter = activeStarter;
             const completedRun = activeRunNumber;
             if (aborted && completedStarter != null && completedRun != null) {
-                ParseAPI.deleteQualiRun(completedStarter, completedRun).catch(() => {});
+                const phase = mode === 'finale' ? 'final' : 'quali';
+                await ParseAPI.deleteQualiRun(completedStarter, completedRun, phase).catch(() => {});
                 channel.postMessage({ cleared: true });
             }
             if (!aborted && completedStarter != null) {
@@ -1414,7 +1419,7 @@
                     drawerRunCounts[completedStarter] = runCounts[completedStarter];
                 }
             }
-            ParseAPI.clearActiveStarter().catch(() => {});
+            await ParseAPI.clearActiveStarter().catch(() => {});
             activeStarter = null;
             juryScores = {};
             filterDone = false;
@@ -1447,14 +1452,22 @@
                         const groupName = completedStarterObj.startGroup?.name ?? 'Gruppe';
                         const group = drawerGroups.find(g => g.objectId === gid);
                         if (group) {
-                            // show confirmation popup instead of firing immediately
-                            document.getElementById('final-confirm-title').textContent =
-                                `${groupName} – Quali abgeschlossen`;
-                            document.getElementById('final-confirm-msg').textContent =
-                                `Alle Starter haben die erforderlichen Qualifikationsläufe absolviert. Finale jetzt erstellen?`;
-                            const overlay = document.getElementById('final-confirm-overlay');
-                            overlay.style.display = 'flex';
-                            _pendingFinalGroup = { gid, groupName, group };
+                            showToast(`🏁 ${groupName}: Finale wird erstellt …`, 5000);
+                            ParseAPI.updateStartGroupQualiClosed(gid, true).then(() => {
+                                group.qualiClosed = true;
+                                closedGroups.add(gid);
+                                return ParseAPI.createFinal(gid);
+                            }).then(async result => {
+                                await refreshFinalEntries();
+                                renderDrawer(); renderFilterChips(); renderList(filterInput.value);
+                                document.getElementById('toast').style.display = 'none';
+                                document.getElementById('final-ready-title').textContent = `${groupName} – Finale bereit`;
+                                document.getElementById('final-ready-msg').textContent =
+                                    `${result.created} Finalisten wurden ermittelt.`;
+                                document.getElementById('final-ready-overlay').style.display = 'flex';
+                            }).catch(() => {
+                                showToast(`✕ Fehler beim Erstellen des Finals`);
+                            });
                         }
                     }
                 }
@@ -1464,7 +1477,18 @@
         filterInput.addEventListener('input', () => renderList(filterInput.value));
         clearBtn.addEventListener('click', clearSelection);
         document.getElementById('next-btn').addEventListener('click', () => exitWaitingForScores(false));
-        document.getElementById('abort-btn').addEventListener('click', () => exitWaitingForScores(true));
+        document.getElementById('abort-btn').addEventListener('click', () => {
+            document.getElementById('abort-confirm-overlay').style.display = 'flex';
+        });
+        document.getElementById('abort-confirm-cancel').addEventListener('click', () => {
+            document.getElementById('abort-confirm-overlay').style.display = 'none';
+        });
+        document.getElementById('abort-confirm-ok').addEventListener('click', async () => {
+            document.getElementById('abort-confirm-overlay').style.display = 'none';
+            const btn = document.getElementById('abort-confirm-ok');
+            btn.disabled = true;
+            try { await exitWaitingForScores(true); } finally { btn.disabled = false; }
+        });
 
         function setMode(m) {
             mode = m;
@@ -1534,37 +1558,6 @@
         document.getElementById('final-ready-btn').addEventListener('click', () => {
             document.getElementById('final-ready-overlay').style.display = 'none';
             setMode('finale');
-        });
-
-        document.getElementById('final-confirm-cancel').addEventListener('click', () => {
-            document.getElementById('final-confirm-overlay').style.display = 'none';
-            _pendingFinalGroup = null;
-        });
-
-        document.getElementById('final-confirm-ok').addEventListener('click', async () => {
-            const confirmBtn = document.getElementById('final-confirm-ok');
-            if (confirmBtn.disabled) return;
-            confirmBtn.disabled = true;
-            document.getElementById('final-confirm-overlay').style.display = 'none';
-            if (!_pendingFinalGroup) return;
-            const { gid, groupName, group } = _pendingFinalGroup;
-            _pendingFinalGroup = null;
-            showToast(`🏁 ${groupName}: Finale wird erstellt …`, 5000);
-            try {
-                await ParseAPI.updateStartGroupQualiClosed(gid, true);
-                group.qualiClosed = true;
-                closedGroups.add(gid);
-                const result = await ParseAPI.createFinal(gid);
-                await refreshFinalEntries();
-                renderDrawer(); renderFilterChips(); renderList(filterInput.value);
-                document.getElementById('toast').style.display = 'none';
-                document.getElementById('final-ready-title').textContent = `${groupName} – Finale bereit`;
-                document.getElementById('final-ready-msg').textContent =
-                    `${result.created} Finalisten wurden ermittelt.`;
-                document.getElementById('final-ready-overlay').style.display = 'flex';
-            } catch (_) {
-                showToast(`✕ Fehler beim Erstellen des Finals`);
-            }
         });
 
         async function drawerSetStatus(starter, status) {
@@ -1968,11 +1961,13 @@
             // Restore active starter if one is set (e.g. after page refresh)
             ParseAPI.fetchActiveStarter().then(active => {
                 if (active?.startNumber != null && activeStarter === null) {
-                    mode = active.phase === 'finale' ? 'finale' : 'quali';
+                    mode = active.phase === 'final' ? 'finale' : 'quali';
                     const runNumber = active.runNumber ?? 1;
+                    const activePhase = active.phase === 'final' ? 'final' : 'quali';
                     ParseAPI.fetchJuryScores(String(active.startNumber)).then(existing => {
                         const scoresForRun = existing.filter(s =>
-                            Number(s.runNumber ?? 1) === Number(runNumber)
+                            Number(s.runNumber ?? 1) === Number(runNumber) &&
+                            (s.phase ?? 'quali') === activePhase
                         );
                         const judgesScored = new Set(scoresForRun.map(s => s.judgeName));
                         const allDone = JUDGE_COUNT() > 0 && judgesScored.size >= JUDGE_COUNT();
@@ -1991,27 +1986,24 @@
         init();
 
         startBtn.addEventListener('click', async () => {
-            if (selected === null) return;
+            if (selected === null || _starting) return;
+            _starting = true;
             startBtn.disabled = true;
             startBtn.innerHTML = '…';
             try {
-                // Compute runNumber here, before the 800ms delay to enterWaitingForScores
                 const phase = mode === 'finale' ? 'final' : 'quali';
                 activeRunNumber = mode === 'finale'
                     ? (finalRunCounts[selected] ?? 0) + 1
                     : (runCounts[selected] ?? 0) + 1;
-                // Clear any stale active starter before publishing the new one
-                // Clear any stale active starter before publishing the new one
                 await ParseAPI.clearActiveStarter().catch(() => {});
                 await ParseAPI.publishActiveStarter(selected, activeRunNumber, phase);
                 channel.postMessage({ startNumber: selected, runNumber: activeRunNumber, phase });
-                startBtn.style.background = 'var(--green)';
-                startBtn.style.color = '#000';
-                startBtn.innerHTML = '✓ Gestartet';
-                setTimeout(() => enterWaitingForScores(selected), 800);
+                enterWaitingForScores(selected);
             } catch (e) {
                 startBtn.innerHTML = '✕ Fehler';
                 startBtn.disabled = false;
+            } finally {
+                _starting = false;
             }
         });
     </script>

@@ -13,7 +13,7 @@
     <header>
         <div class="header-group" id="starter-name-group">
             <div class="header-label" id="startnumber-label">Startnummer</div>
-            <div class="header-value" id="startnumber" style="color:var(--accent)">—</div>
+            <div class="header-value" id="startnumber" style="color:var(--num)">—</div>
             <div id="starter-name" style="font-size:0.7rem;color:var(--muted);margin-top:0.1rem"></div>
         </div>
         <div class="header-group">
@@ -47,6 +47,7 @@
             <div class="waiting-dot"></div>
         </div>
         <div class="waiting-label">Warte auf Startnummer …</div>
+        <img src="../assets/weraceLogo.png" alt="WeRace" style="position:absolute;bottom:calc(0.3rem + env(safe-area-inset-bottom,0px));height:18px;width:100%;object-fit:contain;opacity:0.6">
     </div>
     <div class="waiting hidden" id="reset-screen">
         <div style="font-size:2.5rem;margin-bottom:0.5rem">↩</div>
@@ -287,7 +288,8 @@
             ParseAPI.fetchJuryScores(startNumber).then(existing => {
                 for (const s of existing) {
                     if (s.judgeName !== judgeName &&
-                        String(s.runNumber ?? 1) === String(runNumber ?? 1)) {
+                        String(s.runNumber ?? 1) === String(runNumber ?? 1) &&
+                        (s.phase ?? 'quali') === currentPhase) {
                         _peerScores[s.judgeName] = s;
                     }
                 }
@@ -296,7 +298,8 @@
             // Subscribe to live updates
             _peerWs = ParseAPI.subscribeJuryScores(startNumber, s => {
                 if (s.judgeName !== judgeName &&
-                    String(s.runNumber ?? 1) === String(runNumber ?? 1)) {
+                    String(s.runNumber ?? 1) === String(runNumber ?? 1) &&
+                    (s.phase ?? 'quali') === currentPhase) {
                     _peerScores[s.judgeName] = s;
                     renderPeerScores();
                 }
@@ -412,7 +415,7 @@
                 submitBtn.innerHTML = `<span style="font-size:1.3rem">✓</span> <span class="badge">${rawTotal()}</span>`;
                 submitBtn.addEventListener('click', async () => {
                     submitBtn.disabled = true;
-                    submitBtn.textContent = '…';
+                    submitBtn.innerHTML = '<span style="display:inline-block;width:1.1em;height:1.1em;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle"></span>';
                     try {
                         await saveScore(_frozenStartNum, judgeName, scores);
                     } catch (e) {
