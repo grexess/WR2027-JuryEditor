@@ -3,7 +3,9 @@
     "allow": [
       "mcp__playwright__browser_navigate",
       "Bash(npx --yes serve . -l 5500)",
-      "Bash(python -m http.server 5500)"
+      "Bash(python -m http.server 5500)",
+      "Bash(pkill -f \"http.server 812\")",
+      "Bash(google-chrome --headless=new --disable-gpu --no-sandbox --window-size=375,500 --hide-scrollbars --screenshot=test_linefix.png http://localhost:8125/index.html)"
     ]
   }
 }
