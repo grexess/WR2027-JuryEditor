@@ -326,16 +326,6 @@
             white-space: nowrap;
         }
 
-        .run-best-badge {
-            font-size: 0.6rem;
-            font-weight: 700;
-            color: var(--green);
-            background: color-mix(in srgb, var(--green) 15%, transparent);
-            border-radius: 4px;
-            padding: 0.1rem 0.35rem;
-            white-space: nowrap;
-        }
-
         .run-judges {
             display: flex;
             flex-wrap: wrap;
@@ -353,28 +343,51 @@
             min-width: 3rem;
         }
 
+        .run-judge-chip.has-criteria {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .run-judge-chip.has-criteria:active {
+            background: var(--border);
+        }
+
         .run-judge-name {
             font-size: 0.6rem;
             color: var(--muted);
             white-space: nowrap;
         }
 
+        .run-judge-score-row {
+            display: flex;
+            align-items: center;
+            gap: 0.2rem;
+        }
+
         .run-judge-score {
             font-size: 0.95rem;
             font-weight: 800;
-            color: var(--text);
+            color: var(--green);
+        }
+
+        .run-judge-chevron {
+            font-size: 0.5rem;
+            color: var(--muted);
+            transition: transform 0.2s;
+        }
+
+        .run-judge-chip.open .run-judge-chevron {
+            transform: rotate(180deg);
         }
 
         .run-judge-criteria {
-            display: flex;
-            gap: 0.25rem;
-            margin-top: 0.15rem;
-        }
-
-        .run-judge-criteria {
-            display: flex;
+            display: none;
             gap: 0.3rem;
             margin-top: 0.2rem;
+        }
+
+        .run-judge-chip.open .run-judge-criteria {
+            display: flex;
         }
 
         .run-judge-crit {
@@ -397,7 +410,7 @@
 
         .run-judge-crit-raw {
             font-size: 0.52rem;
-            color: var(--muted);
+            color: var(--accent);
             line-height: 1.2;
         }
 
@@ -411,55 +424,7 @@
         .run-judge-crit-w {
             font-size: 0.58rem;
             font-weight: 700;
-            color: var(--accent);
-            line-height: 1.2;
-        }
-
-        .run-crit-sum {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.25rem 0.5rem;
-            background: rgba(255,255,255,0.04);
-            border-top: 1px solid var(--border);
-            border-radius: 0 0 4px 4px;
-            margin-top: 0.2rem;
-        }
-
-        .run-crit-sum-prefix {
-            font-size: 0.55rem;
-            font-weight: 700;
-            color: var(--accent);
-            margin-right: 0.1rem;
-        }
-
-        .run-crit-sum-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-width: 1.6rem;
-            background: rgba(255,255,255,0.06);
-            border-radius: 3px;
-            padding: 0.1rem 0.25rem;
-        }
-
-        .run-crit-sum-label {
-            font-size: 0.42rem;
-            color: var(--muted);
-            text-transform: uppercase;
-            letter-spacing: 0.03em;
-        }
-
-        .run-crit-sum-raw {
-            font-size: 0.52rem;
-            color: var(--muted);
-            line-height: 1.2;
-        }
-
-        .run-crit-sum-val {
-            font-size: 0.58rem;
-            font-weight: 700;
-            color: var(--accent);
+            color: var(--green);
             line-height: 1.2;
         }
 
@@ -473,6 +438,12 @@
             text-align: right;
             white-space: nowrap;
             align-self: center;
+        }
+
+        .run-total.best-run-total {
+            color: var(--green);
+            background: color-mix(in srgb, var(--green) 18%, transparent);
+            outline: 1px solid color-mix(in srgb, var(--green) 40%, transparent);
         }
 
         .results-empty {
@@ -655,6 +626,64 @@
             letter-spacing: 0.1em;
             background: color-mix(in srgb, var(--border) 60%, transparent);
             color: var(--muted);
+            gap: 0.5rem;
+        }
+
+        .value-mode-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding-top: 0.3rem;
+        }
+
+        .value-mode-toggle {
+            display: flex;
+            gap: 0.1rem;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 0.1rem;
+        }
+
+        .value-mode-btn {
+            font-size: 0.5rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            padding: 0.12rem 0.35rem;
+            border-radius: 3px;
+            color: var(--muted);
+            cursor: pointer;
+            background: transparent;
+            border: none;
+        }
+
+        .value-mode-btn[data-mode="raw"].active {
+            background: var(--accent);
+            color: #fff;
+        }
+
+        .value-mode-btn[data-mode="weighted"].active {
+            background: var(--green);
+            color: #fff;
+        }
+
+        #results-list.mode-raw .run-judge-crit-w,
+        #results-list.mode-raw .run-judge-crit-divider {
+            display: none;
+        }
+
+        #results-list.mode-weighted .run-judge-crit-raw,
+        #results-list.mode-weighted .run-judge-crit-divider {
+            display: none;
+        }
+
+        #results-list.mode-raw .run-judge-crit-raw {
+            font-size: 0.6rem;
+        }
+
+        #results-list.mode-weighted .run-judge-crit-w {
+            font-size: 0.62rem;
         }
 
         .run-phase-best {
@@ -710,6 +739,12 @@
                 <legend>Wertung</legend>
                 <div class="ranking-mode-label" id="ranking-mode-label"></div>
                 <div class="weight-legend" id="weight-legend" style="display:none"></div>
+                <div class="value-mode-row" id="value-mode-row" style="display:none">
+                    <span class="value-mode-toggle">
+                        <button type="button" class="value-mode-btn" data-mode="raw">Roh</button>
+                        <button type="button" class="value-mode-btn active" data-mode="weighted">Gewichtet</button>
+                    </span>
+                </div>
             </fieldset>
             <fieldset class="filter-fieldset" id="filter-fieldset" style="display:none">
                 <legend>Gruppe</legend>
@@ -738,6 +773,7 @@
         let allFinalEntries = [];
         let filterGroup = null;
         let startGroups = [];
+        let valueMode = 'weighted';
 
         // Split a flat score array into { qualiRuns, finalRuns } using the phase field.
         // Falls back to runNumber-based grouping when phase is missing (old records),
@@ -764,10 +800,11 @@
 
         // Deduplicate an array of score records keeping only the latest per judgeName.
         // Input is already sorted by createdAt (oldest first) so the last entry wins.
+        // Result is sorted alphabetically by judgeName for a stable display order.
         function deduplicateByJudge(scores) {
             const latest = new Map();
             for (const s of scores) latest.set(s.judgeName, s);
-            return [...latest.values()];
+            return [...latest.values()].sort((a, b) => a.judgeName.localeCompare(b.judgeName));
         }
 
         function groupByRunNumber(scores) {
@@ -1059,7 +1096,13 @@
             } else {
                 weightEl.style.display = 'none';
             }
-            infoFieldset.style.display = (modeParts.length || hasWeights) ? '' : 'none';
+
+            const hasCriteria = CONFIG.criteria.length > 0;
+            document.getElementById('value-mode-row').style.display = hasCriteria ? '' : 'none';
+            list.classList.toggle('mode-raw', valueMode === 'raw');
+            list.classList.toggle('mode-weighted', valueMode === 'weighted');
+
+            infoFieldset.style.display = (modeParts.length || hasWeights || hasCriteria) ? '' : 'none';
 
             if (!results.length) {
                 list.innerHTML = '<div class="results-empty">Noch keine Wertungen</div>';
@@ -1068,6 +1111,9 @@
 
             const openNums = new Set(
                 [...list.querySelectorAll('.result-card.open')].map(el => String(el.dataset.num))
+            );
+            const openChips = new Set(
+                [...list.querySelectorAll('.run-judge-chip.open')].map(el => el.dataset.chipKey)
             );
 
             list.innerHTML = '';
@@ -1179,10 +1225,11 @@
                 const runsDiv = document.createElement('div');
                 runsDiv.className = 'result-runs';
 
-                // Helper: render a phase block (quali or final)
+                // Helper: render a phase block (quali or final) — always expanded
                 const renderPhase = (phaseRuns, totalExpected, phaseTotal, label, isFinalPhase) => {
                     const phaseComplete = phaseRuns.length >= totalExpected;
                     const bestRunTotal = phaseRuns.length > 1 ? Math.max(...phaseRuns.map(r => r.total)) : -Infinity;
+
                     const phaseHdr = document.createElement('div');
                     phaseHdr.className = 'run-phase-header';
                     phaseHdr.innerHTML =
@@ -1212,14 +1259,17 @@
                         } else {
                             const labelWrap = document.createElement('div');
                             labelWrap.style.cssText = 'display:flex;flex-direction:column;gap:0.2rem';
-                            labelWrap.innerHTML = `<span class="run-label">Lauf ${ri + 1}${isBestRun ? ' <span class="run-best-badge">Bester</span>' : ''}</span>`;
+                            labelWrap.innerHTML = `<span class="run-label">Lauf ${ri + 1}</span>`;
 
                             const judgesDiv = document.createElement('div');
                             judgesDiv.className = 'run-judges';
 
                             for (const score of run.scores) {
+                                const hasCriteria = CONFIG.criteria.length > 0;
+                                const chipKey = `${num}-${isFinalPhase ? 'final' : 'quali'}-r${ri}-${score.judgeName}`;
                                 const chip = document.createElement('div');
-                                chip.className = 'run-judge-chip';
+                                chip.className = 'run-judge-chip' + (hasCriteria ? ' has-criteria' : '') + (openChips.has(chipKey) ? ' open' : '');
+                                chip.dataset.chipKey = chipKey;
                                 const critHtml = CONFIG.criteria.map(c => {
                                     const raw = score[c.key] ?? 0;
                                     const w = c.weight ?? (100 / CONFIG.criteria.length);
@@ -1233,31 +1283,22 @@
                                 }).join('');
                                 chip.innerHTML =
                                     `<span class="run-judge-name">${score.judgeName}</span>` +
+                                    `<span class="run-judge-score-row">` +
                                     `<span class="run-judge-score">${calcJudgeTotal(score).toFixed(1)}</span>` +
-                                    (CONFIG.criteria.length ? `<div class="run-judge-criteria">${critHtml}</div>` : '');
+                                    (hasCriteria ? `<span class="run-judge-chevron">▾</span>` : '') +
+                                    `</span>` +
+                                    (hasCriteria ? `<div class="run-judge-criteria">${critHtml}</div>` : '');
+                                if (hasCriteria) {
+                                    chip.addEventListener('click', () => {
+                                        const nowOpen = !chip.classList.contains('open');
+                                        judgesDiv.querySelectorAll('.run-judge-chip').forEach(c => c.classList.toggle('open', nowOpen));
+                                    });
+                                }
                                 judgesDiv.appendChild(chip);
                             }
 
-                            if (run.scores.length > 1 && CONFIG.criteria.length) {
-                                const sumRow = document.createElement('div');
-                                sumRow.className = 'run-crit-sum';
-                                sumRow.innerHTML = `<span class="run-crit-sum-prefix">Gesamt</span>` +
-                                    CONFIG.criteria.map(c => {
-                                        const w = c.weight ?? (100 / CONFIG.criteria.length);
-                                        const totalWeighted = run.scores.reduce((a, s) => a + Math.round((s[c.key] ?? 0) * w / 100), 0);
-                                        const totalRaw = run.scores.reduce((a, s) => a + (s[c.key] ?? 0), 0);
-                                        return `<span class="run-crit-sum-item">` +
-                                            `<span class="run-crit-sum-label">${c.shortLabel}</span>` +
-                                            `<span class="run-crit-sum-raw">${totalRaw}</span>` +
-                                            `<span class="run-judge-crit-divider"></span>` +
-                                            `<span class="run-crit-sum-val">${totalWeighted}</span>` +
-                                            `</span>`;
-                                    }).join('');
-                                judgesDiv.appendChild(sumRow);
-                            }
-
                             const totalDiv = document.createElement('div');
-                            totalDiv.className = 'run-total';
+                            totalDiv.className = 'run-total' + (isBestRun ? ' best-run-total' : '');
                             totalDiv.textContent = run.total.toFixed(1);
 
                             row.appendChild(labelWrap);
@@ -1268,8 +1309,9 @@
                     }
                 };
 
-                renderPhase(qualiRuns, qualiCount, qualiScore, `Qualifikation${(CONFIG.qualiScoreMode ?? 'sum') === 'best' ? ' · bester Lauf' : ' · Summe'}`, false);
+                // Final result up front, quali result behind it.
                 if (isFinal) renderPhase(finalRuns, finalCount, finalScore, `Finale${(CONFIG.finalScoreMode ?? 'sum') === 'best' ? ' · bester Lauf' : ' · Summe'}`, true);
+                renderPhase(qualiRuns, qualiCount, qualiScore, `Qualifikation${(CONFIG.qualiScoreMode ?? 'sum') === 'best' ? ' · bester Lauf' : ' · Summe'}`, false);
 
                 card.appendChild(runsDiv);
                 list.appendChild(card);
@@ -1343,6 +1385,16 @@
                 render();
             } catch (_) { }
         }
+
+        document.querySelectorAll('#value-mode-row .value-mode-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                valueMode = btn.dataset.mode;
+                document.querySelectorAll('#value-mode-row .value-mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === valueMode));
+                const list = document.getElementById('results-list');
+                list.classList.toggle('mode-raw', valueMode === 'raw');
+                list.classList.toggle('mode-weighted', valueMode === 'weighted');
+            });
+        });
 
         async function init() {
             await Promise.all([ParseAPI.fetchEvent(), ParseAPI.fetchJudges()]).catch(() => { });
