@@ -880,6 +880,7 @@
         let closedGroups = new Set(); // objectIds of groups with qualiClosed=true
         let _chipTicker = null;
         let _starting = false; // true while publishActiveStarter is in flight
+        let _scorePollInterval = null;
         const STALE_MS = CONFIG.presenceStalMs;
 
         // ── Presence ──
@@ -1378,6 +1379,31 @@
             };
             _subscribeScores();
 
+            // Polling fallback — covers cases where Live Query misses create events
+            if (_scorePollInterval) clearInterval(_scorePollInterval);
+            _scorePollInterval = setInterval(() => {
+                if (activeStarter !== startNumber) {
+                    clearInterval(_scorePollInterval);
+                    _scorePollInterval = null;
+                    return;
+                }
+                ParseAPI.fetchJuryScores(startNumber).then(existing => {
+                    let changed = false;
+                    existing.forEach(s => {
+                        const matchesRun = s.runNumber != null
+                            ? Number(s.runNumber) === activeRunNumber
+                            : new Date(s.createdAt?.iso ?? s.createdAt) >= runStartedAt;
+                        const matchesPhase = (s.phase ?? 'quali') === activePhase;
+                        if (s.judgeName && matchesPhase && matchesRun && !scoredBy.has(s.judgeName)) {
+                            scoredBy.add(s.judgeName);
+                            juryScores[s.judgeName] = s;
+                            changed = true;
+                        }
+                    });
+                    if (changed) renderJuryGrid();
+                }).catch(() => {});
+            }, 3000);
+
             ParseAPI.fetchJuryScores(startNumber).then(existing => {
                 existing.forEach(s => {
                     const matchesRun = s.runNumber != null
@@ -1404,6 +1430,7 @@
 
         async function exitWaitingForScores(aborted = false) {
             if (scoreWs) { scoreWs.close(); scoreWs = null; }
+            if (_scorePollInterval) { clearInterval(_scorePollInterval); _scorePollInterval = null; }
             const completedStarter = activeStarter;
             const completedRun = activeRunNumber;
             if (aborted && completedStarter != null && completedRun != null) {

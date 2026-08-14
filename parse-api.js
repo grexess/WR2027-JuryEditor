@@ -255,19 +255,20 @@ const ParseAPI = (() => {
         ws.addEventListener('message', e => {
             const msg = JSON.parse(e.data);
             if (msg.op === 'connected') {
+                // Filter by event Pointer only — combining Pointer + scalar in LQ where silently breaks delivery
                 ws.send(JSON.stringify({
                     op:        'subscribe',
                     requestId,
                     query: {
                         className: 'HT_JURYSCORE',
                         where: {
-                            startNumber: String(startnumber),
                             event: { __type: 'Pointer', className: 'HT_EVENT', objectId: CONFIG.eventObjectId },
                         },
                     },
                 }));
             }
-            if (msg.op === 'create' && msg.object) {
+            if (msg.op === 'create' && msg.object &&
+                String(msg.object.startNumber) === String(startnumber)) {
                 onScore(msg.object);
             }
         });

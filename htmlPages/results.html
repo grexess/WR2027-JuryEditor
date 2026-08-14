@@ -68,11 +68,21 @@
         .result-header {
             display: grid;
             grid-template-columns: auto 1fr auto;
-            align-items: start;
-            gap: 0.75rem;
+            align-items: center;
+            gap: 0.4rem 0.75rem;
             padding: 0.65rem 1rem;
             cursor: pointer;
             user-select: none;
+        }
+
+        .result-secondary {
+            grid-column: 1 / -1;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.4rem;
+            border-top: 1px solid var(--border);
+            padding-top: 0.3rem;
         }
 
         .result-rank-group {
@@ -106,9 +116,6 @@
             flex-wrap: wrap;
             justify-content: flex-end;
             gap: 0.3rem;
-            border-top: 1px solid var(--border);
-            padding-top: 0.3rem;
-            margin-top: 0.05rem;
         }
 
         .result-header:active {
@@ -147,9 +154,6 @@
             row-gap: 0.25rem;
             align-items: center;
             gap: 0.4rem;
-            border-top: 1px solid var(--border);
-            padding-top: 0.3rem;
-            margin-top: 0.05rem;
         }
 
         /* ── Quali start number chip ── */
@@ -827,7 +831,7 @@
 
         // Stable per-group identity color — assigned by alphabetical position so it
         // stays the same across renders regardless of phase/status.
-        const GROUP_COLORS = ['#58a6ff', '#bc8cff', '#f778ba', '#3fb950', '#ffa657', '#39c5cf', '#ff7b72', '#e3b341'];
+        const GROUP_COLORS = ['#f0883e', '#bc8cff', '#f778ba', '#3fb950', '#ffa657', '#39c5cf', '#ff7b72', '#e3b341'];
         const groupColorMap = new Map();
         function groupColor(groupId) {
             return groupId ? groupColorMap.get(groupId) : null;
@@ -1239,6 +1243,7 @@
 
                 // Run pills on the right
                 const buildRunPills = (runs, totalExpected) => {
+                    if (!runs.length) return '';
                     if (totalExpected <= 1 && runs.length <= 1) {
                         if (!runs.length) return '';
                         return `<div class="result-run-pills"><span class="result-run-pill best">1· ${runs[0].total.toFixed(1)}</span></div>`;
@@ -1270,7 +1275,6 @@
                     `<div class="result-rank${rankClass}">${rankDisplay}</div>` +
                     finalNumHtml +
                     `</div>` +
-                    `<div class="result-name">` +
                     `<div class="result-name-row">` +
                     `<span class="result-num">#${num}</span>` +
                     `<div class="result-fullname">` +
@@ -1278,15 +1282,14 @@
                     `<span class="result-last">${lastName}</span>` +
                     `</div>` +
                     `</div>` +
-                    `<div class="result-meta">` +
-                    (groupName ? `<span class="result-group-badge"${groupBadgeStyle}>${groupName}</span>` : '') +
-                    `<span class="${badgeClass}">${badgeText}</span>` +
-                    `</div>` +
-                    `</div>` +
-                    `<div class="result-right">` +
                     `<div class="result-score-row">` +
                     qualiPillHtml +
                     `<div class="result-best${displayScore > 0 ? '' : ' incomplete'}">${displayScore.toFixed(1)}</div>` +
+                    `</div>` +
+                    `<div class="result-secondary">` +
+                    `<div class="result-meta">` +
+                    (groupName ? `<span class="result-group-badge"${groupBadgeStyle}>${groupName}</span>` : '') +
+                    `<span class="${badgeClass}">${badgeText}</span>` +
                     `</div>` +
                     pillsHtml +
                     `</div>`;

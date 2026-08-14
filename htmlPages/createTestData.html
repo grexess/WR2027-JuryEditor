@@ -172,6 +172,7 @@
         }
     </style>
     <script src="../config.js"></script>
+    <script src="../config.local.js" onerror="void 0"></script>
 </head>
 
 <body>
@@ -234,7 +235,7 @@
             <div class="field-group">
                 <div class="field-label">Master Key</div>
                 <input class="field-input" id="master-key-input" type="password" autocomplete="off"
-                    value="DM9571v5VS5KgAcfpzvAeFjiio9Vo1zQ2VV8v8Xt" placeholder="Back4App Master Key">
+                    placeholder="Back4App Master Key">
             </div>
             <div id="login-err" style="color:var(--accent);font-size:0.85rem;min-height:1.2em;margin-bottom:0.5rem">
             </div>
@@ -265,6 +266,14 @@
                 Voraussetzung für den Test des Quali→Finale-Übergangs.<br>
                 Bereits vorhandene JuryScores werden nicht doppelt angelegt.
             </div>
+            <div class="field-group" style="margin-bottom:0.5rem">
+                <div class="field-label">Quali-Scores Modus</div>
+                <select class="field-input" id="score-mode-select">
+                    <option value="all-complete">Alle Gruppen, alle Läufe vollständig</option>
+                    <option value="all-open">Alle Gruppen, letzter Lauf offen (qualiRuns − 1)</option>
+                    <option value="two-open">2 Gruppen vollständig, 2 Gruppen letzter Lauf offen</option>
+                </select>
+            </div>
             <button class="submit-btn" id="scores-btn"
                 style="background:var(--card);border:1.5px solid var(--accent)">Quali-Scores erstellen</button>
 
@@ -281,6 +290,19 @@
                 <button class="confirm-yes" id="final-scores-confirm-yes">Ja, löschen</button>
                 <button id="final-scores-confirm-no">Abbrechen</button>
             </div>
+
+            <div class="hint" style="margin-top:1rem">
+                Erstellt Final-Scores für alle Finalisten (FinalEntries müssen vorhanden sein).
+            </div>
+            <div class="field-group" style="margin-bottom:0.5rem">
+                <div class="field-label">Final-Scores Modus</div>
+                <select class="field-input" id="final-score-mode-select">
+                    <option value="all-complete">Alle Gruppen, alle Läufe vollständig</option>
+                    <option value="two-open">2 Gruppen vollständig, 2 Gruppen letzter Final-Lauf offen</option>
+                </select>
+            </div>
+            <button class="submit-btn" id="final-scores-seed-btn"
+                style="background:var(--card);border:1.5px solid var(--accent)">Final-Scores erstellen</button>
 
             <button class="danger-btn" id="clear-btn">Alle Testdaten löschen</button>
             <div class="confirm-bar" id="confirm-bar">
@@ -301,6 +323,11 @@
 
     <script>
         let masterKey = null;
+
+        // Pre-fill master key from config.local.js if available
+        if (typeof LOCAL_CONFIG !== 'undefined' && LOCAL_CONFIG.masterKey) {
+            document.getElementById('master-key-input').value = LOCAL_CONFIG.masterKey;
+        }
 
         function buildHeaders() {
             const h = {
@@ -415,12 +442,6 @@
             return `${y}-${m}-${d}T00:00:00.000Z`;
         }
 
-        function uniqueStartNumbers(count, min, max) {
-            const nums = new Set();
-            while (nums.size < count) nums.add(min + Math.floor(Math.random() * (max - min + 1)));
-            return [...nums].sort((a, b) => a - b);
-        }
-
         // ── Seed ──
 
         async function runSeed() {
@@ -452,7 +473,13 @@
                     const ev = await pPost('/classes/HT_EVENT', {
                         name: 'Heldentag',
                         date: { __type: 'Date', iso: '2026-08-15T08:00:00.000Z' },
-                        criteria: CONFIG.criteria,
+                        criteria: [
+                            { label: 'Hinline',   shortLabel: 'HL',  key: 'score1', weight: 42 },
+                            { label: 'Rückline',  shortLabel: 'RL',  key: 'score2', weight: 33 },
+                            { label: 'Style',     shortLabel: 'STY', key: 'score3', weight: 25 },
+                        ],
+                        qualiScoreMode: 'best',
+                        finalScoreMode: 'best',
                         presenceStalMs: CONFIG.presenceStalMs,
                         presencePollMs: CONFIG.presencePollMs,
                         qualiRuns,
@@ -499,20 +526,18 @@
                     step++;
                 }
 
-                // 4. Starters — 5 per group
-                log(`Starter (${starterCount} zufällige Startnummern 1–200)`, 'head');
-                const startNums = uniqueStartNumbers(starterCount, 1, 200);
-                let idx = 0;
+                // 4. Starters — sequential numbers per group (K1/K2/…, A1/A2/…, etc.)
+                log(`Starter (${starterCount} Starter, Nummerierung nach Gruppe)`, 'head');
                 for (const g of GROUPS) {
                     log(`  ${g.name}`, 'head');
                     const groupPtr = { __type: 'Pointer', className: 'HT_STARTGROUP', objectId: groupIds[g.code] };
                     for (let j = 0; j < STARTERS_PER_GROUP; j++) {
-                        const startNumber = startNums[idx++];
-                        setProgress(step, totalSteps, `Starter #${startNumber} (${g.name}) …`);
+                        const startNumber = `${g.code}${j + 1}`;
+                        setProgress(step, totalSteps, `Starter ${startNumber} (${g.name}) …`);
                         const where = encodeURIComponent(JSON.stringify({ startNumber, event: eventPtr }));
                         const existing = await pGet(`/classes/HT_STARTER?where=${where}&limit=1`);
                         if (existing.results?.length) {
-                            log(`    ↳ #${String(startNumber).padStart(3)} vorhanden`, 'skip');
+                            log(`    ↳ ${startNumber.padEnd(4)} vorhanden`, 'skip');
                         } else {
                             const firstName = g.female ? pick(FEMALE) : pick([...MALE, ...MALE, ...FEMALE]);
                             const lastName = pick(LAST);
@@ -523,7 +548,7 @@
                                 event: eventPtr,
                                 startGroup: groupPtr,
                             });
-                            log(`    ↳ #${String(startNumber).padStart(3)}  ${firstName} ${lastName}`, 'ok');
+                            log(`    ↳ ${startNumber.padEnd(4)}  ${firstName} ${lastName}`, 'ok');
                         }
                         step++;
                     }
@@ -622,33 +647,57 @@
                     return;
                 }
 
-                // Only score starters from the first 2 start groups (alphabetically)
-                const groupNames = [...new Set(allStarters
-                    .map(s => s.startGroup?.name).filter(Boolean).sort())].slice(0, 2);
-                const starters = allStarters.filter(s => groupNames.includes(s.startGroup?.name));
-                log(`Scores nur für Gruppen: ${groupNames.join(', ')} (${starters.length} Starter)`, 'ok');
+                const scoreMode = document.getElementById('score-mode-select').value;
 
-                // totalSteps = starters × qualiRuns × judges
-                const totalSteps = starters.length * qualiRuns * judgeNames.length;
+                const allGroupNames = [...new Set(allStarters
+                    .map(s => s.startGroup?.name).filter(Boolean).sort())];
+                const starters = allStarters;
+
+                const openGroupNames = new Set();
+                if (scoreMode === 'all-open') allGroupNames.forEach(n => openGroupNames.add(n));
+                else if (scoreMode === 'two-open') allGroupNames.slice(0, 2).forEach(n => openGroupNames.add(n));
+
+                const byGroup = {};
+                for (const s of starters) {
+                    const g = s.startGroup?.name ?? '_';
+                    if (!byGroup[g]) byGroup[g] = [];
+                    byGroup[g].push(s);
+                }
+                const openStartNumbers = new Set();
+                for (const [gname, group] of Object.entries(byGroup)) {
+                    if (openGroupNames.has(gname)) openStartNumbers.add(group[group.length - 1].startNumber);
+                }
+                const openDesc = scoreMode === 'all-open'
+                    ? `Alle ${allGroupNames.length} Gruppen, letzter Lauf offen`
+                    : scoreMode === 'two-open'
+                    ? `${allGroupNames.slice(0,2).join(', ')} – offen; ${allGroupNames.slice(2).join(', ')} – vollständig`
+                    : `Alle ${allGroupNames.length} Gruppen, alle Läufe vollständig`;
+                log(openDesc, 'ok');
+
+                const totalSteps = (starters.length * qualiRuns - openStartNumbers.size) * judgeNames.length;
                 let step = 0;
-                log(`Erstelle ${qualiRuns} Läufe × ${starters.length} Starter × ${judgeNames.length} Kampfrichter = ${totalSteps} Scores`, 'head');
+                log(`Erstelle bis zu ${qualiRuns} Läufe × ${starters.length} Starter × ${judgeNames.length} Kampfrichter = ${totalSteps} Scores`, 'head');
 
                 for (const starter of starters) {
                     const startNumber = starter.startNumber;
-                    for (let run = 0; run < qualiRuns; run++) {
+                    const runsForThis = openStartNumbers.has(startNumber) ? qualiRuns - 1 : qualiRuns;
+                    if (runsForThis === 0) {
+                        log(`  #${String(startNumber).padStart(3)}  offen – kein Lauf vorzubefüllen`, 'skip');
+                        continue;
+                    }
+                    for (let run = 0; run < runsForThis; run++) {
                         const runNumber = run + 1;
                         for (const judgeName of judgeNames) {
                             setProgress(step, totalSteps, `#${startNumber} · Lauf ${runNumber} · ${judgeName} …`);
                             const scores = {};
                             let total = 0;
                             for (const c of CONFIG.criteria) {
-                                const val = Math.round((Math.random() * 8 + 2) * 10) / 10;
+                                const val = Math.floor(Math.random() * 99) + 1;
                                 scores[c.key] = val;
                                 total += val;
                             }
-                            total = Math.round(total * 10) / 10;
                             await pPost('/classes/HT_JURYSCORE', {
-                                startnumber: Number(startNumber),
+                                startNumber: String(startNumber),
                                 judgeName,
                                 total,
                                 runNumber,
@@ -659,7 +708,8 @@
                             step++;
                         }
                     }
-                    log(`  #${String(startNumber).padStart(3)}  ${qualiRuns} Läufe erstellt`, 'ok');
+                    const isOpen = openStartNumbers.has(startNumber);
+                    log(`  #${String(startNumber).padStart(3)}  ${runsForThis} Läufe erstellt${isOpen ? ' (letzter Lauf offen)' : ''}`, isOpen ? 'skip' : 'ok');
                 }
 
                 log('', '');
@@ -672,6 +722,109 @@
                 document.getElementById('progress-wrap').style.display = 'none';
                 btn.disabled = false;
                 btn.textContent = 'Quali-Scores erstellen';
+            }
+        }
+
+        async function runSeedFinalScores() {
+            const btn = document.getElementById('final-scores-seed-btn');
+            btn.disabled = true;
+            document.getElementById('log-wrap').innerHTML = '';
+            document.getElementById('progress-wrap').style.display = 'none';
+            try {
+                setProgress(0, 1, 'Event suchen …');
+                const evWhere = encodeURIComponent(JSON.stringify({ name: 'Heldentag' }));
+                const evRes = await pGet(`/classes/HT_EVENT?where=${evWhere}&limit=1`);
+                if (!evRes.results?.length) {
+                    log('✕ Event "Heldentag" nicht gefunden – zuerst Testevent erstellen.', 'err');
+                    document.getElementById('progress-wrap').style.display = 'none';
+                    btn.disabled = false; return;
+                }
+                const eventId = evRes.results[0].objectId;
+                const eventPtr = { __type: 'Pointer', className: 'HT_EVENT', objectId: eventId };
+                const evDetail = await pGet(`/classes/HT_EVENT/${eventId}`);
+                const finalRuns = evDetail.finalRuns ?? 2;
+                log(`Event gefunden  ${eventId}  (finalRuns=${finalRuns})`, 'ok');
+
+                const judgeRes = await pGet(`/classes/HT_JUDGE?where=${encodeURIComponent(JSON.stringify({ event: eventPtr }))}&limit=100&keys=name`);
+                const judgeNames = (judgeRes.results ?? []).map(j => j.name);
+                if (!judgeNames.length) {
+                    log('✕ Keine Kampfrichter gefunden.', 'err');
+                    document.getElementById('progress-wrap').style.display = 'none';
+                    btn.disabled = false; return;
+                }
+
+                const feRes = await pGet(`/classes/HT_FINALENTRY?where=${encodeURIComponent(JSON.stringify({ event: eventPtr }))}&limit=500&keys=startNumber,startGroup&include=startGroup`);
+                const finalEntries = feRes.results ?? [];
+                if (!finalEntries.length) {
+                    log('✕ Keine FinalEntries gefunden – zuerst Finalisten bestimmen.', 'err');
+                    document.getElementById('progress-wrap').style.display = 'none';
+                    btn.disabled = false; return;
+                }
+                log(`${finalEntries.length} Finalisten geladen`, 'ok');
+
+                const finalMode = document.getElementById('final-score-mode-select').value;
+                const allFinalGroupNames = [...new Set(finalEntries.map(e => e.startGroup?.name).filter(Boolean).sort())];
+                const openFinalGroups = new Set(finalMode === 'two-open' ? allFinalGroupNames.slice(0, 2) : []);
+                const byFinalGroup = {};
+                for (const e of finalEntries) {
+                    const g = e.startGroup?.name ?? '_';
+                    if (!byFinalGroup[g]) byFinalGroup[g] = [];
+                    byFinalGroup[g].push(e);
+                }
+                const openFinalNums = new Set();
+                for (const [gname, group] of Object.entries(byFinalGroup)) {
+                    if (openFinalGroups.has(gname)) openFinalNums.add(group[group.length - 1].startNumber);
+                }
+                const modeDesc = finalMode === 'two-open'
+                    ? `${allFinalGroupNames.slice(0,2).join(', ')} – letzter Lauf offen; ${allFinalGroupNames.slice(2).join(', ')} – vollständig`
+                    : `Alle ${allFinalGroupNames.length} Gruppen, alle Läufe vollständig`;
+                log(modeDesc, 'ok');
+
+                const totalSteps = finalEntries.reduce((a, e) => {
+                    const runs = openFinalNums.has(e.startNumber) ? finalRuns - 1 : finalRuns;
+                    return a + runs * judgeNames.length;
+                }, 0);
+                let step = 0;
+                log(`Erstelle bis zu ${finalRuns} Läufe × ${finalEntries.length} Finalisten × ${judgeNames.length} Kampfrichter`, 'head');
+
+                for (const entry of finalEntries) {
+                    const startNumber = entry.startNumber;
+                    const runsForThis = openFinalNums.has(startNumber) ? finalRuns - 1 : finalRuns;
+                    if (runsForThis === 0) { log(`  #${String(startNumber).padStart(3)}  offen`, 'skip'); continue; }
+                    for (let run = 0; run < runsForThis; run++) {
+                        const runNumber = run + 1;
+                        for (const judgeName of judgeNames) {
+                            setProgress(step, totalSteps, `#${startNumber} · Lauf ${runNumber} · ${judgeName} …`);
+                            const scores = {};
+                            let total = 0;
+                            for (const cr of CONFIG.criteria) {
+                                const val = Math.floor(Math.random() * 99) + 1;
+                                scores[cr.key] = val;
+                                total += val;
+                            }
+                            await pPost('/classes/HT_JURYSCORE', {
+                                startNumber: String(startNumber),
+                                judgeName, total, runNumber,
+                                event: eventPtr,
+                                ...scores,
+                                phase: 'final',
+                            });
+                            step++;
+                        }
+                    }
+                    const isOpenF = openFinalNums.has(startNumber);
+                    log(`  #${String(startNumber).padStart(3)}  ${runsForThis} Läufe${isOpenF ? ' (letzter offen)' : ''}`, isOpenF ? 'skip' : 'ok');
+                }
+                log('', '');
+                log(`✓ ${step} Final-JuryScores erstellt.`, 'ok');
+                setProgressDone();
+                btn.textContent = '✓ Fertig';
+                setTimeout(() => { btn.disabled = false; btn.textContent = 'Final-Scores erstellen'; }, 2000);
+            } catch (e) {
+                log(`✕ Fehler: ${e.message}`, 'err');
+                document.getElementById('progress-wrap').style.display = 'none';
+                btn.disabled = false;
+                btn.textContent = 'Final-Scores erstellen';
             }
         }
 
@@ -704,14 +857,14 @@
                     const batch = await pGet(`/classes/HT_JURYSCORE?where=${encodeURIComponent(JSON.stringify({ event: eventPtr }))}&limit=100&keys=objectId`);
                     if (!batch.results?.length) break;
                     for (const obj of batch.results) {
-                        await pDelete('JuryScore', obj.objectId);
+                        await pDelete('HT_JURYSCORE', obj.objectId);
                         deleted++;
                         setProgress(deleted, Math.max(total, deleted), `${deleted} / ${total} gelöscht …`);
                     }
                 }
 
                 log('FinalEntries löschen', 'head');
-                const fe = await safeDeleteAll('FinalEntry', { event: eventPtr });
+                const fe = await safeDeleteAll('HT_FINALENTRY', { event: eventPtr });
                 log(`  ↳ ${fe} gelöscht`, fe ? 'ok' : 'skip');
 
                 log('', '');
@@ -757,7 +910,7 @@
                     const batch = await pGet(`/classes/HT_JURYSCORE?where=${finalWhere}&limit=100&keys=objectId`);
                     if (!batch.results?.length) break;
                     for (const obj of batch.results) {
-                        await pDelete('JuryScore', obj.objectId);
+                        await pDelete('HT_JURYSCORE', obj.objectId);
                         deleted++;
                         setProgress(deleted, Math.max(total, deleted), `${deleted} / ${total} gelöscht …`);
                     }
@@ -765,7 +918,7 @@
                 log(`  ↳ ${deleted} gelöscht`, deleted ? 'ok' : 'skip');
 
                 log('FinalEntries löschen', 'head');
-                const fe = await safeDeleteAll('FinalEntry', { event: eventPtr });
+                const fe = await safeDeleteAll('HT_FINALENTRY', { event: eventPtr });
                 log(`  ↳ ${fe} gelöscht`, fe ? 'ok' : 'skip');
 
                 log('', '');
@@ -860,7 +1013,7 @@
 
                 setProgress(step, totalSteps, 'Event löschen …');
                 log('Event löschen', 'head');
-                await pDelete('Event', eventId);
+                await pDelete('HT_EVENT', eventId);
                 log('  ↳ gelöscht', 'ok');
 
                 log('', '');
@@ -881,6 +1034,7 @@
         document.getElementById('seed-btn').addEventListener('click', runSeed);
 
         document.getElementById('scores-btn').addEventListener('click', runSeedScores);
+        document.getElementById('final-scores-seed-btn').addEventListener('click', runSeedFinalScores);
         document.getElementById('scores-clear-btn').addEventListener('click', () => {
             document.getElementById('scores-confirm-bar').style.display = 'flex';
             document.getElementById('scores-clear-btn').disabled = true;

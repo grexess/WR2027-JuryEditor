@@ -1007,19 +1007,31 @@
             const d = new Date();
             return d.toLocaleDateString('de-DE') + ' ' + d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
         }
+        function _nowTime() {
+            const d = new Date();
+            return [d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }), d.toLocaleDateString('de-DE')];
+        }
+        function _kpiChips(...chips) {
+            return '<div class="kpi-row">' + chips.map(([val, lbl, cls]) =>
+                `<div class="kpi-chip ${cls}"><strong class="kpi-val">${_esc(String(val))}</strong><span class="kpi-lbl">${_esc(lbl)}</span></div>`
+            ).join('') + '</div>';
+        }
+        function _sectionHead(eventName, logoUrl, docType, groupName, kpiRow) {
+            return `<div class="doc-page-header"><img class="doc-logo" src="${logoUrl}" alt="WeRace"><div class="doc-event-name">${_esc(eventName)}</div></div><hr class="doc-hr"><div class="doc-group-header"><span class="doc-doc-type">${_esc(docType)}</span><span class="doc-group-name">${_esc(groupName)}</span>${kpiRow}</div>`;
+        }
+        function _groupHead(groupName, kpiRow) {
+            return `<div class="doc-group-header"><span class="doc-group-name">${_esc(groupName)}</span>${kpiRow}</div>`;
+        }
 
-        function _printStartlist(groupName, sorted, eventName) {
+        function _printStartlist(groupName, sorted) {
+            const [time, date] = _nowTime();
+            const kpi = _kpiChips([sorted.length, 'Starter', 'kpi-chip-count'], [date, time, 'kpi-chip-time']);
             const rows = sorted.map(s => `<tr>
-                <td class="num">${_esc(s.startNumber ?? '—')}</td>
-                <td>${_esc(s.firstName ?? '')} ${_esc(s.lastName ?? '')}</td>
-                <td class="blank"></td></tr>`).join('');
-            return `<section><div class="doc-header">
-                <span class="doc-event">${_esc(eventName)}</span>
-                <span class="doc-type">Startliste Qualifikation</span>
-                <span class="doc-group">${_esc(groupName)}</span></div>
-                <table><thead><tr><th>Nr.</th><th>Name</th><th>Unterschrift</th></tr></thead>
-                <tbody>${rows}</tbody></table>
-                <div class="doc-footer">${sorted.length} Starter · ${_nowStr()}</div></section>`;
+                <td class="num"><span class="num-badge">${_esc(s.startNumber ?? '—')}</span></td>
+                <td>${_esc(s.firstName ?? '')} ${_esc(s.lastName ?? '')}</td></tr>`).join('');
+            return `<section><div class="doc-group-header"><span class="doc-group-name">${_esc(groupName)}</span>${kpi}</div>
+                <div class="table-wrap"><table><thead><tr><th>Startnummer</th><th>Name</th></tr></thead>
+                <tbody>${rows}</tbody></table></div></section>`;
         }
 
         function _calcJudgeTotal(s) {
@@ -1076,38 +1088,50 @@
             return rows;
         }
 
-        function _printQualiResults(groupName, rows, criteria, eventName) {
-            const scoreLabel = (CONFIG.qualiScoreMode ?? 'sum') === 'best' ? 'Bester Lauf' : 'Gesamt';
-            const qualiRuns = CONFIG.qualiRuns ?? '∞';
-            const tableRows = rows.map((r, i) => {
-                if (r.dq) return `<tr class="excluded"><td class="rank">—</td><td class="num">${_esc(r.starter.startNumber)}</td><td>${_esc(r.starter.firstName ?? '')} ${_esc(r.starter.lastName ?? '')}</td><td class="dq-cell">DSQ</td><td class="score">—</td></tr>`;
-                if (r.noRuns) return `<tr class="excluded"><td class="rank">—</td><td class="num">${_esc(r.starter.startNumber)}</td><td>${_esc(r.starter.firstName ?? '')} ${_esc(r.starter.lastName ?? '')}</td><td>—</td><td class="score">—</td></tr>`;
-                const runScores = r.qualiRuns.map((run, ri) => _runPill(run, ri, criteria)).join(' ');
-                const finBadge = r.isFinal ? '<span class="fin-badge">FINAL</span>' : '';
-                return `<tr><td class="rank">${i + 1}</td><td class="num">${_esc(r.starter.startNumber)}</td><td>${_esc(r.starter.firstName ?? '')} ${_esc(r.starter.lastName ?? '')}${finBadge}</td><td class="runs-cell">${runScores}</td><td class="score">${r.score}</td></tr>`;
-            }).join('');
-            return `<section><div class="doc-header">
-                <span class="doc-event">${_esc(eventName)}</span>
-                <span class="doc-type">Ergebnisse Qualifikation</span>
-                <span class="doc-group">${_esc(groupName)}</span></div>
-                <table><thead><tr><th>Platz</th><th>Nr.</th><th>Name</th><th>Läufe (${qualiRuns}×)</th><th>${_esc(scoreLabel)}</th></tr></thead>
-                <tbody>${tableRows}</tbody></table>
-                <div class="doc-footer">${rows.filter(r => !r.dq && !r.noRuns).length} Gewertet · Gewichtung: ${criteria.map(c => `${_esc(c.shortLabel)} ${c.weight ?? '—'}%`).join(', ')} · ${_nowStr()}</div></section>`;
+        function _runBlock(run, ri, criteria) {
+            const weighted = criteria.map(c => {
+                const w = run.scores.reduce((a, s) => a + Math.round((s[c.key] ?? 0) * ((c.weight ?? (100 / criteria.length)) / 100)), 0);
+                return _esc(c.shortLabel) + ' ' + w;
+            }).join(' / ');
+            return '<div class="run-row"><strong class="run-total">' + (ri + 1) + ': ' + run.total + '</strong> <span class="run-crit">' + weighted + '</span></div>';
         }
 
-        function _printFinalStartlist(groupName, finalEntries, eventName) {
+        function _printQualiResults(groupName, rows, criteria) {
+            const scoreLabel = (CONFIG.qualiScoreMode ?? 'sum') === 'best' ? 'Bester Lauf' : 'Gesamt';
+            const qualiRuns = CONFIG.qualiRuns ?? '∞';
+            const qualiRankOf = rows.map(r => (r.dq || r.noRuns) ? null : 1 + rows.filter(o => !o.dq && !o.noRuns && o.score > r.score).length);
+            const tableRows = rows.map((r, i) => {
+                const rank = qualiRankOf[i];
+                if (r.dq) return `<tr class="excluded"><td class="rank">—</td><td class="num"><span class="num-badge">${_esc(r.starter.startNumber)}</span></td><td>${_esc(r.starter.firstName ?? '')} ${_esc(r.starter.lastName ?? '')}</td><td class="score">—</td><td class="dq-cell">DSQ</td></tr>`;
+                if (r.noRuns) return `<tr class="excluded"><td class="rank">—</td><td class="num"><span class="num-badge">${_esc(r.starter.startNumber)}</span></td><td>${_esc(r.starter.firstName ?? '')} ${_esc(r.starter.lastName ?? '')}</td><td class="score">—</td><td>—</td></tr>`;
+                const runBlocks = r.qualiRuns.map((run, ri) => _runBlock(run, ri, criteria)).join('');
+                const finBadge = r.isFinal ? '<span class="fin-badge">FINAL</span>' : '';
+                return `<tr><td class="rank">${rank}</td><td class="num"><span class="num-badge">${_esc(r.starter.startNumber)}</span></td><td>${_esc(r.starter.firstName ?? '')} ${_esc(r.starter.lastName ?? '')}${finBadge}</td><td class="score">${r.score}</td><td class="runs-cell">${runBlocks}</td></tr>`;
+            }).join('');
+            const scored = rows.filter(r => !r.dq && !r.noRuns).length;
+            const [time, date] = _nowTime();
+            const kpi = _kpiChips([scored, 'Gewertet', 'kpi-chip-count'], [date, time, 'kpi-chip-time']);
+            return `<section>${_groupHead(groupName, kpi)}
+                <table><thead><tr><th>Platz</th><th>Startnummer</th><th>Name</th><th style="text-align:center">${_esc(scoreLabel)}</th><th style="text-align:right">Läufe</th></tr></thead>
+                <tbody>${tableRows}</tbody></table></section>`;
+        }
+
+        function _printFinalStartlist(groupName, finalEntries) {
+            if (!finalEntries.length) {
+                const [time, date] = _nowTime();
+                const kpi = _kpiChips([0, 'Finalisten', 'kpi-chip-final'], [date, time, 'kpi-chip-time']);
+                return `<section>${_groupHead(groupName, kpi)}<p class="no-data-hint">Keine Finalisten für diese Startgruppe erfasst.</p></section>`;
+            }
             const rows = finalEntries.map(e => `<tr>
-                <td class="num">${_esc(e.finalStartNumber ?? '—')}</td>
-                <td class="num">${_esc(e.startNumber ?? e.starter?.startNumber ?? '—')}</td>
+                <td class="num"><span class="num-badge-final">${_esc(e.finalStartNumber ?? '—')}</span></td>
+                <td class="num"><span class="num-badge">${_esc(e.startNumber ?? e.starter?.startNumber ?? '—')}</span></td>
                 <td>${_esc(e.starter?.firstName ?? '')} ${_esc(e.starter?.lastName ?? '')}</td>
-                <td class="blank"></td></tr>`).join('');
-            return `<section><div class="doc-header">
-                <span class="doc-event">${_esc(eventName)}</span>
-                <span class="doc-type">Startliste Finale</span>
-                <span class="doc-group">${_esc(groupName)}</span></div>
-                <table><thead><tr><th>F-Nr.</th><th>Nr.</th><th>Name</th><th>Unterschrift</th></tr></thead>
-                <tbody>${rows}</tbody></table>
-                <div class="doc-footer">${finalEntries.length} Finalisten · ${_nowStr()}</div></section>`;
+                </tr>`).join('');
+            const [time, date] = _nowTime();
+            const kpi = _kpiChips([finalEntries.length, 'Finalisten', 'kpi-chip-final'], [date, time, 'kpi-chip-time']);
+            return `<section>${_groupHead(groupName, kpi)}
+                <div class="table-wrap"><table><thead><tr><th>Final-Startnummer</th><th>Startnummer</th><th>Name</th></tr></thead>
+                <tbody>${rows}</tbody></table></div></section>`;
         }
 
         function _buildFinalResults(groupStarters, allScores, allFinalEntries, gid, finalistNums) {
@@ -1132,23 +1156,29 @@
             return rows;
         }
 
-        function _printFinalResults(groupName, rows, criteria, eventName) {
+        function _printFinalResults(groupName, rows, criteria) {
+            if (!rows.length) {
+                const [time, date] = _nowTime();
+                const kpi = _kpiChips([0, 'Gewertet', 'kpi-chip-count'], [date, time, 'kpi-chip-time']);
+                return `<section>${_groupHead(groupName, kpi)}<p class="no-data-hint">Keine Finalisten für diese Startgruppe erfasst.</p></section>`;
+            }
             const scoreLabel = (CONFIG.finalScoreMode ?? 'sum') === 'best' ? 'Bester Lauf' : 'Gesamt';
             const finalRuns = CONFIG.finalRuns ?? '∞';
+            const finalRankOf = rows.map(r => (r.dq || r.noRuns) ? null : 1 + rows.filter(o => !o.dq && !o.noRuns && o.score > r.score).length);
             const tableRows = rows.map((r, i) => {
-                if (r.dq) return `<tr class="excluded"><td class="rank">—</td><td class="num">${_esc(r.finalStartNum)}</td><td class="num muted">${_esc(r.starter.startNumber)}</td><td>${_esc(r.starter.firstName ?? '')} ${_esc(r.starter.lastName ?? '')}</td><td class="dq-cell">DSQ</td><td class="score">—</td></tr>`;
-                if (r.noRuns) return `<tr class="excluded"><td class="rank">—</td><td class="num">${_esc(r.finalStartNum)}</td><td class="num muted">${_esc(r.starter.startNumber)}</td><td>${_esc(r.starter.firstName ?? '')} ${_esc(r.starter.lastName ?? '')}</td><td>—</td><td class="score">—</td></tr>`;
-                const runScores = r.finalRuns.map((run, ri) => _runPill(run, ri, criteria)).join(' ');
-                const medal = i === 0 ? ' 🥇' : i === 1 ? ' 🥈' : i === 2 ? ' 🥉' : '';
-                return `<tr${i < 3 ? ` class="podium podium-${i + 1}"` : ''}><td class="rank">${i + 1}${medal}</td><td class="num">${_esc(r.finalStartNum)}</td><td class="num muted">${_esc(r.starter.startNumber)}</td><td>${_esc(r.starter.firstName ?? '')} ${_esc(r.starter.lastName ?? '')}</td><td class="runs-cell">${runScores}</td><td class="score">${r.score}</td></tr>`;
+                const rank = finalRankOf[i];
+                if (r.dq) return `<tr class="excluded"><td class="rank">—</td><td class="num"><span class="num-badge-final">${_esc(r.finalStartNum)}</span></td><td class="num"><span class="num-badge">${_esc(r.starter.startNumber)}</span></td><td>${_esc(r.starter.firstName ?? '')} ${_esc(r.starter.lastName ?? '')}</td><td class="score">—</td><td class="dq-cell">DSQ</td></tr>`;
+                if (r.noRuns) return `<tr class="excluded"><td class="rank">—</td><td class="num"><span class="num-badge-final">${_esc(r.finalStartNum)}</span></td><td class="num"><span class="num-badge">${_esc(r.starter.startNumber)}</span></td><td>${_esc(r.starter.firstName ?? '')} ${_esc(r.starter.lastName ?? '')}</td><td class="score">—</td><td>—</td></tr>`;
+                const runBlocks = r.finalRuns.map((run, ri) => _runBlock(run, ri, criteria)).join('');
+                const medal = rank === 1 ? ' 🥇' : rank === 2 ? ' 🥈' : rank === 3 ? ' 🥉' : '';
+                return `<tr${rank !== null && rank <= 3 ? ` class="podium podium-${rank}"` : ''}><td class="rank">${rank ?? '—'}${medal}</td><td class="num"><span class="num-badge-final">${_esc(r.finalStartNum)}</span></td><td class="num"><span class="num-badge">${_esc(r.starter.startNumber)}</span></td><td>${_esc(r.starter.firstName ?? '')} ${_esc(r.starter.lastName ?? '')}</td><td class="score">${r.score}</td><td class="runs-cell">${runBlocks}</td></tr>`;
             }).join('');
-            return `<section><div class="doc-header">
-                <span class="doc-event">${_esc(eventName)}</span>
-                <span class="doc-type">Ergebnisse Finale</span>
-                <span class="doc-group">${_esc(groupName)}</span></div>
-                <table><thead><tr><th>Platz</th><th>F-Nr.</th><th>Nr.</th><th>Name</th><th>Läufe (${finalRuns}×)</th><th>${_esc(scoreLabel)}</th></tr></thead>
-                <tbody>${tableRows}</tbody></table>
-                <div class="doc-footer">${rows.filter(r => !r.dq && !r.noRuns).length} Gewertet · Gewichtung: ${criteria.map(c => `${_esc(c.shortLabel)} ${c.weight ?? '—'}%`).join(', ')} · ${_nowStr()}</div></section>`;
+            const scored = rows.filter(r => !r.dq && !r.noRuns).length;
+            const [time, date] = _nowTime();
+            const kpi = _kpiChips([scored, 'Gewertet', 'kpi-chip-count'], [date, time, 'kpi-chip-time']);
+            return `<section>${_groupHead(groupName, kpi)}
+                <table><thead><tr><th>Platz</th><th>Final-Startnummer</th><th>Startnummer</th><th>Name</th><th style="text-align:center">${_esc(scoreLabel)}</th><th style="text-align:right">Läufe</th></tr></thead>
+                <tbody>${tableRows}</tbody></table></section>`;
         }
 
         function _openPrintWindow(sectionsHtml, eventName) {
@@ -1165,19 +1195,46 @@ section:last-child{page-break-after:avoid}
 .doc-type{font-size:13pt;font-weight:800;flex:1}
 .doc-group{font-size:11pt;font-weight:700;color:#2c5282;white-space:nowrap}
 .doc-footer{margin-top:0.5em;font-size:8pt;color:#777;text-align:right}
-table{width:100%;border-collapse:collapse;font-size:9.5pt}
-thead tr{border-bottom:1.5px solid #111}
-th{padding:0.25em 0.5em;text-align:left;font-size:8.5pt;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#444;white-space:nowrap}
-td{padding:0.3em 0.5em;border-bottom:1px solid #e0e0e0;vertical-align:middle}
+.doc-page-header{text-align:center;padding-bottom:0.7em}
+.doc-logo{height:2.2cm;display:block;margin:0 auto 0.35em}
+.doc-event-name{font-size:20pt;font-weight:800;color:#111;letter-spacing:-0.01em;margin-top:0.15em}
+.doc-event-subtitle{font-size:9.5pt;color:#666;margin-top:0.15em;margin-bottom:0.4em;display:block}
+.criteria-row{display:flex;justify-content:center;gap:0.7em;margin-top:0.5em;flex-wrap:wrap}
+.criteria-chip{display:inline-flex;flex-direction:column;align-items:center;padding:0.4em 1em;background:#edf2ff;border:1.5px solid #c3d0f0;border-radius:8px;min-width:4.5em;text-align:center}
+.criteria-weight{font-size:14pt;font-weight:800;color:#2c5282;line-height:1.1;display:block}
+.criteria-name{font-size:7.5pt;color:#555;margin-top:0.1em;text-transform:uppercase;letter-spacing:0.04em;display:block}
+.doc-hr{border:none;border-top:2px solid #111;margin:0.6em 0 0}
+.doc-group-header{text-align:center;padding:0.9em 0 0.8em;border-bottom:1.5px solid #dce3ee;margin-bottom:0.8em}
+.doc-doc-type{font-size:8pt;text-transform:uppercase;letter-spacing:0.1em;color:#aaa;display:block;margin-bottom:0.25em}
+.doc-group-name{font-size:20pt;font-weight:800;color:#2c5282;display:block;margin-bottom:0.2em;letter-spacing:-0.01em}
+.kpi-row{display:flex;justify-content:center;gap:1em;margin-top:0.5em}
+.kpi-chip{display:inline-flex;flex-direction:column;align-items:center;padding:0.45em 1.1em;border-radius:8px;min-width:5em;text-align:center}
+.kpi-val{font-size:12pt;font-weight:800;line-height:1.1;display:block}
+.kpi-lbl{font-size:7pt;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-top:0.15em;opacity:0.75}
+.kpi-chip-count{background:#edf2ff;border:1.5px solid #b4c6f5;color:#2c5282}
+.kpi-chip-time{background:#f0fdf4;border:1.5px solid #b7e4c7;color:#276749}
+.kpi-chip-final{background:#fff3e0;border:1.5px solid #ffcc80;color:#7b4400}
+.table-wrap{max-width:55%;margin:0 auto}
+table{width:100%;border-collapse:collapse;font-size:10pt}
+thead tr{border-bottom:2px solid #2c5282}
+th{padding:0.3em 0.6em;text-align:left;font-size:8pt;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#2c5282;white-space:nowrap}
+td{padding:0.45em 0.6em;border-bottom:1px solid #ebebeb;vertical-align:middle}
+tr:nth-child(even) td{background:#f5f7fa}
 tr:last-child td{border-bottom:none}
 .rank{font-weight:800;font-size:11pt;text-align:right;width:2.5em;white-space:nowrap}
-.num{font-weight:700;text-align:right;width:3em;color:#333}
+.num{text-align:center;width:4em;white-space:nowrap}
+.num-badge{display:inline-block;background:#2c5282;color:#fff;border-radius:4px;padding:0.1em 0.45em;font-size:8.5pt;font-weight:800;letter-spacing:0.02em}
+.num-badge-final{display:inline-block;background:#fff8e6;color:#7b4400;border:1.5px solid #f6ad55;border-radius:4px;padding:0.08em 0.4em;font-size:8.5pt;font-weight:800;letter-spacing:0.02em}
 .muted{color:#888}
-.score{font-weight:800;font-size:11pt;text-align:right;width:3.5em}
+.score{font-weight:800;font-size:11pt;text-align:center;width:3.5em}
 .blank{width:4cm}
-.runs-cell{font-size:8.5pt;color:#444}
+.runs-cell{font-size:8.5pt;color:#444;vertical-align:top;text-align:right}
+.run-row{line-height:1.7}
+.run-total{font-weight:800;font-size:9.5pt;white-space:nowrap;margin-right:0.5em}
+.run-crit{font-size:8pt;color:#555}
 .run-pill{display:inline-block;background:#f0f0f0;border-radius:3px;padding:0.15em 0.4em;margin:0.1em 0.15em;white-space:nowrap;vertical-align:top}
 .run-detail{display:block;font-size:7pt;color:#777;font-weight:400;margin-top:0.1em}
+.no-data-hint{text-align:center;color:#888;font-size:10pt;padding:1.5em 0;font-style:italic}
 .dq-cell{color:#c0392b;font-weight:700;font-size:8.5pt}
 .excluded td{opacity:0.55}
 .fin-badge{display:inline-block;font-size:6.5pt;font-weight:800;color:#fff;background:#2c5282;border-radius:2px;padding:0.1em 0.3em;margin-left:0.3em;vertical-align:middle}
@@ -1199,20 +1256,32 @@ tr:last-child td{border-bottom:none}
             const targetGroups = groupId === '__all__' ? groups : groups.filter(g => g.objectId === groupId);
             const eventName = CONFIG.eventName ?? 'WeRace';
             const criteria = CONFIG.criteria ?? [];
+            const logoUrl = new URL('../assets/weraceLogo.png', document.location.href).href;
             let sectionsHtml = '';
+            if (type === 'startlist') {
+                sectionsHtml += `<div class="doc-page-header"><img class="doc-logo" src="${logoUrl}" alt="WeRace"><div class="doc-event-name">${_esc(eventName)}</div></div><hr class="doc-hr">`;
+            } else if (type === 'quali-results') {
+                const chips = criteria.map(c => `<div class="criteria-chip"><span class="criteria-weight">${_esc(String(c.weight ?? '—'))}%</span><span class="criteria-name">${_esc(c.label)}</span></div>`).join('');
+                sectionsHtml += `<div class="doc-page-header"><img class="doc-logo" src="${logoUrl}" alt="WeRace"><div class="doc-event-name">${_esc(eventName)}</div><span class="doc-event-subtitle">Ergebnisse Qualifikation</span><div class="criteria-row">${chips}</div></div><hr class="doc-hr">`;
+            } else if (type === 'final-startlist') {
+                sectionsHtml += `<div class="doc-page-header"><img class="doc-logo" src="${logoUrl}" alt="WeRace"><div class="doc-event-name">${_esc(eventName)}</div><span class="doc-event-subtitle">Startliste Finale</span></div><hr class="doc-hr">`;
+            } else if (type === 'final-results') {
+                const chips = criteria.map(c => `<div class="criteria-chip"><span class="criteria-weight">${_esc(String(c.weight ?? '—'))}%</span><span class="criteria-name">${_esc(c.label)}</span></div>`).join('');
+                sectionsHtml += `<div class="doc-page-header"><img class="doc-logo" src="${logoUrl}" alt="WeRace"><div class="doc-event-name">${_esc(eventName)}</div><span class="doc-event-subtitle">Ergebnisse Finale</span><div class="criteria-row">${chips}</div></div><hr class="doc-hr">`;
+            }
             for (const group of targetGroups) {
                 const gid = group.objectId;
                 const groupStarters = starters.filter(s => s.startGroup?.objectId === gid && s.status !== 'removed');
                 const finalistNums = new Set(allFinalEntries.filter(fe => fe.startGroup?.objectId === gid).map(fe => fe.startNumber ?? fe.starter?.startNumber));
                 if (type === 'startlist') {
-                    sectionsHtml += _printStartlist(group.name, [...groupStarters].sort((a, b) => String(a.startNumber).localeCompare(String(b.startNumber), undefined, { numeric: true })), eventName);
+                    sectionsHtml += _printStartlist(group.name, [...groupStarters].sort((a, b) => String(a.startNumber).localeCompare(String(b.startNumber), undefined, { numeric: true })));
                 } else if (type === 'quali-results') {
-                    sectionsHtml += _printQualiResults(group.name, _buildQualiResults(groupStarters, allScores, finalistNums), criteria, eventName);
+                    sectionsHtml += _printQualiResults(group.name, _buildQualiResults(groupStarters, allScores, finalistNums), criteria);
                 } else if (type === 'final-startlist') {
                     const finalEntries = allFinalEntries.filter(fe => fe.startGroup?.objectId === gid).sort((a, b) => Number(a.finalStartNumber) - Number(b.finalStartNumber));
-                    sectionsHtml += _printFinalStartlist(group.name, finalEntries, eventName);
+                    sectionsHtml += _printFinalStartlist(group.name, finalEntries);
                 } else if (type === 'final-results') {
-                    sectionsHtml += _printFinalResults(group.name, _buildFinalResults(groupStarters, allScores, allFinalEntries, gid, finalistNums), criteria, eventName);
+                    sectionsHtml += _printFinalResults(group.name, _buildFinalResults(groupStarters, allScores, allFinalEntries, gid, finalistNums), criteria);
                 }
             }
             _openPrintWindow(sectionsHtml, eventName);
