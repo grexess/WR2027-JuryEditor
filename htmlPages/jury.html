@@ -201,12 +201,15 @@
             activeCrit = null;
             inputBuffer = '';
             _peerScores = {};
+            if (_peerWs) { _peerWs.close(); _peerWs = null; }
+            if (_peerPollInterval) { clearInterval(_peerPollInterval); _peerPollInterval = null; }
             CRITERIA.forEach(c => scores[c] = 50);
             document.getElementById('startnumber-label').textContent = 'Startnummer';
             document.getElementById('startnumber').textContent = '—';
             document.getElementById('starter-name').textContent = '';
             renderCriteria();
             renderNumpad();
+            renderPeerScores();
             // Show reset info screen briefly, then switch to waiting
             document.getElementById('waiting').classList.add('hidden');
             document.getElementById('reset-screen').classList.remove('hidden');
@@ -250,6 +253,7 @@
         let _frozenStartNum = null;
         let _peerScores = {};   // judgeName → score record
         let _peerWs = null;
+        let _peerPollInterval = null;
 
         function calcWeighted(scoreRecord) {
             return Math.round(CONFIG.criteria.reduce((a, c) =>
@@ -259,7 +263,8 @@
         function renderPeerScores() {
             const el = document.getElementById('peer-scores');
             const peers = Object.values(_peerScores);
-            if (!peers.length) { el.innerHTML = ''; return; }
+            if (!peers.length) { el.innerHTML = ''; el.style.display = 'none'; return; }
+            el.style.display = '';
             el.innerHTML = '<div class="peer-scores-title">Andere Kampfrichter</div>';
             for (const s of peers) {
                 const chip = document.createElement('div');
@@ -282,28 +287,51 @@
 
         function subscribePeerScores(startNumber, runNumber) {
             if (_peerWs) { _peerWs.close(); _peerWs = null; }
+            if (_peerPollInterval) { clearInterval(_peerPollInterval); _peerPollInterval = null; }
             _peerScores = {};
             renderPeerScores();
+
+            const phase = currentPhase; // snapshot — avoids stale-closure issues
+
+            function filterScore(s) {
+                return s.judgeName && s.judgeName !== judgeName &&
+                    (s.phase ?? 'quali') === phase &&
+                    (s.runNumber == null || Number(s.runNumber) === Number(runNumber ?? 1));
+            }
+
             // Fetch existing scores for this run
             ParseAPI.fetchJuryScores(startNumber).then(existing => {
+                let changed = false;
                 for (const s of existing) {
-                    if (s.judgeName !== judgeName &&
-                        String(s.runNumber ?? 1) === String(runNumber ?? 1) &&
-                        (s.phase ?? 'quali') === currentPhase) {
-                        _peerScores[s.judgeName] = s;
-                    }
+                    if (filterScore(s)) { _peerScores[s.judgeName] = s; changed = true; }
                 }
-                renderPeerScores();
+                if (changed) renderPeerScores();
             }).catch(() => {});
-            // Subscribe to live updates
+
+            // Subscribe to live updates (no runNumber filter — matches starter.html behaviour)
             _peerWs = ParseAPI.subscribeJuryScores(startNumber, s => {
-                if (s.judgeName !== judgeName &&
-                    String(s.runNumber ?? 1) === String(runNumber ?? 1) &&
-                    (s.phase ?? 'quali') === currentPhase) {
+                if (s.judgeName && s.judgeName !== judgeName &&
+                    (s.phase ?? 'quali') === phase) {
                     _peerScores[s.judgeName] = s;
                     renderPeerScores();
                 }
             });
+
+            // Polling fallback — catches missed WebSocket events (same as starter.html)
+            _peerPollInterval = setInterval(() => {
+                if (String(startNumber) !== String(startNum)) {
+                    clearInterval(_peerPollInterval); _peerPollInterval = null; return;
+                }
+                ParseAPI.fetchJuryScores(startNumber).then(existing => {
+                    let changed = false;
+                    for (const s of existing) {
+                        if (filterScore(s) && !_peerScores[s.judgeName]) {
+                            _peerScores[s.judgeName] = s; changed = true;
+                        }
+                    }
+                    if (changed) renderPeerScores();
+                }).catch(() => {});
+            }, 5000);
         }
 
         async function saveScore(startnumber, judgeName, scores) {
@@ -382,10 +410,8 @@
         function renderNumpad() {
             const wrap = document.getElementById('numpad-wrap');
             const submitWrap = document.getElementById('submit-wrap');
-            const peerEl = document.getElementById('peer-scores');
             wrap.innerHTML = '';
             submitWrap.innerHTML = '';
-            peerEl.style.display = reviewing ? '' : 'none';
 
             if (submitted) {
                 const btn = document.createElement('button');

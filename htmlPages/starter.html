@@ -972,12 +972,15 @@
             const groups = [];
             const seenG = new Set();
             for (const s of STARTERS) {
-                if (s.startGroup && !seenG.has(s.startGroup.objectId) && !finalGroupIds.has(s.startGroup.objectId)) {
+                if (s.startGroup && !seenG.has(s.startGroup.objectId)
+                        && !finalGroupIds.has(s.startGroup.objectId)
+                        && !closedGroups.has(s.startGroup.objectId)) {
                     seenG.add(s.startGroup.objectId);
                     groups.push({ id: s.startGroup.objectId, name: s.startGroup.name ?? s.startGroup.objectId });
                 }
             }
             groups.sort((a, b) => a.name.localeCompare(b.name));
+            if (filterGroup && !groups.some(g => g.id === filterGroup)) filterGroup = null;
 
             const runSet = new Set(STARTERS.map(s => runCounts[s.startNumber] ?? 0));
             const runs = [...runSet].sort((a, b) => a - b);
@@ -987,9 +990,8 @@
             groupBar.innerHTML = '';
             for (const g of groups) {
                 const chip = document.createElement('button');
-                const isClosed = closedGroups.has(g.id);
-                chip.className = 'fchip' + (filterGroup === g.id ? ' active' : '') + (isClosed ? ' closed-group' : '');
-                chip.textContent = isClosed ? `🔒 ${g.name}` : g.name;
+                chip.className = 'fchip' + (filterGroup === g.id ? ' active' : '');
+                chip.textContent = g.name;
                 chip.addEventListener('click', () => {
                     filterGroup = filterGroup === g.id ? null : g.id;
                     renderFilterChips();
@@ -1038,13 +1040,26 @@
             const bar = document.getElementById('filter-chips-finale');
             bar.innerHTML = '';
             const groups = Object.entries(finalEntriesByGroup).filter(([, e]) => e.length > 0);
-            if (groups.length <= 1) { bar.style.display = 'none'; return; }
+            const closedWithoutFinal = [...closedGroups].filter(gid => !(finalEntriesByGroup[gid]?.length > 0));
+            if (groups.length + closedWithoutFinal.length <= 1) { bar.style.display = 'none'; return; }
             bar.style.display = '';
             for (const [gid, entries] of groups) {
                 const name = entries[0].startGroup?.name ?? gid;
                 const chip = document.createElement('button');
                 chip.className = 'fchip finale-group' + (filterFinalGroup === gid ? ' active' : '');
                 chip.textContent = name;
+                chip.addEventListener('click', () => {
+                    filterFinalGroup = filterFinalGroup === gid ? null : gid;
+                    renderFinalChips();
+                    renderList('');
+                });
+                bar.appendChild(chip);
+            }
+            for (const gid of closedWithoutFinal) {
+                const name = drawerGroups.find(g => g.objectId === gid)?.name ?? gid;
+                const chip = document.createElement('button');
+                chip.className = 'fchip finale-group' + (filterFinalGroup === gid ? ' active' : '');
+                chip.textContent = `🔒 ${name}`;
                 chip.addEventListener('click', () => {
                     filterFinalGroup = filterFinalGroup === gid ? null : gid;
                     renderFinalChips();
@@ -1062,7 +1077,12 @@
                 let groups = Object.entries(finalEntriesByGroup).filter(([, e]) => e.length > 0);
                 if (filterFinalGroup) groups = groups.filter(([gid]) => gid === filterFinalGroup);
 
-                if (!groups.length) {
+                // Also show closed groups that have no final entries yet
+                const closedWithoutFinal = [...closedGroups]
+                    .filter(gid => !(finalEntriesByGroup[gid]?.length > 0))
+                    .filter(gid => !filterFinalGroup || filterFinalGroup === gid);
+
+                if (!groups.length && !closedWithoutFinal.length) {
                     const inner = document.createElement('div');
                     inner.className = 'picker-list-inner';
                     const empty = document.createElement('div');
@@ -1144,6 +1164,58 @@
                 resultsLabel.textContent = term
                     ? `${total} Ergebnis${total !== 1 ? 'se' : ''}`
                     : `${total} Finalisten`;
+
+                // Render closed groups without final entries
+                for (const gid of closedWithoutFinal) {
+                    const groupName = drawerGroups.find(g => g.objectId === gid)?.name ?? gid;
+                    const panel = document.createElement('div');
+                    panel.className = 'finale-panel open';
+                    const hdr = document.createElement('div');
+                    hdr.className = 'finale-panel-header';
+                    hdr.innerHTML =
+                        `<span class="finale-panel-title">🔒 ${groupName}</span>` +
+                        `<span class="finale-panel-count">0</span>` +
+                        `<span class="finale-panel-chevron">▼</span>`;
+                    hdr.addEventListener('click', () => panel.classList.toggle('open'));
+                    panel.appendChild(hdr);
+                    const body = document.createElement('div');
+                    body.className = 'finale-panel-body picker-list-inner';
+                    body.style.borderRadius = '0';
+                    body.style.border = 'none';
+                    const empty = document.createElement('div');
+                    empty.className = 'picker-empty';
+                    empty.style.display = 'flex';
+                    empty.style.flexDirection = 'column';
+                    empty.style.gap = '0.75rem';
+                    const msg = document.createElement('span');
+                    msg.textContent = 'Finale noch nicht erstellt';
+                    const btn = document.createElement('button');
+                    btn.className = 'submit-btn';
+                    btn.style.fontSize = '0.85rem';
+                    btn.style.padding = '0.5rem 1rem';
+                    btn.textContent = 'Finale erstellen';
+                    btn.addEventListener('click', async () => {
+                        btn.disabled = true;
+                        btn.textContent = 'Erstelle …';
+                        try {
+                            const result = await ParseAPI.createFinal(gid);
+                            await refreshFinalEntries();
+                            renderFinalChips();
+                            renderList('');
+                            showToast(`✅ ${groupName}: ${result.created} Finalisten ermittelt`);
+                        } catch (e) {
+                            btn.disabled = false;
+                            btn.textContent = 'Finale erstellen';
+                            showToast('Fehler beim Erstellen des Finals');
+                        }
+                    });
+                    empty.appendChild(msg);
+                    empty.appendChild(btn);
+                    body.appendChild(empty);
+                    panel.appendChild(body);
+                    pickerList.appendChild(panel);
+                }
+
                 return;
             }
 
@@ -1554,7 +1626,7 @@
                     if (!finalEntriesByGroup[gid]) finalEntriesByGroup[gid] = [];
                     finalEntriesByGroup[gid].push(e);
                 }
-                const hasFinals = Object.values(finalEntriesByGroup).some(e => e.length > 0);
+                const hasFinals = Object.values(finalEntriesByGroup).some(e => e.length > 0) || closedGroups.size > 0;
                 document.getElementById('mode-toggle').style.display = hasFinals ? '' : 'none';
                 renderFilterChips();
                 if (mode === 'finale') renderFinalChips();

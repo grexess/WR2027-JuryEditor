@@ -433,7 +433,7 @@ const ParseAPI = (() => {
         return data.results ?? [];
     }
 
-    function subscribeAllJuryScores(onChange, onScore) {
+    function subscribeAllJuryScores(onChange, onScore, onStatus) {
         const ws = new WebSocket(CONFIG.parseLiveQueryUrl);
         ws.addEventListener('open', () => {
             ws.send(JSON.stringify({
@@ -444,6 +444,7 @@ const ParseAPI = (() => {
         });
         ws.addEventListener('message', e => {
             const msg = JSON.parse(e.data);
+            console.log('[LQ]', msg.op, msg);
             if (msg.op === 'connected') {
                 ws.send(JSON.stringify({
                     op: 'subscribe',
@@ -454,10 +455,12 @@ const ParseAPI = (() => {
                     },
                 }));
             }
-            if (msg.op === 'create' || msg.op === 'delete') onChange();
+            if (msg.op === 'subscribed') { if (onStatus) onStatus(true); }
+            if (msg.op === 'create' || msg.op === 'update' || msg.op === 'enter' || msg.op === 'leave' || msg.op === 'delete') onChange();
             if (msg.op === 'create' && msg.object && onScore) onScore(msg.object);
         });
-        ws.addEventListener('close', () => setTimeout(() => subscribeAllJuryScores(onChange, onScore), 3000));
+        ws.addEventListener('error', e => { console.warn('[LQ] error', e); if (onStatus) onStatus(false); });
+        ws.addEventListener('close', e => { console.warn('[LQ] close', e.code, e.reason); if (onStatus) onStatus(false); setTimeout(() => subscribeAllJuryScores(onChange, onScore, onStatus), 3000); });
         return ws;
     }
 
