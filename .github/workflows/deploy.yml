@@ -16,7 +16,7 @@ jobs:
       - name: Deploy via rsync over SSH
         uses: burnett01/rsync-deployments@7.0.1
         with:
-          switches: -avz --delete --exclude='.git' --exclude='config.js'
+          switches: -avz --delete --exclude='.git'
           path: ./
           remote_path: /var/www/werace.de/heldentag/
           remote_host: ${{ secrets.DEPLOY_HOST }}

@@ -775,6 +775,7 @@
             font-size: 0.85rem;
             padding: 0.35rem 0.6rem;
             outline: none;
+            min-width: 0;
         }
 
         .starter-search-input:focus {
@@ -784,6 +785,47 @@
         .starter-search-input::placeholder {
             color: var(--muted);
         }
+
+        .search-row {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .view-mode-toggle {
+            display: flex;
+            gap: 0.1rem;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 0.1rem;
+            flex-shrink: 0;
+        }
+
+        .view-mode-btn {
+            font-size: 0.5rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            padding: 0.12rem 0.4rem;
+            border-radius: 3px;
+            color: var(--muted);
+            cursor: pointer;
+            background: transparent;
+            border: none;
+        }
+
+        .view-mode-btn.active {
+            background: var(--accent);
+            color: #fff;
+        }
+
+        #results-list.mode-compact .result-run-pills { display: none; }
+        #results-list.mode-compact .result-runs-badge { display: none; }
+        #results-list.mode-compact .result-quali-pill { display: none; }
+        #results-list.mode-compact .result-runs { display: none !important; }
+        #results-list.mode-compact .result-header { cursor: default; }
+        #results-list.mode-compact .result-secondary { border-top: none; padding-top: 0; }
     </style>
 </head>
 
@@ -811,7 +853,13 @@
         <div class="results-controls">
             <fieldset class="filter-fieldset">
                 <legend>Suche</legend>
-                <input type="search" id="starter-search" class="starter-search-input" placeholder="Name oder Startnummer …" autocomplete="off">
+                <div class="search-row">
+                    <input type="search" id="starter-search" class="starter-search-input" placeholder="Name oder Startnummer …" autocomplete="off">
+                    <span class="view-mode-toggle">
+                        <button type="button" class="view-mode-btn" data-view="full">Detail</button>
+                        <button type="button" class="view-mode-btn" data-view="compact">Kompakt</button>
+                    </span>
+                </div>
             </fieldset>
             <fieldset class="info-fieldset" id="info-fieldset" style="display:none">
                 <legend>Wertung</legend>
@@ -853,6 +901,7 @@
         let searchQuery = '';
         let startGroups = [];
         let valueMode = 'weighted';
+        let viewMode = localStorage.getItem('resultsViewMode') || 'full';
 
         // Stable per-group identity color — assigned by alphabetical position so it
         // stays the same across renders regardless of phase/status.
@@ -970,11 +1019,14 @@
 
                 if (starter?.status === 'disqualified' || starter?.status === 'removed') continue;
                 if (filterGroup !== null && starter?.startGroup?.objectId !== filterGroup) continue;
+
+                const finalEntry = allFinalEntries.find(fe => String(fe.startNumber ?? fe.starter?.startNumber) === num);
+                const finalStartNumber = finalEntry?.finalStartNumber ?? null;
+
                 if (searchQuery) {
-                    const q = searchQuery.toLowerCase();
-                    const numQ = q.replace(/^#/, '');
+                    const q = searchQuery.toLowerCase().replace(/^#/, '');
                     const fullName = `${starter?.firstName ?? ''} ${starter?.lastName ?? ''}`.toLowerCase();
-                    if (!fullName.includes(q) && !String(num).includes(numQ)) continue;
+                    if (!fullName.includes(q) && !String(num).toLowerCase().includes(q) && !String(finalStartNumber ?? '').toLowerCase().includes(q)) continue;
                 }
 
                 const phaseResult = scoreToPhaseRuns(scores);
@@ -994,8 +1046,6 @@
                 const qualiCount = CONFIG.qualiRuns ?? qualiRuns.length;
                 const finalCount = CONFIG.finalRuns ?? 0;
                 const isFinal = finalistNums.has(num);
-                const finalEntry = allFinalEntries.find(fe => String(fe.startNumber ?? fe.starter?.startNumber) === num);
-                const finalStartNumber = finalEntry?.finalStartNumber ?? null;
 
                 const qualiComplete = qualiRuns.length >= qualiCount;
                 const finalComplete = !isFinal || finalRuns.length >= finalCount;
@@ -1204,6 +1254,8 @@
             document.getElementById('value-mode-row').style.display = hasCriteria ? '' : 'none';
             list.classList.toggle('mode-raw', valueMode === 'raw');
             list.classList.toggle('mode-weighted', valueMode === 'weighted');
+            list.classList.toggle('mode-compact', viewMode === 'compact');
+            document.querySelectorAll('.view-mode-btn').forEach(b => b.classList.toggle('active', b.dataset.view === viewMode));
 
             infoFieldset.style.display = (modeParts.length || hasWeights || hasCriteria) ? '' : 'none';
 
@@ -1330,7 +1382,7 @@
                     `</div>` +
                     pillsHtml +
                     `</div>`;
-                header.addEventListener('click', () => card.classList.toggle('open'));
+                header.addEventListener('click', () => { if (viewMode !== 'compact') card.classList.toggle('open'); });
                 card.appendChild(header);
 
                 const runsDiv = document.createElement('div');
@@ -1526,6 +1578,14 @@
         document.getElementById('starter-search').addEventListener('input', e => {
             searchQuery = e.target.value.trim();
             render();
+        });
+
+        document.querySelectorAll('.view-mode-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                viewMode = btn.dataset.view;
+                localStorage.setItem('resultsViewMode', viewMode);
+                render();
+            });
         });
 
         document.querySelectorAll('#value-mode-row .value-mode-btn').forEach(btn => {
