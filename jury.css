@@ -125,7 +125,6 @@ main {
 }
 
 #peer-scores {
-    display: none;
     max-width: 480px;
     width: 100%;
     margin: 0 auto;
@@ -640,7 +639,7 @@ main {
     overflow-x: auto;
     justify-content: center;
     gap: 0.4rem;
-    padding: 0.4rem 0 0;
+    padding: 0.4rem 0 0.6rem;
     scrollbar-width: none;
     flex-shrink: 0;
 }

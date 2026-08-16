@@ -444,7 +444,6 @@ const ParseAPI = (() => {
         });
         ws.addEventListener('message', e => {
             const msg = JSON.parse(e.data);
-            console.log('[LQ]', msg.op, msg);
             if (msg.op === 'connected') {
                 ws.send(JSON.stringify({
                     op: 'subscribe',
@@ -459,8 +458,8 @@ const ParseAPI = (() => {
             if (msg.op === 'create' || msg.op === 'update' || msg.op === 'enter' || msg.op === 'leave' || msg.op === 'delete') onChange();
             if (msg.op === 'create' && msg.object && onScore) onScore(msg.object);
         });
-        ws.addEventListener('error', e => { console.warn('[LQ] error', e); if (onStatus) onStatus(false); });
-        ws.addEventListener('close', e => { console.warn('[LQ] close', e.code, e.reason); if (onStatus) onStatus(false); setTimeout(() => subscribeAllJuryScores(onChange, onScore, onStatus), 3000); });
+        ws.addEventListener('error', () => { if (onStatus) onStatus(false); });
+        ws.addEventListener('close', () => { if (onStatus) onStatus(false); setTimeout(() => subscribeAllJuryScores(onChange, onScore, onStatus), 3000); });
         return ws;
     }
 

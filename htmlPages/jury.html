@@ -56,8 +56,8 @@
     </div>
     <div class="content-center">
         <main id="main"></main>
-        <div id="peer-scores"></div>
         <div class="numpad-wrap" id="numpad-wrap"></div>
+        <div id="peer-scores"></div>
     </div>
     <div class="toast" id="toast">✓ Wertung gespeichert</div>
     <div class="modal-backdrop" id="error-backdrop">
@@ -119,8 +119,14 @@
             document.title = `${CONFIG.eventName} – Wertung ${judgeName}`;
 
         // Heartbeat — announces this judge is online, refreshes every 15 s
-        // sessionId detects concurrent tabs/devices using the same token
-        const _sessionId = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+        // sessionId detects concurrent tabs/devices using the same token.
+        // Persisted in localStorage so page refresh on the same browser doesn't look like a new session.
+        const _sessionLsKey = `wr_jury_session_${judgeName}`;
+        let _sessionId = localStorage.getItem(_sessionLsKey);
+        if (!_sessionId) {
+            _sessionId = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+            localStorage.setItem(_sessionLsKey, _sessionId);
+        }
         let _sessionWarned = false;
 
         async function runHeartbeat() {
@@ -264,7 +270,7 @@
             const el = document.getElementById('peer-scores');
             const peers = Object.values(_peerScores);
             if (!peers.length) { el.innerHTML = ''; el.style.display = 'none'; return; }
-            el.style.display = '';
+            el.style.display = 'block';
             el.innerHTML = '<div class="peer-scores-title">Andere Kampfrichter</div>';
             for (const s of peers) {
                 const chip = document.createElement('div');
