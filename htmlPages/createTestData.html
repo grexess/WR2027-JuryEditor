@@ -354,6 +354,15 @@
             return data;
         }
 
+        async function pPut(className, objectId, body) {
+            const res = await fetch(`${CONFIG.parseServerUrl}/classes/${className}/${objectId}`, {
+                method: 'PUT', headers: buildHeaders(), body: JSON.stringify(body),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
+            return data;
+        }
+
         async function pDelete(className, objectId) {
             const res = await fetch(`${CONFIG.parseServerUrl}/classes/${className}/${objectId}`, {
                 method: 'DELETE', headers: buildHeaders(),
@@ -866,6 +875,16 @@
                 log('FinalEntries löschen', 'head');
                 const fe = await safeDeleteAll('HT_FINALENTRY', { event: eventPtr });
                 log(`  ↳ ${fe} gelöscht`, fe ? 'ok' : 'skip');
+
+                log('qualiClosed zurücksetzen', 'head');
+                const sgWhere = encodeURIComponent(JSON.stringify({ event: eventPtr }));
+                const sgRes = await pGet(`/classes/HT_STARTGROUP?where=${sgWhere}&limit=1000&keys=objectId`);
+                let sgReset = 0;
+                for (const sg of sgRes.results ?? []) {
+                    await pPut('HT_STARTGROUP', sg.objectId, { qualiClosed: false });
+                    sgReset++;
+                }
+                log(`  ↳ ${sgReset} Startgruppen zurückgesetzt`, sgReset ? 'ok' : 'skip');
 
                 log('', '');
                 log(`✓ ${deleted} JuryScores gelöscht.`, 'ok');
