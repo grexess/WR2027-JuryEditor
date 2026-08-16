@@ -209,6 +209,24 @@
             color: #fff;
         }
 
+        .group-select {
+            width: 100%;
+            box-sizing: border-box;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            font-size: 0.8rem;
+            padding: 0.3rem 0.5rem;
+            outline: none;
+            cursor: pointer;
+            margin-top: 0.4rem;
+        }
+
+        .group-select:focus {
+            border-color: var(--accent);
+        }
+
         /* ── Run-status chip (Quali progress) ── */
         .result-runs-badge {
             font-size: 0.65rem;
@@ -860,6 +878,9 @@
                         <button type="button" class="view-mode-btn" data-view="compact">Kompakt</button>
                     </span>
                 </div>
+                <select id="group-select" class="group-select" style="display:none">
+                    <option value="">Alle Gruppen</option>
+                </select>
             </fieldset>
             <fieldset class="info-fieldset" id="info-fieldset" style="display:none">
                 <legend>Wertung</legend>
@@ -871,10 +892,6 @@
                         <button type="button" class="value-mode-btn active" data-mode="weighted">Gewichtet</button>
                     </span>
                 </div>
-            </fieldset>
-            <fieldset class="filter-fieldset" id="filter-fieldset" style="display:none">
-                <legend>Gruppe</legend>
-                <div id="group-chips" class="filter-chips" style="flex-wrap:wrap;justify-content:center"></div>
             </fieldset>
         </div>
         <div class="results-list" id="results-list">
@@ -1148,8 +1165,7 @@
         }
 
         function renderGroupChips() {
-            const bar = document.getElementById('group-chips');
-            const filterFieldset = document.getElementById('filter-fieldset');
+            const select = document.getElementById('group-select');
             const groups = [];
             const seen = new Set();
             for (const s of starters) {
@@ -1161,8 +1177,7 @@
             groups.sort((a, b) => a.name.localeCompare(b.name));
             groups.forEach((g, i) => groupColorMap.set(g.id, GROUP_COLORS[i % GROUP_COLORS.length]));
 
-            filterFieldset.style.display = groups.length ? '' : 'none';
-            bar.innerHTML = '';
+            select.style.display = groups.length ? '' : 'none';
 
             const modeLabels = {
                 'quali-idle': 'Quali nicht gestartet',
@@ -1173,23 +1188,15 @@
                 'final-done': 'Final beendet',
             };
 
+            select.innerHTML = '<option value="">Alle Gruppen</option>';
             for (const g of groups) {
                 const sg = startGroups.find(x => x.objectId === g.id);
                 const mode = groupMode(sg);
-                const color = groupColor(g.id);
-                const chip = document.createElement('button');
-                chip.className = 'fchip' + (filterGroup === g.id ? ' active' : '');
-                chip.style.setProperty('--group-color', color);
-                chip.innerHTML =
-                    `<span class="group-color-dot" style="background:${color}"></span>` +
-                    g.name +
-                    `<span class="group-mode-badge ${mode}">${modeLabels[mode]}</span>`;
-                chip.addEventListener('click', () => {
-                    filterGroup = filterGroup === g.id ? null : g.id;
-                    renderGroupChips();
-                    render();
-                });
-                bar.appendChild(chip);
+                const opt = document.createElement('option');
+                opt.value = g.id;
+                opt.textContent = `${g.name}  —  ${modeLabels[mode]}`;
+                opt.selected = filterGroup === g.id;
+                select.appendChild(opt);
             }
 
             // Update header group indicator
@@ -1257,7 +1264,7 @@
             list.classList.toggle('mode-compact', viewMode === 'compact');
             document.querySelectorAll('.view-mode-btn').forEach(b => b.classList.toggle('active', b.dataset.view === viewMode));
 
-            infoFieldset.style.display = (modeParts.length || hasWeights || hasCriteria) ? '' : 'none';
+            infoFieldset.style.display = (viewMode !== 'compact' && (modeParts.length || hasWeights || hasCriteria)) ? '' : 'none';
 
             if (!results.length) {
                 list.innerHTML = '<div class="results-empty">Noch keine Wertungen</div>';
@@ -1574,6 +1581,11 @@
                 render();
             } catch (_) { }
         }
+
+        document.getElementById('group-select').addEventListener('change', e => {
+            filterGroup = e.target.value || null;
+            render();
+        });
 
         document.getElementById('starter-search').addEventListener('input', e => {
             searchQuery = e.target.value.trim();
