@@ -1025,7 +1025,7 @@
 
         function _printStartlist(groupName, sorted) {
             const [time, date] = _nowTime();
-            const kpi = _kpiChips([sorted.length, 'Starter', 'kpi-chip-count'], [date, time, 'kpi-chip-time']);
+            const kpi = _kpiChips([sorted.length, 'Starter', 'kpi-chip-count']);
             const rows = sorted.map(s => `<tr>
                 <td class="num"><span class="num-badge">${_esc(s.startNumber ?? '—')}</span></td>
                 <td>${_esc(s.firstName ?? '')} ${_esc(s.lastName ?? '')}</td></tr>`).join('');
@@ -1110,7 +1110,7 @@
             }).join('');
             const scored = rows.filter(r => !r.dq && !r.noRuns).length;
             const [time, date] = _nowTime();
-            const kpi = _kpiChips([scored, 'Gewertet', 'kpi-chip-count'], [date, time, 'kpi-chip-time']);
+            const kpi = _kpiChips([scored, 'Gewertet', 'kpi-chip-count']);
             return `<section>${_groupHead(groupName, kpi)}
                 <table><thead><tr><th>Platz</th><th>Startnummer</th><th>Name</th><th style="text-align:center">${_esc(scoreLabel)}</th><th style="text-align:right">Läufe</th></tr></thead>
                 <tbody>${tableRows}</tbody></table></section>`;
@@ -1119,7 +1119,7 @@
         function _printFinalStartlist(groupName, finalEntries) {
             if (!finalEntries.length) {
                 const [time, date] = _nowTime();
-                const kpi = _kpiChips([0, 'Finalisten', 'kpi-chip-final'], [date, time, 'kpi-chip-time']);
+            const kpi = _kpiChips([0, 'Finalisten', 'kpi-chip-final']);
                 return `<section>${_groupHead(groupName, kpi)}<p class="no-data-hint">Keine Finalisten für diese Startgruppe erfasst.</p></section>`;
             }
             const rows = finalEntries.map(e => `<tr>
@@ -1128,7 +1128,7 @@
                 <td>${_esc(e.starter?.firstName ?? '')} ${_esc(e.starter?.lastName ?? '')}</td>
                 </tr>`).join('');
             const [time, date] = _nowTime();
-            const kpi = _kpiChips([finalEntries.length, 'Finalisten', 'kpi-chip-final'], [date, time, 'kpi-chip-time']);
+            const kpi = _kpiChips([finalEntries.length, 'Finalisten', 'kpi-chip-final']);
             return `<section>${_groupHead(groupName, kpi)}
                 <div class="table-wrap"><table><thead><tr><th>Final-Startnummer</th><th>Startnummer</th><th>Name</th></tr></thead>
                 <tbody>${rows}</tbody></table></div></section>`;
@@ -1159,7 +1159,7 @@
         function _printFinalResults(groupName, rows, criteria) {
             if (!rows.length) {
                 const [time, date] = _nowTime();
-                const kpi = _kpiChips([0, 'Gewertet', 'kpi-chip-count'], [date, time, 'kpi-chip-time']);
+                const kpi = _kpiChips([0, 'Gewertet', 'kpi-chip-count']);
                 return `<section>${_groupHead(groupName, kpi)}<p class="no-data-hint">Keine Finalisten für diese Startgruppe erfasst.</p></section>`;
             }
             const scoreLabel = (CONFIG.finalScoreMode ?? 'sum') === 'best' ? 'Bester Lauf' : 'Gesamt';
@@ -1175,7 +1175,7 @@
             }).join('');
             const scored = rows.filter(r => !r.dq && !r.noRuns).length;
             const [time, date] = _nowTime();
-            const kpi = _kpiChips([scored, 'Gewertet', 'kpi-chip-count'], [date, time, 'kpi-chip-time']);
+            const kpi = _kpiChips([scored, 'Gewertet', 'kpi-chip-count']);
             return `<section>${_groupHead(groupName, kpi)}
                 <table><thead><tr><th>Platz</th><th>Final-Startnummer</th><th>Startnummer</th><th>Name</th><th style="text-align:center">${_esc(scoreLabel)}</th><th style="text-align:right">Läufe</th></tr></thead>
                 <tbody>${tableRows}</tbody></table></section>`;
@@ -1197,7 +1197,7 @@ section:last-child{page-break-after:avoid}
 .doc-footer{margin-top:0.5em;font-size:8pt;color:#777;text-align:right}
 .doc-page-header{text-align:center;padding-bottom:0.7em}
 .doc-logo{height:2.2cm;display:block;margin:0 auto 0.35em}
-.doc-event-name{font-size:20pt;font-weight:800;color:#111;letter-spacing:-0.01em;margin-top:0.15em}
+.doc-event-name{font-size:22pt;font-weight:800;color:#2c5282;letter-spacing:-0.02em;margin-top:0.15em}
 .doc-event-subtitle{font-size:9.5pt;color:#666;margin-top:0.15em;margin-bottom:0.4em;display:block}
 .criteria-row{display:flex;justify-content:center;gap:0.7em;margin-top:0.5em;flex-wrap:wrap}
 .criteria-chip{display:inline-flex;flex-direction:column;align-items:center;padding:0.4em 1em;background:#edf2ff;border:1.5px solid #c3d0f0;border-radius:8px;min-width:4.5em;text-align:center}
@@ -1257,17 +1257,18 @@ tr:last-child td{border-bottom:none}
             const eventName = CONFIG.eventName ?? 'WeRace';
             const criteria = CONFIG.criteria ?? [];
             const logoUrl = new URL('../assets/weraceLogo.png', document.location.href).href;
+            const [printTime, printDate] = _nowTime();
             let sectionsHtml = '';
             if (type === 'startlist') {
-                sectionsHtml += `<div class="doc-page-header"><img class="doc-logo" src="${logoUrl}" alt="WeRace"><div class="doc-event-name">${_esc(eventName)}</div></div><hr class="doc-hr">`;
+                sectionsHtml += `<div class="doc-page-header"><img class="doc-logo" src="${logoUrl}" alt="WeRace"><div class="doc-event-name">${_esc(eventName)}</div>${_kpiChips([printDate, printTime, 'kpi-chip-time'])}</div><hr class="doc-hr">`;
             } else if (type === 'quali-results') {
                 const chips = criteria.map(c => `<div class="criteria-chip"><span class="criteria-weight">${_esc(String(c.weight ?? '—'))}%</span><span class="criteria-name">${_esc(c.label)}</span></div>`).join('');
-                sectionsHtml += `<div class="doc-page-header"><img class="doc-logo" src="${logoUrl}" alt="WeRace"><div class="doc-event-name">${_esc(eventName)}</div><span class="doc-event-subtitle">Ergebnisse Qualifikation</span><div class="criteria-row">${chips}</div></div><hr class="doc-hr">`;
+                sectionsHtml += `<div class="doc-page-header"><img class="doc-logo" src="${logoUrl}" alt="WeRace"><div class="doc-event-name">${_esc(eventName)}</div><span class="doc-event-subtitle">Ergebnisse Qualifikation</span><div class="criteria-row">${chips}</div>${_kpiChips([printDate, printTime, 'kpi-chip-time'])}</div><hr class="doc-hr">`;
             } else if (type === 'final-startlist') {
-                sectionsHtml += `<div class="doc-page-header"><img class="doc-logo" src="${logoUrl}" alt="WeRace"><div class="doc-event-name">${_esc(eventName)}</div><span class="doc-event-subtitle">Startliste Finale</span></div><hr class="doc-hr">`;
+                sectionsHtml += `<div class="doc-page-header"><img class="doc-logo" src="${logoUrl}" alt="WeRace"><div class="doc-event-name">${_esc(eventName)}</div><span class="doc-event-subtitle">Startliste Finale</span>${_kpiChips([printDate, printTime, 'kpi-chip-time'])}</div><hr class="doc-hr">`;
             } else if (type === 'final-results') {
                 const chips = criteria.map(c => `<div class="criteria-chip"><span class="criteria-weight">${_esc(String(c.weight ?? '—'))}%</span><span class="criteria-name">${_esc(c.label)}</span></div>`).join('');
-                sectionsHtml += `<div class="doc-page-header"><img class="doc-logo" src="${logoUrl}" alt="WeRace"><div class="doc-event-name">${_esc(eventName)}</div><span class="doc-event-subtitle">Ergebnisse Finale</span><div class="criteria-row">${chips}</div></div><hr class="doc-hr">`;
+                sectionsHtml += `<div class="doc-page-header"><img class="doc-logo" src="${logoUrl}" alt="WeRace"><div class="doc-event-name">${_esc(eventName)}</div><span class="doc-event-subtitle">Ergebnisse Finale</span><div class="criteria-row">${chips}</div>${_kpiChips([printDate, printTime, 'kpi-chip-time'])}</div><hr class="doc-hr">`;
             }
             for (const group of targetGroups) {
                 const gid = group.objectId;

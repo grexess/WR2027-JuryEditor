@@ -764,6 +764,26 @@
         .quali-reveal.open .quali-reveal-body {
             display: block;
         }
+
+        .starter-search-input {
+            width: 100%;
+            box-sizing: border-box;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            font-size: 0.85rem;
+            padding: 0.35rem 0.6rem;
+            outline: none;
+        }
+
+        .starter-search-input:focus {
+            border-color: var(--accent);
+        }
+
+        .starter-search-input::placeholder {
+            color: var(--muted);
+        }
     </style>
 </head>
 
@@ -789,6 +809,10 @@
 
     <div class="content-center">
         <div class="results-controls">
+            <fieldset class="filter-fieldset">
+                <legend>Suche</legend>
+                <input type="search" id="starter-search" class="starter-search-input" placeholder="Name oder Startnummer …" autocomplete="off">
+            </fieldset>
             <fieldset class="info-fieldset" id="info-fieldset" style="display:none">
                 <legend>Wertung</legend>
                 <div class="ranking-mode-label" id="ranking-mode-label"></div>
@@ -826,6 +850,7 @@
         let allScores = [];
         let allFinalEntries = [];
         let filterGroup = null;
+        let searchQuery = '';
         let startGroups = [];
         let valueMode = 'weighted';
 
@@ -945,6 +970,12 @@
 
                 if (starter?.status === 'disqualified' || starter?.status === 'removed') continue;
                 if (filterGroup !== null && starter?.startGroup?.objectId !== filterGroup) continue;
+                if (searchQuery) {
+                    const q = searchQuery.toLowerCase();
+                    const numQ = q.replace(/^#/, '');
+                    const fullName = `${starter?.firstName ?? ''} ${starter?.lastName ?? ''}`.toLowerCase();
+                    if (!fullName.includes(q) && !String(num).includes(numQ)) continue;
+                }
 
                 const phaseResult = scoreToPhaseRuns(scores);
                 let qualiRuns, finalRuns;
@@ -1005,6 +1036,12 @@
                 const starter = starters.find(s => String(s.startNumber) === num);
                 if ((starter?.status ?? 'active') !== statusFilter) continue;
                 if (filterGroup !== null && starter?.startGroup?.objectId !== filterGroup) continue;
+                if (searchQuery) {
+                    const q = searchQuery.toLowerCase();
+                    const numQ = q.replace(/^#/, '');
+                    const fullName = `${starter?.firstName ?? ''} ${starter?.lastName ?? ''}`.toLowerCase();
+                    if (!fullName.includes(q) && !String(num).includes(numQ)) continue;
+                }
                 const runs = scoreToRuns(scores);
                 const best = runs.length ? Math.max(...runs.map(r => r.total)) : null;
                 results.push({ num, starter, runs, best });
@@ -1485,6 +1522,11 @@
                 render();
             } catch (_) { }
         }
+
+        document.getElementById('starter-search').addEventListener('input', e => {
+            searchQuery = e.target.value.trim();
+            render();
+        });
 
         document.querySelectorAll('#value-mode-row .value-mode-btn').forEach(btn => {
             btn.addEventListener('click', () => {

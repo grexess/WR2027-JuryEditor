@@ -313,7 +313,7 @@ if (_urlEvent) CONFIG.eventObjectId = _urlEvent;
             s.status !== 'disqualified' && s.status !== 'removed');
 
         const byStarter = {};
-        for (const s of allScores) { const n = s.startnumber; if (!byStarter[n]) byStarter[n] = []; byStarter[n].push(s); }
+        for (const s of allScores) { const n = s.startNumber; if (!byStarter[n]) byStarter[n] = []; byStarter[n].push(s); }
 
         const results = [];
         for (const starter of groupStarters) {
@@ -555,11 +555,11 @@ if (_urlEvent) CONFIG.eventObjectId = _urlEvent;
     }
 
     function onNewScore(score) {
-        const key = `${score.startnumber}_${score.runNumber ?? 1}_${score.phase ?? 'quali'}`;
+        const key = `${score.startNumber}_${score.runNumber ?? 1}_${score.phase ?? 'quali'}`;
         if (!pendingRuns[key]) pendingRuns[key] = { scores: {}, runNumber: score.runNumber ?? 1, phase: score.phase ?? 'quali' };
         pendingRuns[key].scores[score.judgeName] = score;
         if (Object.keys(pendingRuns[key].scores).length >= judgeCount()) {
-            showPopup(score.startnumber, key, pendingRuns[key].scores, pendingRuns[key].runNumber, pendingRuns[key].phase);
+            showPopup(score.startNumber, key, pendingRuns[key].scores, pendingRuns[key].runNumber, pendingRuns[key].phase);
         }
     }
 
