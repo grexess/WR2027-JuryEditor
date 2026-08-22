@@ -4,13 +4,13 @@ const CONFIG = (() => {
         // Parse connection — must stay here, needed before any fetch
         parseServerUrl: 'https://parseapi.back4app.com',
         // # Werace.PRD
-        // parseLiveQueryUrl: 'wss://werace.b4a.io',
-        // parseAppId: 'dzIL6ltm4ccW5erqzoFasEuAJXvoAUwev61xUJca',
-        // parseJsKey: 'CqWP8C1y7EbLYzttuvs0B35vzrQUhXihWK8SI8Hq',
+        parseLiveQueryUrl: 'wss://werace.b4a.io',
+        parseAppId: 'dzIL6ltm4ccW5erqzoFasEuAJXvoAUwev61xUJca',
+        parseJsKey: 'CqWP8C1y7EbLYzttuvs0B35vzrQUhXihWK8SI8Hq',
         // # BMX-Contest
-        parseLiveQueryUrl: 'wss://bmxcontest.b4a.io',
-        parseAppId: 'oyJqZgtk69JqKt5JoTDFuHeEpwYR4gnmdRqKGBUQ',
-        parseJsKey: 'KFEkhoKaUWnrcuhyX1zG8jZfGsNYCQNMWNaxXGE2',
+        // parseLiveQueryUrl: 'wss://bmxcontest.b4a.io',
+        // parseAppId: 'oyJqZgtk69JqKt5JoTDFuHeEpwYR4gnmdRqKGBUQ',
+        // parseJsKey: 'KFEkhoKaUWnrcuhyX1zG8jZfGsNYCQNMWNaxXGE2',
 
         // Active event — set by index.html picker, persisted in localStorage
         eventObjectId: saved?.objectId ?? null,
