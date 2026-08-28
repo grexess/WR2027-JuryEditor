@@ -1039,6 +1039,19 @@
                 a + (s[c.key] ?? 0) * ((c.weight ?? (100 / CONFIG.criteria.length)) / 100), 0));
         }
 
+        function _distributeRounded(s, criteria) {
+            const total = _calcJudgeTotal(s);
+            const exact = criteria.map(c =>
+                (s[c.key] ?? 0) * ((c.weight ?? (100 / criteria.length)) / 100));
+            const floors = exact.map(Math.floor);
+            const remainder = total - floors.reduce((a, b) => a + b, 0);
+            exact.map((v, i) => ({ i, frac: v - floors[i] }))
+                .sort((a, b) => b.frac - a.frac)
+                .slice(0, remainder)
+                .forEach(({ i }) => floors[i]++);
+            return floors;
+        }
+
         function _deduplicateByJudge(scores) {
             const latest = new Map();
             for (const s of scores) latest.set(s.judgeName, s);
@@ -1064,8 +1077,8 @@
         }
 
         function _runPill(run, ri, criteria) {
-            const detail = criteria.map(c => {
-                const weighted = run.scores.reduce((a, s) => a + Math.round((s[c.key] ?? 0) * ((c.weight ?? (100 / criteria.length)) / 100)), 0);
+            const detail = criteria.map((c, ci) => {
+                const weighted = run.scores.reduce((a, s) => a + _distributeRounded(s, criteria)[ci], 0);
                 const raw = run.scores.reduce((a, s) => a + (s[c.key] ?? 0), 0);
                 return `<strong>${_esc(c.shortLabel)}&nbsp;${weighted}</strong>&nbsp;<span style="font-size:6.5pt;color:#999">(${raw})</span>`;
             }).join(' / ');
@@ -1089,10 +1102,9 @@
         }
 
         function _runBlock(run, ri, criteria) {
-            const weighted = criteria.map(c => {
-                const w = run.scores.reduce((a, s) => a + Math.round((s[c.key] ?? 0) * ((c.weight ?? (100 / criteria.length)) / 100)), 0);
-                return _esc(c.shortLabel) + ' ' + w;
-            }).join(' / ');
+            const weighted = criteria.map((c, ci) =>
+                _esc(c.shortLabel) + ' ' + run.scores.reduce((a, s) => a + _distributeRounded(s, criteria)[ci], 0)
+            ).join(' / ');
             return '<div class="run-row"><strong class="run-total">' + (ri + 1) + ': ' + run.total + '</strong> <span class="run-crit">' + weighted + '</span></div>';
         }
 
