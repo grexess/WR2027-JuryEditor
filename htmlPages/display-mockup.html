@@ -294,6 +294,7 @@ function renderScene(scene) {
     }).join('');
 
     // Table rows
+    document.getElementById('table-wrap').style.display = scene.rows.length ? '' : 'none';
     const tbody = document.getElementById('results-body');
     tbody.innerHTML = scene.rows.map(r => {
         const rankCls = r.rank <= 3 ? ` r${r.rank}` : '';

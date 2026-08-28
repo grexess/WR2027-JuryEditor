@@ -482,7 +482,6 @@ if (_urlEvent) CONFIG.eventObjectId = _urlEvent;
             return;
         }
         empty.style.display = 'none';
-        document.getElementById('table-wrap').style.display = '';
 
         // Podium (top 1–3, always shown when results exist)
         const podiumEl = document.getElementById('podium');
@@ -514,6 +513,7 @@ if (_urlEvent) CONFIG.eventObjectId = _urlEvent;
 
         // Table (rank 4+)
         const tableResults = results.slice(3);
+        document.getElementById('table-wrap').style.display = tableResults.length ? '' : 'none';
         const tbody = document.getElementById('results-body');
         tbody.innerHTML = '';
         tableResults.forEach(r => {
