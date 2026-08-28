@@ -87,6 +87,7 @@
     .podium-card.rank-1 { border-color: var(--gold); order: 2; }
     .podium-card.rank-2 { border-color: var(--silver); order: 1; }
     .podium-card.rank-3 { border-color: var(--bronze); order: 3; }
+    .podium-card:only-child { grid-column: 2; }
 
     .podium-rank {
         font-size: 2rem; font-weight: 900; line-height: 1;
@@ -156,7 +157,16 @@
     .g-dot { width:0.45rem; height:0.45rem; border-radius:50%; background:var(--border); transition:background 0.3s, transform 0.3s; }
     .g-dot.active { background:var(--accent); transform:scale(1.4); }
 
-    /* ── Live badge ── */
+    /* ── Stop/Go button ── */
+    #rotation-btn {
+        font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em;
+        padding: 0.25rem 0.75rem; border-radius: 999px; border: none; cursor: pointer;
+        transition: background 0.2s, color 0.2s;
+    }
+    #rotation-btn.running { background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent); border: 1px solid var(--accent); }
+    #rotation-btn.paused  { background: color-mix(in srgb, var(--green) 18%, transparent);  color: var(--green);  border: 1px solid var(--green); }
+
+
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
     .live-dot { width:0.5rem; height:0.5rem; border-radius:50%; background:var(--green); animation:pulse 1.5s infinite; }
 
@@ -205,6 +215,7 @@
         </div>
         <div id="top-right">
             <div class="live-dot"></div>
+            <button id="rotation-btn" class="running">&#9646;&#9646; Stop</button>
             <span class="phase-badge quali" id="phase-badge">Qualifikation</span>
             <div id="group-dots"></div>
         </div>
@@ -268,9 +279,21 @@ if (_urlEvent) CONFIG.eventObjectId = _urlEvent;
     let currentGroupIdx = 0;
     let rotationTimer = null;
     let progressInterval = null;
+    let rotationPaused = false;
     const ROTATION_MS = 8000;
 
     // ── Scoring helpers (same logic as results.html) ──
+    function calcJudgeTotal(s) {
+        return Math.round(CONFIG.criteria.reduce((a, c) =>
+            a + (s[c.key] ?? 0) * ((c.weight ?? (100 / CONFIG.criteria.length)) / 100), 0));
+    }
+
+    function deduplicateByJudge(scores) {
+        const latest = new Map();
+        for (const s of scores) latest.set(s.judgeName, s);
+        return [...latest.values()];
+    }
+
     function groupByRunNumber(scores) {
         if (!scores.length) return [];
         const hasRN = scores.some(s => s.runNumber != null);
@@ -278,16 +301,16 @@ if (_urlEvent) CONFIG.eventObjectId = _urlEvent;
             const byRun = {};
             for (const s of scores) { const r = s.runNumber ?? 1; if (!byRun[r]) byRun[r] = []; byRun[r].push(s); }
             return Object.keys(byRun).map(Number).sort((a,b)=>a-b)
-                .map(r => ({ scores: byRun[r], total: byRun[r].reduce((a,s)=>a+(s.total??0),0) }));
+                .map(r => { const d = deduplicateByJudge(byRun[r]); return { scores: d, total: d.reduce((a,s)=>a+calcJudgeTotal(s),0) }; });
         }
         const runs = []; let chunk = []; const seen = new Set();
         for (const s of scores) {
             if (seen.has(s.judgeName)) {
-                if (chunk.length) runs.push({ scores: chunk, total: chunk.reduce((a,s)=>a+(s.total??0),0) });
+                if (chunk.length) { const d = deduplicateByJudge(chunk); runs.push({ scores: d, total: d.reduce((a,s)=>a+calcJudgeTotal(s),0) }); }
                 chunk = [s]; seen.clear(); seen.add(s.judgeName);
             } else { chunk.push(s); seen.add(s.judgeName); }
         }
-        if (chunk.length) runs.push({ scores: chunk, total: chunk.reduce((a,s)=>a+(s.total??0),0) });
+        if (chunk.length) { const d = deduplicateByJudge(chunk); runs.push({ scores: d, total: d.reduce((a,s)=>a+calcJudgeTotal(s),0) }); }
         return runs;
     }
 
@@ -318,20 +341,19 @@ if (_urlEvent) CONFIG.eventObjectId = _urlEvent;
         const results = [];
         for (const starter of groupStarters) {
             const scores = byStarter[starter.startNumber] ?? [];
-            if (!scores.length) continue;
+            const isFinal = finalistNums.has(starter.startNumber);
             const { qualiRuns, finalRuns } = scoreToPhaseRuns(scores);
-            if (!qualiRuns.length && !finalRuns.length) continue;
+            if (isFinal ? !finalRuns.length : !qualiRuns.length) continue;
 
             const qualiCount = CONFIG.qualiRuns ?? qualiRuns.length;
             const finalCount = CONFIG.finalRuns ?? 0;
-            const isFinal = finalistNums.has(starter.startNumber);
             const qualiTotal = qualiRuns.reduce((a,r)=>a+r.total,0);
             const qualiBest  = qualiRuns.length ? Math.max(...qualiRuns.map(r=>r.total)) : 0;
             const qualiScore = (CONFIG.qualiScoreMode??'sum')==='best' ? qualiBest : qualiTotal;
             const finalTotal = finalRuns.reduce((a,r)=>a+r.total,0);
             const finalBest  = finalRuns.length ? Math.max(...finalRuns.map(r=>r.total)) : 0;
             const finalScore = (CONFIG.finalScoreMode??'sum')==='best' ? finalBest : finalTotal;
-            const best = isFinal ? (finalRuns.length ? finalScore : qualiScore) : qualiScore;
+            const best = isFinal ? finalScore : qualiScore;
             const complete = isFinal
                 ? (!finalCount || finalRuns.length >= finalCount)
                 : (!qualiCount || qualiRuns.length >= qualiCount);
@@ -414,7 +436,7 @@ if (_urlEvent) CONFIG.eventObjectId = _urlEvent;
                     <div class="podium-group">${r.starter?.startGroup?.name ?? ''}</div>
                 </div>
                 <div>
-                    <div class="podium-score">${r.best.toFixed(1)}</div>
+                    <div class="podium-score">${r.best.toFixed(0)}</div>
                     <div class="podium-runs">${runsLabel}</div>
                 </div>`;
             podiumEl.appendChild(card);
@@ -436,7 +458,7 @@ if (_urlEvent) CONFIG.eventObjectId = _urlEvent;
                 `<td>${r.starter?.lastName ?? ''} ${r.starter?.firstName ?? ''}</td>` +
                 `<td class="group-cell">${r.starter?.startGroup?.name ?? ''}</td>` +
                 `<td class="runs">${runsLabel}</td>` +
-                `<td class="score${r.complete?'':' incomplete'}">${r.best.toFixed(1)}</td>`;
+                `<td class="score${r.complete?'':' incomplete'}">${r.best.toFixed(0)}</td>`;
             tbody.appendChild(tr);
         });
     }
@@ -446,7 +468,7 @@ if (_urlEvent) CONFIG.eventObjectId = _urlEvent;
 
     function startRotation() {
         stopRotation();
-        if (startGroups.length <= 1) return;
+        if (rotationPaused || startGroups.length <= 1) return;
 
         const sg = startGroups[currentGroupIdx];
         const results = sg ? buildResultsForGroup(sg.objectId) : [];
@@ -475,6 +497,19 @@ if (_urlEvent) CONFIG.eventObjectId = _urlEvent;
         clearTimeout(rotationTimer);
         clearInterval(progressInterval);
     }
+
+    function updateRotationBtn() {
+        const btn = document.getElementById('rotation-btn');
+        if (rotationPaused) { btn.textContent = '▶ Go'; btn.className = 'paused'; }
+        else { btn.innerHTML = '&#9646;&#9646; Stop'; btn.className = 'running'; }
+    }
+
+    document.getElementById('rotation-btn').addEventListener('click', () => {
+        rotationPaused = !rotationPaused;
+        updateRotationBtn();
+        if (rotationPaused) stopRotation();
+        else startRotation();
+    });
 
     // ── Data refresh ──
     async function refresh() {
@@ -511,19 +546,19 @@ if (_urlEvent) CONFIG.eventObjectId = _urlEvent;
         const name = starter ? `${starter.lastName ?? ''} ${starter.firstName ?? ''}`.trim() : `#${startnumber}`;
         const groupName = starter?.startGroup?.name ?? '';
         const phaseLabel = phase === 'final' ? 'Finale' : 'Qualifikation';
-        const total = Object.values(runScores).reduce((a, s) => a + (s.total ?? 0), 0);
+        const total = Object.values(runScores).reduce((a, s) => a + calcJudgeTotal(s), 0);
 
         document.getElementById('sp-startnum').textContent = `#${startnumber}`;
         document.getElementById('sp-name').textContent = name;
         document.getElementById('sp-run').textContent = `${groupName ? groupName + ' · ' : ''}${phaseLabel} · Lauf ${runNumber}`;
-        document.getElementById('sp-total').textContent = total.toFixed(1);
+        document.getElementById('sp-total').textContent = total;
 
         const judgesEl = document.getElementById('sp-judges');
         judgesEl.innerHTML = '';
         for (const [judge, s] of Object.entries(runScores)) {
             const row = document.createElement('div');
             row.className = 'sp-judge-row';
-            row.innerHTML = `<span class="sp-judge-name">${judge}</span><span class="sp-judge-score">${(s.total ?? 0).toFixed(1)}</span>`;
+            row.innerHTML = `<span class="sp-judge-name">${judge}</span><span class="sp-judge-score">${calcJudgeTotal(s)}</span>`;
             judgesEl.appendChild(row);
         }
 
