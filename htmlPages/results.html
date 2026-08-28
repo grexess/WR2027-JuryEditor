@@ -1007,6 +1007,20 @@
                 a + (s[c.key] ?? 0) * ((c.weight ?? (100 / CONFIG.criteria.length)) / 100), 0));
         }
 
+        // Distribute a rounded total across criteria using the largest-remainder method
+        // so displayed integers always sum to the judge total (avoids 28+33+22=83 ≠ 82).
+        function distributeRounded(s, total) {
+            const exact = CONFIG.criteria.map(c =>
+                (s[c.key] ?? 0) * ((c.weight ?? (100 / CONFIG.criteria.length)) / 100));
+            const floors = exact.map(Math.floor);
+            const remainder = total - floors.reduce((a, b) => a + b, 0);
+            exact.map((v, i) => ({ i, frac: v - floors[i] }))
+                .sort((a, b) => b.frac - a.frac)
+                .slice(0, remainder)
+                .forEach(({ i }) => floors[i]++);
+            return floors;
+        }
+
         // Deduplicate an array of score records keeping only the latest per judgeName.
         // Input is already sorted by createdAt (oldest first) so the last entry wins.
         // Result is sorted alphabetically by judgeName for a stable display order.
@@ -1479,15 +1493,14 @@
                                 const chip = document.createElement('div');
                                 chip.className = 'run-judge-chip' + (hasCriteria ? ' has-criteria' : '') + (openChips.has(chipKey) ? ' open' : '');
                                 chip.dataset.chipKey = chipKey;
-                                const critHtml = CONFIG.criteria.map(c => {
+                                const distributed = distributeRounded(score, calcJudgeTotal(score));
+                                const critHtml = CONFIG.criteria.map((c, ci) => {
                                     const raw = score[c.key] ?? 0;
-                                    const w = c.weight ?? (100 / CONFIG.criteria.length);
-                                    const weighted = Math.round(raw * w / 100);
                                     return `<span class="run-judge-crit">` +
                                         `<span class="run-judge-crit-label">${c.shortLabel}</span>` +
                                         `<span class="run-judge-crit-raw">${raw}</span>` +
                                         `<span class="run-judge-crit-divider"></span>` +
-                                        `<span class="run-judge-crit-w">${weighted}</span>` +
+                                        `<span class="run-judge-crit-w">${distributed[ci]}</span>` +
                                         `</span>`;
                                 }).join('');
                                 chip.innerHTML =
