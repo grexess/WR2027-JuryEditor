@@ -17,6 +17,29 @@ const ParseAPI = (() => {
         return readHeaders();
     }
 
+    async function fetchAllPages(url, keys) {
+        const sep = url.includes('?') ? '&' : '?';
+        const keysParam = keys ? `&keys=${keys}` : '';
+        const results = [];
+        let skip = 0;
+        const limit = 1000;
+        while (true) {
+            const res = await fetch(
+                `${url}${sep}limit=${limit}&skip=${skip}${keysParam}`,
+                { headers: readHeaders() }
+            );
+            if (!res.ok) throw new Error(`Parse error ${res.status}`);
+            const data = await res.json();
+            const batch = data.results;
+            if (!Array.isArray(batch)) throw new Error(`Unexpected Parse response (no results array): ${JSON.stringify(data)}`);
+            if (!batch.length) break;
+            results.push(...batch);
+            if (batch.length < limit) break;
+            skip += limit;
+        }
+        return results;
+    }
+
     function getSessionUser() { return _sessionUser; }
 
     async function login(username, password) {
@@ -161,20 +184,18 @@ const ParseAPI = (() => {
         return res.json();
     }
 
-    async function fetchScoreCountByStarter() {
+    async function _fetchScoreCountByPhase(phase) {
         const where = encodeURIComponent(JSON.stringify({
             event: { __type: 'Pointer', className: 'HT_EVENT', objectId: CONFIG.eventObjectId },
-            phase: 'quali',
+            phase,
         }));
-        const res = await fetch(
-            `${CONFIG.parseServerUrl}/classes/HT_JURYSCORE?where=${where}&limit=2000&keys=startNumber,runNumber`,
-            { headers: readHeaders() }
+        const allResults = await fetchAllPages(
+            `${CONFIG.parseServerUrl}/classes/HT_JURYSCORE?where=${where}&order=objectId`,
+            'startNumber,runNumber'
         );
-        if (!res.ok) throw new Error(`Parse error ${res.status}`);
-        const data = await res.json();
         // Count distinct runNumbers per starter
         const byStarter = {};
-        for (const s of data.results ?? []) {
+        for (const s of allResults) {
             if (!byStarter[s.startNumber]) byStarter[s.startNumber] = new Set();
             byStarter[s.startNumber].add(s.runNumber ?? 1);
         }
@@ -183,26 +204,12 @@ const ParseAPI = (() => {
         return map;
     }
 
+    async function fetchScoreCountByStarter() {
+        return _fetchScoreCountByPhase('quali');
+    }
+
     async function fetchFinalScoreCountByStarter() {
-        const where = encodeURIComponent(JSON.stringify({
-            event: { __type: 'Pointer', className: 'HT_EVENT', objectId: CONFIG.eventObjectId },
-            phase: 'final',
-        }));
-        const res = await fetch(
-            `${CONFIG.parseServerUrl}/classes/HT_JURYSCORE?where=${where}&limit=1000&keys=startNumber,runNumber`,
-            { headers: readHeaders() }
-        );
-        if (!res.ok) throw new Error(`Parse error ${res.status}`);
-        const data = await res.json();
-        // Count distinct runNumbers per starter (each runNumber = one complete run)
-        const byStarter = {};
-        for (const s of data.results ?? []) {
-            if (!byStarter[s.startNumber]) byStarter[s.startNumber] = new Set();
-            byStarter[s.startNumber].add(s.runNumber ?? 1);
-        }
-        const map = {};
-        for (const [num, set] of Object.entries(byStarter)) map[num] = set.size;
-        return map;
+        return _fetchScoreCountByPhase('final');
     }
 
     async function deleteQualiRun(startnumber, runNumber, phase = 'quali') {
@@ -227,17 +234,11 @@ const ParseAPI = (() => {
     }
 
     async function fetchJuryScores(startnumber) {
-        const where = JSON.stringify({
+        const where = encodeURIComponent(JSON.stringify({
             startNumber: String(startnumber),
             event: { __type: 'Pointer', className: 'HT_EVENT', objectId: CONFIG.eventObjectId },
-        });
-        const res = await fetch(
-            `${CONFIG.parseServerUrl}/classes/HT_JURYSCORE?where=${encodeURIComponent(where)}`,
-            { headers: readHeaders() }
-        );
-        if (!res.ok) throw new Error(`Parse error ${res.status}`);
-        const data = await res.json();
-        return data.results ?? [];
+        }));
+        return fetchAllPages(`${CONFIG.parseServerUrl}/classes/HT_JURYSCORE?where=${where}`);
     }
 
     function subscribeJuryScores(startnumber, onScore) {
@@ -424,13 +425,9 @@ const ParseAPI = (() => {
         const where = encodeURIComponent(JSON.stringify({
             event: { __type: 'Pointer', className: 'HT_EVENT', objectId: CONFIG.eventObjectId },
         }));
-        const res = await fetch(
-            `${CONFIG.parseServerUrl}/classes/HT_JURYSCORE?where=${where}&limit=2000&order=createdAt`,
-            { headers: readHeaders() }
+        return fetchAllPages(
+            `${CONFIG.parseServerUrl}/classes/HT_JURYSCORE?where=${where}&order=createdAt,objectId`
         );
-        if (!res.ok) throw new Error(`Parse error ${res.status}`);
-        const data = await res.json();
-        return data.results ?? [];
     }
 
     function subscribeAllJuryScores(onChange, onScore, onStatus) {
@@ -595,13 +592,10 @@ const ParseAPI = (() => {
             event: { __type: 'Pointer', className: 'HT_EVENT', objectId: CONFIG.eventObjectId },
             startNumber: String(startnumber),
         }));
-        const res = await fetch(
-            `${CONFIG.parseServerUrl}/classes/HT_JURYSCORE?where=${where}&limit=2000&keys=objectId,phase`,
-            { headers: readHeaders() }
+        return fetchAllPages(
+            `${CONFIG.parseServerUrl}/classes/HT_JURYSCORE?where=${where}`,
+            'objectId,phase'
         );
-        if (!res.ok) throw new Error(`Parse error ${res.status}`);
-        const data = await res.json();
-        return data.results ?? [];
     }
 
     async function fetchFinalEntriesForStarter(starterObjectId) {

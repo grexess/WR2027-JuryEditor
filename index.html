@@ -588,12 +588,13 @@
             <div class="link-label" style="margin-top:0.25rem">Kampfrichter</div>
             <div id="jury-links" style="display:flex;flex-direction:column;gap:0.75rem"></div>
 
-            <div class="link-label" style="margin-top:0.5rem">Kurzanleitung drucken</div>
+            <div class="link-label" style="margin-top:0.5rem">Kurzanleitung / Notizblatt drucken</div>
             <div class="guide-row">
                 <select class="guide-select" id="guide-select">
                     <option value="starter">Startbereich</option>
                     <option value="starterMaintenance">Starter verwalten</option>
                     <option value="results">Ergebnisse</option>
+                    <option value="jury-notizblatt">🗒 Notfall-Notizblatt (Kampfrichter)</option>
                 </select>
                 <button class="guide-print-btn" onclick="printGuide()">Drucken ↗</button>
             </div>
@@ -744,9 +745,190 @@
             document.getElementById('login-user').focus();
         }
 
+        async function printJurySheets() {
+            const printBtn = document.querySelector('.guide-print-btn');
+            const orig = printBtn.textContent;
+            printBtn.disabled = true;
+            printBtn.textContent = 'Lade…';
+
+            const eventName = CONFIG.eventName || 'WeRace';
+            const criteria = CONFIG.criteria || [];
+            const qualiRuns = CONFIG.qualiRuns || 2;
+            const finalRuns = CONFIG.finalRuns || 0;
+            const judgeEntries = Object.entries(CONFIG.judgeTokens || {});
+
+            if (!judgeEntries.length) {
+                alert('Keine Kampfrichter geladen. Bitte zuerst ein Event auswählen.');
+                printBtn.disabled = false;
+                printBtn.textContent = orig;
+                return;
+            }
+
+            let starters = [], finalEntries = [];
+            try {
+                [starters, finalEntries] = await Promise.all([
+                    ParseAPI.fetchStarters(),
+                    finalRuns > 0 ? ParseAPI.fetchAllFinalEntries() : Promise.resolve([])
+                ]);
+            } catch (e) {
+                // proceed with whatever loaded
+            }
+
+            printBtn.disabled = false;
+            printBtn.textContent = orig;
+
+            const html = generateJurySheetsHTML(eventName, criteria, judgeEntries, qualiRuns, finalRuns, starters, finalEntries);
+            const w = window.open('', '_blank', 'width=900,height=1100');
+            w.document.write(html);
+            w.document.close();
+            w.focus();
+        }
+
+        function generateJurySheetsHTML(eventName, criteria, judgeEntries, qualiRuns, finalRuns, starters, finalEntries) {
+            starters = [...starters].sort((a, b) => (a.startNumber || 0) - (b.startNumber || 0));
+
+            const starterMap = new Map(starters.map(s => [s.startNumber, s]));
+            const finalStarters = [...(finalEntries || [])]
+                .sort((a, b) => (a.finalStartNumber || 0) - (b.finalStartNumber || 0))
+                .map(fe => {
+                    const s = starterMap.get(fe.startNumber);
+                    return {
+                        startNumber: fe.finalStartNumber,
+                        firstName: s?.firstName || '',
+                        lastName: s?.lastName || '',
+                        startGroup: fe.startGroup || s?.startGroup || null
+                    };
+                });
+
+            const today = new Date().toLocaleDateString('de-DE');
+            const BLANK_ROWS = 30;
+
+            function buildRunTable(runNum, phase, rowStarters) {
+                const criteriaHeaders = criteria.map(c =>
+                    `<th>${c.shortLabel || c.label}<br><span class="weight">${c.weight}%</span></th>`
+                ).join('');
+                const labelClass = phase === 'final' ? ' run-label-final' : '';
+                const phaseLabel = phase === 'final' ? `Finallauf ${runNum}` : `Lauf ${runNum}`;
+                const blankRows = phase === 'final' ? 10 : BLANK_ROWS;
+
+                let rows;
+                if (rowStarters.length > 0) {
+                    rows = rowStarters.map(s => {
+                        const scoreCells = criteria.map(() => `<td class="score-cell"></td>`).join('');
+                        const name = [s.lastName, s.firstName].filter(Boolean).join(', ');
+                        const groupName = s.startGroup?.name || '';
+                        return `<tr>
+                            <td class="num-cell">${s.startNumber ?? ''}</td>
+                            <td class="name-cell">${name}</td>
+                            <td class="group-cell">${groupName}</td>
+                            ${scoreCells}
+                            <td class="total-cell"></td>
+                        </tr>`;
+                    }).join('');
+                } else {
+                    rows = Array.from({ length: blankRows }, () => {
+                        const scoreCells = criteria.map(() => `<td class="score-cell"></td>`).join('');
+                        return `<tr>
+                            <td class="num-cell"></td>
+                            <td class="name-cell"></td>
+                            <td class="group-cell"></td>
+                            ${scoreCells}
+                            <td class="total-cell"></td>
+                        </tr>`;
+                    }).join('');
+                }
+
+                return `<div class="run-section">
+                    <div class="run-label${labelClass}">${phaseLabel}</div>
+                    <table>
+                        <thead><tr>
+                            <th class="th-num">#</th>
+                            <th class="th-name">Name</th>
+                            <th class="th-group">Gruppe</th>
+                            ${criteriaHeaders}
+                            <th class="th-total">Total</th>
+                        </tr></thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>`;
+            }
+
+            const pages = judgeEntries.map(([, name], idx) => {
+                const qualiTables = Array.from({ length: qualiRuns }, (_, i) =>
+                    buildRunTable(i + 1, 'quali', starters)).join('');
+                const finalSection = finalRuns > 0
+                    ? `<div class="phase-section">
+                        <div class="phase-label">Finale</div>
+                        ${Array.from({ length: finalRuns }, (_, i) =>
+                            buildRunTable(i + 1, 'final', finalStarters)).join('')}
+                       </div>`
+                    : '';
+                const isLast = idx === judgeEntries.length - 1;
+                return `<div class="page${isLast ? '' : ' page-break'}">
+                    <div class="page-header">
+                        <div>
+                            <div class="page-event">${eventName}</div>
+                            <div class="page-judge">Kampfrichter: <strong>${name}</strong></div>
+                        </div>
+                        <div class="page-header-right">
+                            <div class="page-tag">Notfall-Notizblatt</div>
+                            <div class="page-date">Datum: ${today}</div>
+                        </div>
+                    </div>
+                    ${qualiTables}
+                    ${finalSection}
+                    <div class="page-footer">WeRace · ${eventName} · ${today}</div>
+                </div>`;
+            }).join('');
+
+            return `<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Jury-Notizblatt – ${eventName}</title>
+<style>
+  @page { size: A4; margin: 6mm 7mm 6mm 7mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; color: #111; font-size: 7pt; }
+  .page { display: flex; flex-direction: column; gap: 2.5mm; }
+  .page-break { page-break-after: always; }
+  .page-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1.5px solid #e05b3a; padding-bottom: 2mm; margin-bottom: 0.5mm; }
+  .page-event { font-size: 10pt; font-weight: 800; color: #e05b3a; }
+  .page-judge { font-size: 8.5pt; margin-top: 0.5mm; }
+  .page-header-right { text-align: right; }
+  .page-tag { font-size: 7pt; font-weight: 700; color: #e05b3a; text-transform: uppercase; letter-spacing: 0.06em; }
+  .page-date { font-size: 7pt; color: #666; margin-top: 0.5mm; }
+  .phase-section { display: flex; flex-direction: column; gap: 2.5mm; }
+  .phase-label { font-size: 7.5pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: #aa6b00; border-top: 1px dashed #aa6b00; padding-top: 2mm; margin-top: 0.5mm; }
+  .run-section { }
+  .run-label { font-size: 6.5pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: #555; margin-bottom: 0.5mm; padding-left: 2.5px; border-left: 2.5px solid #e05b3a; }
+  .run-label-final { border-left-color: #aa6b00; color: #aa6b00; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { border: 1px solid #bbb; padding: 0.3mm 1.2mm; vertical-align: middle; }
+  th { background: #efefef; font-size: 6.5pt; font-weight: 700; text-align: center; }
+  .weight { font-weight: 400; font-size: 6pt; color: #888; }
+  td { font-size: 7pt; }
+  .th-num, .num-cell { width: 6mm; text-align: center; color: #555; }
+  .th-name, .name-cell { text-align: left; }
+  .th-group, .group-cell { width: 16mm; text-align: center; color: #555; }
+  .score-cell { width: 18mm; height: 4.5mm; text-align: center; }
+  .th-total, .total-cell { width: 14mm; text-align: center; background: #f5f5f5; }
+  tbody tr:nth-child(odd) { background: #fafafa; }
+  tbody tr:nth-child(even) { background: #fff; }
+  .page-footer { font-size: 6pt; color: #bbb; text-align: right; margin-top: 1.5mm; }
+</style>
+</head>
+<body>
+${pages}
+<script>window.print();<\/script>
+</body>
+</html>`;
+        }
+
         function printGuide() {
             const sel = document.getElementById('guide-select');
             const value = sel.value;
+            if (value === 'jury-notizblatt') { printJurySheets(); return; }
             const label = sel.options[sel.selectedIndex].text;
             const eventName = CONFIG.eventName || 'WeRace';
             const html = generateGuideHTML(value, label, eventName);

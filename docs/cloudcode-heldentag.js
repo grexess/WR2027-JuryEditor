@@ -1,5 +1,5 @@
 // WeRace jury editor — cloud functions
-// Include from main.js with: require('./werace');
+// Include from main.js with: require('./cloudcode-heldentag.js');
 // Remove by deleting that line and this file.
 
 Parse.Cloud.define('refereeUpdate', async (request) => {
@@ -109,14 +109,14 @@ async function createFinal(event, startGroupObjectId) {
     startersQuery.equalTo('startGroup', startGroup);
     startersQuery.notEqualTo('status', 'disqualified');
     startersQuery.notEqualTo('status', 'removed');
-    startersQuery.limit(500);
+    startersQuery.limit(1000);
     const starters = await startersQuery.find({ useMasterKey: true });
 
     // Load all jury scores for the event
     const scoresQuery = new Parse.Query('HT_JURYSCORE');
     scoresQuery.equalTo('event', event);
     scoresQuery.equalTo('phase', 'quali');
-    scoresQuery.limit(5000);
+    scoresQuery.limit(10000);
     scoresQuery.ascending('createdAt');
     const scores = await scoresQuery.find({ useMasterKey: true });
 
@@ -189,7 +189,7 @@ async function createFinal(event, startGroupObjectId) {
     const existingQuery = new Parse.Query('HT_FINALENTRY');
     existingQuery.equalTo('startGroup', startGroup);
     existingQuery.equalTo('event', event);
-    existingQuery.limit(500);
+    existingQuery.limit(10000);
     const existing = await existingQuery.find({ useMasterKey: true });
     await Parse.Object.destroyAll(existing, { useMasterKey: true });
 
@@ -222,7 +222,7 @@ Parse.Cloud.beforeDelete('HT_STARTER', async (request) => {
         (async () => {
             const q = new Parse.Query('HT_JURYSCORE');
             q.equalTo('startNumber', startNumber);
-            q.limit(5000);
+            q.limit(10000);
             const results = await q.find({ useMasterKey: true });
             await Parse.Object.destroyAll(results, { useMasterKey: true });
         })(),
@@ -231,7 +231,7 @@ Parse.Cloud.beforeDelete('HT_STARTER', async (request) => {
         (async () => {
             const q = new Parse.Query('HT_FINALENTRY');
             q.equalTo('starter', starter);
-            q.limit(500);
+            q.limit(10000);
             const results = await q.find({ useMasterKey: true });
             await Parse.Object.destroyAll(results, { useMasterKey: true });
         })(),

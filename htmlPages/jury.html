@@ -175,7 +175,7 @@
             reviewing = false;
             activeCrit = CRITERIA[0];
             inputBuffer = '';
-            CRITERIA.forEach(c => scores[c] = 50);
+            CRITERIA.forEach(c => scores[c] = 0);
             updateStarterName(startNum);
             renderCriteria();
             renderNumpad();
@@ -209,7 +209,7 @@
             _peerScores = {};
             if (_peerWs) { _peerWs.close(); _peerWs = null; }
             if (_peerPollInterval) { clearInterval(_peerPollInterval); _peerPollInterval = null; }
-            CRITERIA.forEach(c => scores[c] = 50);
+            CRITERIA.forEach(c => scores[c] = 0);
             document.getElementById('startnumber-label').textContent = 'Startnummer';
             document.getElementById('startnumber').textContent = '—';
             document.getElementById('starter-name').textContent = '';
@@ -251,7 +251,7 @@
             onNewStarter(e.data.startNumber, e.data.runNumber, e.data.phase);
         });
 
-        const scores = Object.fromEntries(CRITERIA.map(c => [c, 50]));
+        const scores = Object.fromEntries(CRITERIA.map(c => [c, 0]));
         let submitted = false;
         let reviewing = false;
         let activeCrit = startNum ? CRITERIA[0] : null;
@@ -464,7 +464,7 @@
                     reviewing = false;
                     activeCrit = null;
                     inputBuffer = '';
-                    CRITERIA.forEach(c => scores[c] = 50);
+                    CRITERIA.forEach(c => scores[c] = 0);
                     document.getElementById('startnumber').textContent = '—';
                     document.getElementById('waiting').classList.remove('hidden');
                     renderCriteria();
