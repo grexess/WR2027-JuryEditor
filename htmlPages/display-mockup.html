@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WeRace – Anzeigetafel (Mockup)</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+        --bg:      #0d1117;
+        --card:    #161b22;
+        --border:  #30363d;
+        --text:    #e6edf3;
+        --muted:   #8b949e;
+        --accent:  #e05b3a;
+        --green:   #3fb950;
+        --gold:    #ffd700;
+        --silver:  #c0c0c0;
+        --bronze:  #cd7f32;
+    }
+    html, body { width: 100%; height: 100%; background: var(--bg); color: var(--text);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+
+    #app { display: flex; flex-direction: column; min-height: 100vh; }
+
+    #top-bar {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 0.6rem 1.5rem;
+        background: var(--card);
+        border-bottom: 2px solid var(--accent);
+        flex-shrink: 0;
+    }
+
+    #top-logo {
+        font-size: 1.6rem; font-weight: 900; letter-spacing: -0.03em; color: #f9c23c;
+        font-style: italic;
+    }
+    #top-logo span { color: var(--accent); }
+
+    #top-center { display: flex; flex-direction: column; align-items: center; gap: 0.1rem; }
+    #top-event { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.12em; }
+    #top-group { font-size: 1.3rem; font-weight: 900; color: var(--text); letter-spacing: 0.02em; }
+
+    #top-right { display: flex; align-items: center; gap: 0.75rem; }
+
+    .phase-badge {
+        font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;
+        padding: 0.2rem 0.6rem; border-radius: 999px;
+    }
+    .phase-badge.final { background: color-mix(in srgb, var(--gold) 18%, transparent); color: var(--gold); border: 1px solid var(--gold); }
+    .phase-badge.quali { background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent); border: 1px solid var(--accent); }
+
+    #rotation-btn {
+        font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em;
+        padding: 0.25rem 0.75rem; border-radius: 999px; border: none; cursor: pointer;
+    }
+    #rotation-btn.running { background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent); border: 1px solid var(--accent); }
+    #rotation-btn.paused  { background: color-mix(in srgb, var(--green) 18%, transparent); color: var(--green); border: 1px solid var(--green); }
+
+    #group-dots { display: flex; gap: 0.4rem; align-items: center; }
+    .g-dot { width: 0.45rem; height: 0.45rem; border-radius: 50%; background: var(--border); }
+    .g-dot.active { background: var(--accent); transform: scale(1.4); }
+
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+    .live-dot { width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--green); animation: pulse 1.5s infinite; }
+
+    #progress-bar-wrap { height: 3px; background: var(--border); flex-shrink: 0; }
+    #progress-bar { height: 100%; background: var(--accent); width: 0%; transition: width 0.1s linear; }
+    #progress-bar.paused { background: var(--border); }
+
+    #content { flex: 1; padding: 1.2rem 1.5rem; display: flex; flex-direction: column; gap: 0.5rem; }
+
+    /* ── Podium ── */
+    #podium { display: grid; grid-template-columns: 1fr 1.15fr 1fr; gap: 0.75rem; flex-shrink: 0; }
+
+    .podium-card {
+        background: var(--card); border: 1px solid var(--border);
+        border-radius: 12px; padding: 0.85rem 1rem;
+        display: flex; align-items: center; gap: 0.75rem;
+    }
+    .podium-card.rank-1 { border-color: var(--gold);   order: 2; margin-top: 0; }
+    .podium-card.rank-2 { border-color: var(--silver); order: 1; margin-top: 1.4rem; }
+    .podium-card.rank-3 { border-color: var(--bronze); order: 3; margin-top: 2.4rem; }
+    .podium-card:only-child { grid-column: 2; }
+
+    .podium-rank { font-size: 2rem; font-weight: 900; line-height: 1; min-width: 2rem; text-align: center; }
+    .rank-1 .podium-rank { color: var(--gold); font-size: 2.4rem; }
+    .rank-2 .podium-rank { color: var(--silver); }
+    .rank-3 .podium-rank { color: var(--bronze); }
+
+    .podium-info { flex: 1; min-width: 0; }
+    .podium-num { font-size: 0.7rem; color: var(--muted); font-weight: 700; display: flex; gap: 0.3rem; align-items: center; flex-wrap: wrap; }
+    .podium-name { font-size: 1.1rem; font-weight: 800; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .rank-1 .podium-name { font-size: 1.25rem; color: var(--gold); }
+    .rank-2 .podium-name { color: var(--silver); }
+    .rank-3 .podium-name { color: var(--bronze); }
+    .podium-group { font-size: 0.65rem; color: var(--muted); margin-top: 0.1rem; }
+    .podium-criteria { margin-top: 0.25rem; }
+    .podium-score { font-size: 1.5rem; font-weight: 900; color: var(--green); text-align: right; }
+    .rank-1 .podium-score { font-size: 1.8rem; color: var(--gold); }
+    .rank-2 .podium-score { color: var(--silver); }
+    .rank-3 .podium-score { color: var(--bronze); }
+    .podium-runs { text-align: right; margin-top: 0.1rem; }
+
+    /* ── Table ── */
+    #table-wrap { flex: 1; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; table-layout: fixed; }
+    th { text-align: left; font-size: 0.6rem; color: var(--muted); text-transform: uppercase;
+        letter-spacing: 0.1em; padding: 0.3rem 0.5rem; border-bottom: 1px solid var(--border); }
+    td { padding: 0.45rem 0.5rem; border-bottom: 1px solid var(--border); color: var(--text); }
+    tr:last-child td { border-bottom: none; }
+
+    .col-rank  { width: 3rem; }
+    .col-num   { width: 7rem; }
+    .col-group { width: 10rem; }
+    .col-name  { width: 10rem; }
+    .col-runs  { width: 6rem; }
+    .col-score { width: 6rem; }
+
+    td.rank  { font-weight: 800; color: var(--muted); font-size: 0.85rem; }
+    td.rank.r1 { color: var(--gold); }
+    td.rank.r2 { color: var(--silver); }
+    td.rank.r3 { color: var(--bronze); }
+    .num-chip {
+        font-size: 0.65rem; font-weight: 800; color: #fff;
+        background: #58a6ff; border-radius: 4px; padding: 0.1rem 0.4rem;
+        letter-spacing: 0.02em; white-space: nowrap;
+    }
+    .final-num-chip {
+        font-size: 0.65rem; font-weight: 800; color: #ffd700;
+        background: color-mix(in srgb, #ffd700 14%, transparent);
+        border: 1px solid color-mix(in srgb, #ffd700 35%, transparent);
+        border-radius: 4px; padding: 0.1rem 0.4rem;
+        letter-spacing: 0.02em; white-space: nowrap;
+    }
+    td.score { font-weight: 800; color: var(--green); font-size: 1rem; }
+    td.score.incomplete { color: var(--gold); }
+    .runs-chip {
+        font-size: 0.65rem; font-weight: 800; border-radius: 4px; padding: 0.1rem 0.45rem;
+        letter-spacing: 0.02em; white-space: nowrap;
+    }
+    .runs-chip.done {
+        color: var(--green);
+        background: color-mix(in srgb, var(--green) 14%, transparent);
+        border: 1px solid color-mix(in srgb, var(--green) 35%, transparent);
+    }
+    .runs-chip.open {
+        color: var(--gold);
+        background: color-mix(in srgb, var(--gold) 14%, transparent);
+        border: 1px solid color-mix(in srgb, var(--gold) 35%, transparent);
+    }
+    td.group-cell { color: var(--muted); font-size: 0.8rem; }
+    td.criteria-cell { font-size: 0.75rem; white-space: nowrap; text-align: right; }
+    th.col-criteria  { text-align: right; }
+    .crit-chip {
+        display: inline-flex; align-items: stretch; border-radius: 4px; overflow: hidden;
+        border: 1px solid rgba(255,255,255,0.09); margin-right: 0.2rem;
+        font-size: 0.62rem; font-weight: 800; vertical-align: middle;
+    }
+    .crit-chip .cl {
+        background: rgba(255,255,255,0.07); color: var(--muted);
+        padding: 0.15rem 0.3rem; letter-spacing: 0.05em;
+    }
+    .crit-chip .cv {
+        color: var(--text); padding: 0.15rem 0.35rem;
+    }
+</style>
+</head>
+<body>
+<div id="app">
+    <div id="top-bar">
+        <div id="top-logo">we ra<span>c</span>e</div>
+        <div id="top-center">
+            <div id="top-event">Heldentag 2026</div>
+            <div id="top-group"></div>
+            <span id="phase-badge" class="phase-badge"></span>
+        </div>
+        <div id="top-right">
+            <div class="live-dot"></div>
+            <button id="rotation-btn" class="running">⏸ Stop</button>
+            <div id="group-dots"></div>
+        </div>
+    </div>
+
+    <div id="progress-bar-wrap"><div id="progress-bar"></div></div>
+
+    <div id="content">
+        <div id="podium"></div>
+        <div id="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th class="col-rank">#</th>
+                        <th class="col-num">Nr.</th>
+                        <th class="col-score">Score</th>
+                        <th class="col-runs">Läufe</th>
+                        <th class="col-name">Name</th>
+                        <th class="col-criteria">Kriterien</th>
+                    </tr>
+                </thead>
+                <tbody id="results-body"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+const INTERVAL_MS = 6000;
+
+const scenes = [
+    {
+        group: 'Amateur',
+        phase: 'final',
+        phaseLabel: 'Finale',
+        podium: [
+            { rank: 1, num: '#A7', finalNum: 'F-A-7', name: 'Jonas Schreiber', group: 'Amateur', score: 312, runs: '2/2 Final-Läufe', criteria: [['HL',131],['RL',103],['STY',78]] },
+            { rank: 2, num: '#A3', finalNum: 'F-A-3', name: 'Laura Fischer',   group: 'Amateur', score: 287, runs: '1/2 Final-Läufe', complete: false, criteria: [['HL',121],['RL', 95],['STY',71]] },
+            { rank: 3, num: '#A1', finalNum: 'F-A-1', name: 'Max Muster',      group: 'Amateur', score: 265, runs: '2/2 Final-Läufe', criteria: [['HL',111],['RL', 87],['STY',67]] },
+        ],
+        rows: [
+            { rank: 4,  num: '#A5',  finalNum: 'F-A-5',  name: 'Anna Wagner',     group: 'Amateur', score: 251, runs: '2/2 F', complete: true,  criteria: [['HL',106],['RL',83],['STY',62]] },
+            { rank: 5,  num: '#A2',  finalNum: 'F-A-2',  name: 'Kevin Braun',     group: 'Amateur', score: 243, runs: '2/2 F', complete: true,  criteria: [['HL',102],['RL',80],['STY',61]] },
+            { rank: 6,  num: '#A8',  finalNum: 'F-A-8',  name: 'Sarah Hoffmann',  group: 'Amateur', score: 231, runs: '2/2 F', complete: true,  criteria: [['HL', 97],['RL',76],['STY',58]] },
+            { rank: 7,  num: '#A4',  finalNum: 'F-A-4',  name: 'Michael Koch',    group: 'Amateur', score: 218, runs: '2/2 F', complete: true,  criteria: [['HL', 92],['RL',72],['STY',54]] },
+            { rank: 8,  num: '#A6',  finalNum: 'F-A-6',  name: 'Nina Bauer',      group: 'Amateur', score: 197, runs: '1/2 F', complete: false, criteria: [['HL', 83],['RL',65],['STY',49]] },
+            { rank: 9,  num: '#A9',  finalNum: 'F-A-9',  name: 'Felix Zimmermann',group: 'Amateur', score: 184, runs: '1/2 F', complete: false, criteria: [['HL', 77],['RL',61],['STY',46]] },
+            { rank: 10, num: '#A10', finalNum: 'F-A-10', name: 'Petra Neumann',   group: 'Amateur', score: 176, runs: '2/2 F', complete: true,  criteria: [['HL', 74],['RL',58],['STY',44]] },
+        ],
+    },
+    {
+        group: 'Profi',
+        phase: 'quali',
+        phaseLabel: 'Qualifikation',
+        podium: [
+            { rank: 1, num: '#P3', finalNum: null, name: 'Leon Hartmann', group: 'Profi', score: 189, runs: '2/2 Q-Läufe', criteria: [['HL',79],['RL',62],['STY',48]] },
+            { rank: 2, num: '#P6', finalNum: null, name: 'Mia Vogel',     group: 'Profi', score: 174, runs: '2/2 Q-Läufe', criteria: [['HL',73],['RL',57],['STY',44]] },
+            { rank: 3, num: '#P1', finalNum: null, name: 'Tom Becker',    group: 'Profi', score: 161, runs: '2/2 Q-Läufe', criteria: [['HL',68],['RL',53],['STY',40]] },
+        ],
+        rows: [
+            { rank: 4, num: '#P4', finalNum: null, name: 'Julia Maier',     group: 'Profi', score: 147, runs: '2/2 Q', complete: true,  criteria: [['HL',62],['RL',49],['STY',36]] },
+            { rank: 5, num: '#P7', finalNum: null, name: 'Nico Schulz',     group: 'Profi', score: 133, runs: '2/2 Q', complete: true,  criteria: [['HL',56],['RL',44],['STY',33]] },
+            { rank: 6, num: '#P2', finalNum: null, name: 'Jana Wolf',       group: 'Profi', score: 118, runs: '2/2 Q', complete: true,  criteria: [['HL',50],['RL',39],['STY',29]] },
+            { rank: 7, num: '#P5', finalNum: null, name: 'Erik Lange',      group: 'Profi', score:  97, runs: '1/2 Q', complete: false, criteria: [['HL',41],['RL',32],['STY',24]] },
+        ],
+    },
+];
+
+let currentIdx = 0;
+let paused = false;
+let progressStart = null;
+let rafId = null;
+
+function numCellHtml(num, finalNum) {
+    if (finalNum) return `<span class="final-num-chip">${finalNum}</span>`;
+    return `<span class="num-chip">${num}</span>`;
+}
+
+function critHtml(criteria) {
+    if (!criteria) return '—';
+    return criteria.map(([label, val]) =>
+        `<span class="crit-chip"><span class="cl">${label}</span><span class="cv">${val}</span></span>`
+    ).join('');
+}
+
+function renderScene(scene) {
+    document.getElementById('top-group').textContent = scene.group;
+
+    const badge = document.getElementById('phase-badge');
+    badge.textContent = scene.phaseLabel;
+    badge.className = 'phase-badge ' + scene.phase;
+
+    // Dots
+    const dotsEl = document.getElementById('group-dots');
+    dotsEl.innerHTML = scenes.map((_, i) =>
+        `<div class="g-dot${i === currentIdx ? ' active' : ''}"></div>`
+    ).join('');
+
+    // Podium
+    const podiumEl = document.getElementById('podium');
+    podiumEl.innerHTML = scene.podium.map(p => {
+        const rankCls = ['rank-1','rank-2','rank-3'][p.rank - 1];
+        return `<div class="podium-card ${rankCls}">
+            <div class="podium-rank">${p.rank}</div>
+            <div class="podium-info">
+                <div class="podium-num">${numCellHtml(p.num, p.finalNum)}</div>
+                <div class="podium-name">${p.name}</div>
+                ${p.criteria ? `<div class="podium-criteria">${critHtml(p.criteria)}</div>` : ''}
+            </div>
+            <div>
+                <div class="podium-score">${p.score}</div>
+                <div class="podium-runs"><span class="runs-chip ${p.complete===false?'open':'done'}">${p.runs}</span></div>
+            </div>
+        </div>`;
+    }).join('');
+
+    // Table rows
+    const tbody = document.getElementById('results-body');
+    tbody.innerHTML = scene.rows.map(r => {
+        const rankCls = r.rank <= 3 ? ` r${r.rank}` : '';
+        const scoreCls = r.complete ? '' : ' incomplete';
+        return `<tr>
+            <td class="rank${rankCls}">${r.rank}</td>
+            <td class="num">${numCellHtml(r.num, r.finalNum)}</td>
+            <td class="score${scoreCls}">${r.score}</td>
+            <td><span class="runs-chip ${r.complete?'done':'open'}">${r.runs}</span></td>
+            <td>${r.name}</td>
+            <td class="criteria-cell">${critHtml(r.criteria)}</td>
+        </tr>`;
+    }).join('');
+}
+
+function startProgress() {
+    if (rafId) cancelAnimationFrame(rafId);
+    progressStart = performance.now();
+    const bar = document.getElementById('progress-bar');
+
+    function tick(now) {
+        const elapsed = now - progressStart;
+        const pct = Math.min(100, (elapsed / INTERVAL_MS) * 100);
+        bar.style.width = pct + '%';
+        if (elapsed >= INTERVAL_MS) {
+            if (!paused) {
+                currentIdx = (currentIdx + 1) % scenes.length;
+                renderScene(scenes[currentIdx]);
+                startProgress();
+            }
+            return;
+        }
+        rafId = requestAnimationFrame(tick);
+    }
+    rafId = requestAnimationFrame(tick);
+}
+
+document.getElementById('rotation-btn').addEventListener('click', function() {
+    paused = !paused;
+    this.textContent = paused ? '▶ Go' : '⏸ Stop';
+    this.className = paused ? 'paused' : 'running';
+    const bar = document.getElementById('progress-bar');
+    if (paused) {
+        if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+        bar.classList.add('paused');
+    } else {
+        bar.classList.remove('paused');
+        startProgress();
+    }
+});
+
+renderScene(scenes[currentIdx]);
+startProgress();
+</script>
+</body>
+</html>

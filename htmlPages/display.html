@@ -68,6 +68,7 @@
         height: 100%; background: var(--accent);
         width: 0%; transition: none;
     }
+    #progress-bar.paused { background: var(--border); }
 
     #content { flex: 1; overflow: hidden; padding: 1.2rem 1.5rem; display: flex; flex-direction: column; gap: 0.5rem; }
 
@@ -84,9 +85,9 @@
         position: relative; overflow: hidden;
         transition: transform 0.3s;
     }
-    .podium-card.rank-1 { border-color: var(--gold); order: 2; }
-    .podium-card.rank-2 { border-color: var(--silver); order: 1; }
-    .podium-card.rank-3 { border-color: var(--bronze); order: 3; }
+    .podium-card.rank-1 { border-color: var(--gold);   order: 2; margin-top: 0; }
+    .podium-card.rank-2 { border-color: var(--silver); order: 1; margin-top: 1.4rem; }
+    .podium-card.rank-3 { border-color: var(--bronze); order: 3; margin-top: 2.4rem; }
     .podium-card:only-child { grid-column: 2; }
 
     .podium-rank {
@@ -98,15 +99,18 @@
     .rank-3 .podium-rank { color: var(--bronze); }
 
     .podium-info { flex: 1; min-width: 0; }
-    .podium-num { font-size: 0.7rem; color: var(--muted); font-weight: 700; }
-    .podium-name { font-size: 1.1rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .rank-1 .podium-name { font-size: 1.25rem; }
+    .podium-num { font-size: 0.7rem; color: var(--muted); font-weight: 700; display: flex; gap: 0.3rem; align-items: center; flex-wrap: wrap; }
+    .podium-name { font-size: 1.1rem; font-weight: 800; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .rank-1 .podium-name { font-size: 1.25rem; color: var(--gold); }
+    .rank-2 .podium-name { color: var(--silver); }
+    .rank-3 .podium-name { color: var(--bronze); }
     .podium-group { font-size: 0.65rem; color: var(--muted); margin-top: 0.1rem; }
+    .podium-criteria { margin-top: 0.25rem; }
     .podium-score { font-size: 1.5rem; font-weight: 900; color: var(--green); text-align: right; }
     .rank-1 .podium-score { font-size: 1.8rem; color: var(--gold); }
     .rank-2 .podium-score { color: var(--silver); }
     .rank-3 .podium-score { color: var(--bronze); }
-    .podium-runs { font-size: 0.65rem; color: var(--muted); text-align: right; margin-top: 0.1rem; }
+    .podium-runs { text-align: right; margin-top: 0.1rem; }
 
     /* ── Table ── */
     #table-wrap { flex: 1; overflow: hidden; }
@@ -123,21 +127,59 @@
     tr:last-child td { border-bottom: none; }
 
     .col-rank  { width: 3rem; }
-    .col-num   { width: 3.5rem; }
-    .col-name  { }
+    .col-num   { width: 7rem; }
     .col-group { width: 10rem; }
-    .col-runs  { width: 6rem; text-align: right; }
-    .col-score { width: 6rem; text-align: right; }
+    .col-name  { width: 10rem; }
+    .col-runs  { width: 6rem; }
+    .col-score { width: 6rem; }
 
     td.rank  { font-weight: 800; color: var(--muted); font-size: 0.85rem; }
     td.rank.r1 { color: var(--gold); }
     td.rank.r2 { color: var(--silver); }
     td.rank.r3 { color: var(--bronze); }
-    td.num   { font-weight: 800; color: var(--accent); }
+    .num-chip {
+        font-size: 0.65rem; font-weight: 800; color: #fff;
+        background: #58a6ff; border-radius: 4px; padding: 0.1rem 0.4rem;
+        letter-spacing: 0.02em; white-space: nowrap;
+    }
+    .final-num-chip {
+        font-size: 0.65rem; font-weight: 800; color: #ffd700;
+        background: color-mix(in srgb, #ffd700 14%, transparent);
+        border: 1px solid color-mix(in srgb, #ffd700 35%, transparent);
+        border-radius: 4px; padding: 0.1rem 0.4rem;
+        letter-spacing: 0.02em; white-space: nowrap;
+    }
     td.score { font-weight: 800; color: var(--green); font-size: 1rem; }
-    td.score.incomplete { color: var(--muted); }
-    td.runs  { color: var(--muted); font-size: 0.8rem; text-align: right; }
+    td.score.incomplete { color: var(--gold); }
+    .runs-chip {
+        font-size: 0.65rem; font-weight: 800; border-radius: 4px; padding: 0.1rem 0.45rem;
+        letter-spacing: 0.02em; white-space: nowrap;
+    }
+    .runs-chip.done {
+        color: var(--green);
+        background: color-mix(in srgb, var(--green) 14%, transparent);
+        border: 1px solid color-mix(in srgb, var(--green) 35%, transparent);
+    }
+    .runs-chip.open {
+        color: var(--gold);
+        background: color-mix(in srgb, var(--gold) 14%, transparent);
+        border: 1px solid color-mix(in srgb, var(--gold) 35%, transparent);
+    }
     td.group-cell { color: var(--muted); font-size: 0.8rem; }
+    td.criteria-cell { font-size: 0.75rem; white-space: nowrap; text-align: right; }
+    th.col-criteria  { text-align: right; }
+    .crit-chip {
+        display: inline-flex; align-items: stretch; border-radius: 4px; overflow: hidden;
+        border: 1px solid rgba(255,255,255,0.09); margin-right: 0.2rem;
+        font-size: 0.62rem; font-weight: 800; vertical-align: middle;
+    }
+    .crit-chip .cl {
+        background: rgba(255,255,255,0.07); color: var(--muted);
+        padding: 0.15rem 0.3rem; letter-spacing: 0.05em;
+    }
+    .crit-chip .cv {
+        color: var(--text); padding: 0.15rem 0.35rem;
+    }
 
     /* ── Flash animation for new scores ── */
     @keyframes flash { 0%,100%{background:transparent} 30%{background:color-mix(in srgb,var(--green) 15%,transparent)} }
@@ -212,11 +254,11 @@
         <div id="top-center">
             <div id="top-event">WeRace</div>
             <div id="top-group">—</div>
+            <span class="phase-badge quali" id="phase-badge">Qualifikation</span>
         </div>
         <div id="top-right">
             <div class="live-dot"></div>
             <button id="rotation-btn" class="running">&#9646;&#9646; Stop</button>
-            <span class="phase-badge quali" id="phase-badge">Qualifikation</span>
             <div id="group-dots"></div>
         </div>
     </div>
@@ -231,10 +273,10 @@
                     <tr>
                         <th class="col-rank">#</th>
                         <th class="col-num">Nr.</th>
-                        <th class="col-name">Name</th>
-                        <th class="col-group">Gruppe</th>
-                        <th class="col-runs">Läufe</th>
                         <th class="col-score">Score</th>
+                        <th class="col-runs">Läufe</th>
+                        <th class="col-name">Name</th>
+                        <th class="col-criteria">Kriterien</th>
                     </tr>
                 </thead>
                 <tbody id="results-body"></tbody>
@@ -286,6 +328,28 @@ if (_urlEvent) CONFIG.eventObjectId = _urlEvent;
     function calcJudgeTotal(s) {
         return Math.round(CONFIG.criteria.reduce((a, c) =>
             a + (s[c.key] ?? 0) * ((c.weight ?? (100 / CONFIG.criteria.length)) / 100), 0));
+    }
+
+    function distributeRounded(s, total) {
+        const exact = CONFIG.criteria.map(c =>
+            (s[c.key] ?? 0) * ((c.weight ?? (100 / CONFIG.criteria.length)) / 100));
+        const floors = exact.map(Math.floor);
+        const remainder = total - floors.reduce((a, b) => a + b, 0);
+        exact.map((v, i) => ({ i, frac: v - floors[i] }))
+            .sort((a, b) => b.frac - a.frac)
+            .slice(0, remainder)
+            .forEach(({ i }) => floors[i]++);
+        return floors;
+    }
+
+    function bestRunCriteriaHtml(runs) {
+        if (!runs.length) return '';
+        const best = runs.reduce((a, b) => b.total > a.total ? b : a);
+        const vals = CONFIG.criteria.map((c, ci) =>
+            best.scores.reduce((a, s) => a + distributeRounded(s, calcJudgeTotal(s))[ci], 0));
+        return CONFIG.criteria.map((c, ci) =>
+            `<span class="crit-chip"><span class="cl">${c.shortLabel}</span><span class="cv">${vals[ci]}</span></span>`
+        ).join('');
     }
 
     function deduplicateByJudge(scores) {
@@ -342,6 +406,9 @@ if (_urlEvent) CONFIG.eventObjectId = _urlEvent;
         for (const starter of groupStarters) {
             const scores = byStarter[starter.startNumber] ?? [];
             const isFinal = finalistNums.has(starter.startNumber);
+            const finalEntry = allFinalEntries.find(fe =>
+                String(fe.startNumber ?? fe.starter?.startNumber) === String(starter.startNumber));
+            const finalStartNumber = finalEntry?.finalStartNumber ?? null;
             const { qualiRuns, finalRuns } = scoreToPhaseRuns(scores);
             if (isFinal ? !finalRuns.length : !qualiRuns.length) continue;
 
@@ -357,7 +424,8 @@ if (_urlEvent) CONFIG.eventObjectId = _urlEvent;
             const complete = isFinal
                 ? (!finalCount || finalRuns.length >= finalCount)
                 : (!qualiCount || qualiRuns.length >= qualiCount);
-            results.push({ num: starter.startNumber, starter, qualiRuns, finalRuns, qualiCount, finalCount, isFinal, qualiScore, finalScore, best, complete });
+            const criteriaHtml = bestRunCriteriaHtml(isFinal ? finalRuns : qualiRuns);
+            results.push({ num: starter.startNumber, starter, qualiRuns, finalRuns, qualiCount, finalCount, isFinal, finalStartNumber, qualiScore, finalScore, best, complete, criteriaHtml });
         }
 
         results.sort((a,b) => {
@@ -431,13 +499,15 @@ if (_urlEvent) CONFIG.eventObjectId = _urlEvent;
             card.innerHTML = `
                 <div class="podium-rank">${r.rank}</div>
                 <div class="podium-info">
-                    <div class="podium-num">#${r.num}</div>
-                    <div class="podium-name">${r.starter?.lastName ?? ''} ${r.starter?.firstName ?? ''}</div>
-                    <div class="podium-group">${r.starter?.startGroup?.name ?? ''}</div>
+                    <div class="podium-num">
+                        ${r.isFinal && r.finalStartNumber ? `<span class="final-num-chip">${r.finalStartNumber}</span>` : `<span class="num-chip">#${r.num}</span>`}
+                    </div>
+                    <div class="podium-name">${r.starter?.firstName ?? ''} ${r.starter?.lastName ?? ''}</div>
+                    ${r.criteriaHtml ? `<div class="podium-criteria">${r.criteriaHtml}</div>` : ''}
                 </div>
                 <div>
                     <div class="podium-score">${r.best.toFixed(0)}</div>
-                    <div class="podium-runs">${runsLabel}</div>
+                    <div class="podium-runs"><span class="runs-chip ${r.complete?'done':'open'}">${runsLabel}</span></div>
                 </div>`;
             podiumEl.appendChild(card);
         });
@@ -454,11 +524,11 @@ if (_urlEvent) CONFIG.eventObjectId = _urlEvent;
             const tr = document.createElement('tr');
             tr.innerHTML =
                 `<td class="rank${rankCls}">${r.rank}</td>` +
-                `<td class="num">${r.num}</td>` +
-                `<td>${r.starter?.lastName ?? ''} ${r.starter?.firstName ?? ''}</td>` +
-                `<td class="group-cell">${r.starter?.startGroup?.name ?? ''}</td>` +
-                `<td class="runs">${runsLabel}</td>` +
-                `<td class="score${r.complete?'':' incomplete'}">${r.best.toFixed(0)}</td>`;
+                `<td class="num">${r.isFinal && r.finalStartNumber ? `<span class="final-num-chip">${r.finalStartNumber}</span>` : `<span class="num-chip">#${r.num}</span>`}</td>` +
+                `<td class="score${r.complete?'':' incomplete'}">${r.best.toFixed(0)}</td>` +
+                `<td><span class="runs-chip ${r.complete?'done':'open'}">${runsLabel}</span></td>` +
+                `<td>${r.starter?.firstName ?? ''} ${r.starter?.lastName ?? ''}</td>` +
+                `<td class="criteria-cell">${r.criteriaHtml || '—'}</td>`;
             tbody.appendChild(tr);
         });
     }
@@ -476,6 +546,7 @@ if (_urlEvent) CONFIG.eventObjectId = _urlEvent;
 
         let elapsed = 0;
         const bar = document.getElementById('progress-bar');
+        bar.classList.remove('paused');
         bar.style.transition = 'none';
         bar.style.width = '0%';
 
@@ -496,6 +567,9 @@ if (_urlEvent) CONFIG.eventObjectId = _urlEvent;
     function stopRotation() {
         clearTimeout(rotationTimer);
         clearInterval(progressInterval);
+        const bar = document.getElementById('progress-bar');
+        bar.style.transition = 'none';
+        bar.classList.add('paused');
     }
 
     function updateRotationBtn() {
@@ -543,7 +617,7 @@ if (_urlEvent) CONFIG.eventObjectId = _urlEvent;
         clearTimeout(popupTimer);
 
         const starter = starters.find(s => s.startNumber === startnumber);
-        const name = starter ? `${starter.lastName ?? ''} ${starter.firstName ?? ''}`.trim() : `#${startnumber}`;
+        const name = starter ? `${starter.firstName ?? ''} ${starter.lastName ?? ''}`.trim() : `#${startnumber}`;
         const groupName = starter?.startGroup?.name ?? '';
         const phaseLabel = phase === 'final' ? 'Finale' : 'Qualifikation';
         const total = Object.values(runScores).reduce((a, s) => a + calcJudgeTotal(s), 0);
