@@ -1291,7 +1291,7 @@ tr:last-child td{border-bottom:none}
                 } else if (type === 'quali-results') {
                     sectionsHtml += _printQualiResults(group.name, _buildQualiResults(groupStarters, allScores, finalistNums), criteria);
                 } else if (type === 'final-startlist') {
-                    const finalEntries = allFinalEntries.filter(fe => fe.startGroup?.objectId === gid).sort((a, b) => Number(a.finalStartNumber) - Number(b.finalStartNumber));
+                    const finalEntries = allFinalEntries.filter(fe => fe.startGroup?.objectId === gid).sort((a, b) => String(b.finalStartNumber ?? '').localeCompare(String(a.finalStartNumber ?? ''), undefined, { numeric: true }));
                     sectionsHtml += _printFinalStartlist(group.name, finalEntries);
                 } else if (type === 'final-results') {
                     sectionsHtml += _printFinalResults(group.name, _buildFinalResults(groupStarters, allScores, allFinalEntries, gid, finalistNums), criteria);
