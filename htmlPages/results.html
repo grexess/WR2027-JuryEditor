@@ -959,6 +959,14 @@
 
     <button type="button" id="refresh-btn" class="fab-refresh" title="Neu laden">&#x21BB;</button>
 
+    <!-- Event picker overlay — shown when no event is stored in localStorage -->
+    <div id="event-picker-overlay" style="display:none;position:fixed;inset:0;background:#0d1117;z-index:1000;overflow-y:auto;flex-direction:column;align-items:center;justify-content:flex-start;padding:2rem 1rem;gap:1rem">
+        <div style="font-size:1rem;font-weight:700;color:var(--text)">Veranstaltung wählen</div>
+        <div id="event-picker-list" style="width:100%;max-width:420px;display:flex;flex-direction:column;gap:0.5rem">
+            <div style="color:var(--muted);font-size:0.85rem;text-align:center">Lade Veranstaltungen …</div>
+        </div>
+    </div>
+
     <script src="../config.js"></script>
     <script>
         // Allow seed.html to redirect results to the test event
@@ -1344,28 +1352,34 @@
             );
 
             list.innerHTML = '';
-            // Compute ranks: tied scores share the same rank, next rank skips (1,1,3,4…)
-            // Finalists with no final runs yet get null rank (shown as —)
-            const ranks = [];
+            // Compute ranks from the group-filtered set without search — so a search
+            // result always shows its true overall rank, not rank 1 of a filtered list.
+            const savedSearch = searchQuery;
+            searchQuery = '';
+            const rankSource = buildResults();
+            searchQuery = savedSearch;
+            const rankMap = new Map();
             let rankCounter = 0;
-            for (let i = 0; i < results.length; i++) {
-                const r = results[i];
+            for (let i = 0; i < rankSource.length; i++) {
+                const r = rankSource[i];
                 const pending = r.isFinal && r.finalRuns.length === 0;
-                if (pending) { ranks.push(null); continue; }
+                if (pending) { rankMap.set(r.num, null); continue; }
                 rankCounter++;
-                if (i > 0 && ranks[i - 1] !== null && results[i - 1].best === r.best) {
-                    ranks.push(ranks[i - 1]);
+                const prev = rankSource[i - 1];
+                const prevRank = prev ? rankMap.get(prev.num) : undefined;
+                if (prev && prevRank !== null && prev.best === r.best) {
+                    rankMap.set(r.num, prevRank);
                 } else {
-                    ranks.push(rankCounter);
+                    rankMap.set(r.num, rankCounter);
                 }
             }
 
-            results.forEach(({ num, starter, qualiRuns, finalRuns, qualiCount, finalCount, isFinal, finalStartNumber, qualiScore, finalScore, finalTotal, best, complete }, i) => {
+            results.forEach(({ num, starter, qualiRuns, finalRuns, qualiCount, finalCount, isFinal, finalStartNumber, qualiScore, finalScore, finalTotal, best, complete }) => {
                 const card = document.createElement('div');
                 card.className = 'result-card' + (openNums.has(num) ? ' open' : '');
                 card.dataset.num = num;
 
-                const rank = ranks[i];
+                const rank = rankMap.get(num) ?? null;
                 const rankClass = rank === 1 ? ' top1' : rank === 2 ? ' top2' : rank === 3 ? ' top3' : '';
                 const rankDisplay = rank ?? '—';
                 const firstName = starter?.firstName ?? '';
@@ -1679,7 +1693,47 @@
             });
         });
 
+        async function showEventPicker() {
+            const overlay = document.getElementById('event-picker-overlay');
+            const listEl  = document.getElementById('event-picker-list');
+            overlay.style.display = 'flex';
+
+            let events = [];
+            try {
+                events = await ParseAPI.fetchAllEvents();
+            } catch (_) {
+                listEl.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;text-align:center">Fehler beim Laden</div>';
+                return;
+            }
+
+            if (!events.length) {
+                listEl.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;text-align:center">Keine Veranstaltungen gefunden</div>';
+                return;
+            }
+
+            listEl.innerHTML = '';
+            for (const ev of events) {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.style.cssText = 'width:100%;text-align:left;padding:0.85rem 1rem;background:var(--card);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:1rem;font-weight:700;cursor:pointer';
+                btn.textContent = ev.name ?? ev.objectId;
+                btn.addEventListener('click', () => {
+                    localStorage.setItem('werace-event', JSON.stringify({ objectId: ev.objectId, name: ev.name }));
+                    CONFIG.eventObjectId = ev.objectId;
+                    CONFIG.eventName = ev.name ?? 'WeRace';
+                    overlay.style.display = 'none';
+                    init();
+                });
+                listEl.appendChild(btn);
+            }
+        }
+
         async function init() {
+            if (!CONFIG.eventObjectId) {
+                await showEventPicker();
+                return;
+            }
+
             await Promise.all([ParseAPI.fetchEvent(), ParseAPI.fetchJudges()]).catch(() => { });
             document.getElementById('event-name').textContent = CONFIG.eventName;
             document.title = `${CONFIG.eventName} – Ergebnisse`;
